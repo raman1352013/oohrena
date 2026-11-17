@@ -6,7 +6,7 @@ import { inr, left } from "@/lib/format";
 import { useNow } from "@/hooks/use-now";
 import { Btn, Eyebrow, Pill } from "./kit";
 
-export function QuoteBuilderPanel({ leadId }: { leadId?: string }) {
+export function QuoteBuilderPanel({ leadId }: { leadId?: string | undefined }) {
   const s = useStore((x) => x);
   const now = useNow();
   const nav = useNavigate();

@@ -23,22 +23,22 @@ export function WorkOrderRows({ limit, only }: { limit?: number; only?: WOStatus
         const gpsOk = w.day && w.night && gpsPasses(w.day.distance) && gpsPasses(w.night.distance);
         const open = () => nav({ to: "/admin/proof/$woId", params: { woId: w.id } });
         return (
-          <div key={w.id} className="px-5 py-3 min-h-14 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
-            <span className="font-mono text-[12px] w-32">{w.id} <span className="text-mute">{w.bookingId}</span></span>
-            <span className="flex items-center gap-2 w-48"><Avatar>{ini}</Avatar>{v.name}</span>
-            <span className="w-36">{site.name}</span>
-            <span className="w-24">
+          <div key={w.id} className="px-5 py-3 min-h-14 flex flex-wrap xl:flex-nowrap items-center gap-x-4 gap-y-2 text-[13px]">
+            <span className="font-mono text-[12px] w-28 shrink-0 whitespace-nowrap">{w.id} <span className="text-mute">{w.bookingId}</span></span>
+            <span className="flex items-center gap-2 w-44 shrink-0"><Avatar>{ini}</Avatar>{v.name}</span>
+            <span className="w-36 shrink-0 truncate">{site.name}</span>
+            <span className="w-20 shrink-0 whitespace-nowrap">
               {w.status === "certified" ? <span className="text-verified font-medium">Live</span>
                 : w.status === "rejected" ? <span className="text-destructive font-medium">Re-mount</span>
                 : <span className="text-saffron font-medium">{dl < 0 ? "SLA breached" : dl < 12 * 3600000 ? `Today ${new Date(w.deadline).toLocaleTimeString("en-IN", { hour: "numeric", hour12: true }).replace(" ", "").toUpperCase()}` : left(dl)}</span>}
             </span>
-            <span className="flex-1 min-w-40">
+            <span className="flex-1 min-w-32 whitespace-nowrap">
               {w.status === "certified" ? <Pill tone="verified">Dual GPS &lt;{Math.ceil(maxD / 5) * 5}m</Pill>
                 : w.status === "rejected" ? <span className="text-mute">Rejected: {w.rejectReason}</span>
                 : <span className="text-mute">{w.day ? <span className="text-verified">Day ✓</span> : "Day pending"} / {w.night ? <span className="text-verified">Night ✓</span> : "Night pending"}</span>}
             </span>
-            {w.status === "proof_submitted" && gpsOk ? <Btn variant="dark" className="h-8 px-3 text-[12px]" onClick={open}>Certify & Release Escrow</Btn>
-              : <Btn variant="secondary" className="h-8 px-3 text-[12px]" onClick={open}>{w.status === "certified" ? "View Proof" : "Inspect Proof"}</Btn>}
+            {w.status === "proof_submitted" && gpsOk ? <Btn variant="dark" className="h-8 px-3 text-[12px] ml-auto whitespace-nowrap" onClick={open}>Certify & Release Escrow</Btn>
+              : <Btn variant="secondary" className="h-8 px-3 text-[12px] ml-auto whitespace-nowrap" onClick={open}>{w.status === "certified" ? "View Proof" : "Inspect Proof"}</Btn>}
           </div>
         );
       })}

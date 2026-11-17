@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- App state lives in a browser-persisted store (`src/lib/store.ts`, localStorage) and routes render client-side (`defaultSsr: false` in `src/start.ts`); why: staging demo with role switcher and no backend yet — move to Lovable Cloud tables when real accounts are needed.
+- Money rules (18% GST as 9% CGST + 9% SGST, 48h hold, <50m GPS check) live only in `src/lib/gst.ts` with tests; why: one source of truth for quotes, holds and proof checks.

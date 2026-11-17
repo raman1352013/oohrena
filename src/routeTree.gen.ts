@@ -10,11 +10,39 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientRouteImport } from './routes/client'
+import { Route as FinanceRouteImport } from './routes/finance'
+import { Route as PartnerRouteImport } from './routes/partner'
+import { Route as VendorRouteImport } from './routes/vendor'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminProofWoIdRouteImport } from './routes/admin.proof.$woId'
+import { Route as AdminQuoteLeadIdRouteImport } from './routes/admin.quote.$leadId'
+import { Route as PrintDossierCampaignIdRouteImport } from './routes/print.dossier.$campaignId'
+import { Route as PrintQuoteQuoteIdRouteImport } from './routes/print.quote.$quoteId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientRoute = ClientRouteImport.update({
+  id: '/client',
+  path: '/client',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceRoute = FinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerRoute = PartnerRouteImport.update({
+  id: '/partner',
+  path: '/partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VendorRoute = VendorRouteImport.update({
+  id: '/vendor',
+  path: '/vendor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -22,31 +50,114 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminProofWoIdRoute = AdminProofWoIdRouteImport.update({
+  id: '/admin/proof/$woId',
+  path: '/admin/proof/$woId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminQuoteLeadIdRoute = AdminQuoteLeadIdRouteImport.update({
+  id: '/admin/quote/$leadId',
+  path: '/admin/quote/$leadId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrintDossierCampaignIdRoute = PrintDossierCampaignIdRouteImport.update({
+  id: '/print/dossier/$campaignId',
+  path: '/print/dossier/$campaignId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrintQuoteQuoteIdRoute = PrintQuoteQuoteIdRouteImport.update({
+  id: '/print/quote/$quoteId',
+  path: '/print/quote/$quoteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/client': typeof ClientRoute
+  '/finance': typeof FinanceRoute
+  '/partner': typeof PartnerRoute
+  '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/proof/$woId': typeof AdminProofWoIdRoute
+  '/admin/quote/$leadId': typeof AdminQuoteLeadIdRoute
+  '/print/dossier/$campaignId': typeof PrintDossierCampaignIdRoute
+  '/print/quote/$quoteId': typeof PrintQuoteQuoteIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/client': typeof ClientRoute
+  '/finance': typeof FinanceRoute
+  '/partner': typeof PartnerRoute
+  '/vendor': typeof VendorRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/proof/$woId': typeof AdminProofWoIdRoute
+  '/admin/quote/$leadId': typeof AdminQuoteLeadIdRoute
+  '/print/dossier/$campaignId': typeof PrintDossierCampaignIdRoute
+  '/print/quote/$quoteId': typeof PrintQuoteQuoteIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/client': typeof ClientRoute
+  '/finance': typeof FinanceRoute
+  '/partner': typeof PartnerRoute
+  '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/proof/$woId': typeof AdminProofWoIdRoute
+  '/admin/quote/$leadId': typeof AdminQuoteLeadIdRoute
+  '/print/dossier/$campaignId': typeof PrintDossierCampaignIdRoute
+  '/print/quote/$quoteId': typeof PrintQuoteQuoteIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin/'
+  fullPaths:
+    | '/'
+    | '/client'
+    | '/finance'
+    | '/partner'
+    | '/vendor'
+    | '/admin/'
+    | '/admin/proof/$woId'
+    | '/admin/quote/$leadId'
+    | '/print/dossier/$campaignId'
+    | '/print/quote/$quoteId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin'
-  id: '__root__' | '/' | '/admin/'
+  to:
+    | '/'
+    | '/client'
+    | '/finance'
+    | '/partner'
+    | '/vendor'
+    | '/admin'
+    | '/admin/proof/$woId'
+    | '/admin/quote/$leadId'
+    | '/print/dossier/$campaignId'
+    | '/print/quote/$quoteId'
+  id:
+    | '__root__'
+    | '/'
+    | '/client'
+    | '/finance'
+    | '/partner'
+    | '/vendor'
+    | '/admin/'
+    | '/admin/proof/$woId'
+    | '/admin/quote/$leadId'
+    | '/print/dossier/$campaignId'
+    | '/print/quote/$quoteId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClientRoute: typeof ClientRoute
+  FinanceRoute: typeof FinanceRoute
+  PartnerRoute: typeof PartnerRoute
+  VendorRoute: typeof VendorRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminProofWoIdRoute: typeof AdminProofWoIdRoute
+  AdminQuoteLeadIdRoute: typeof AdminQuoteLeadIdRoute
+  PrintDossierCampaignIdRoute: typeof PrintDossierCampaignIdRoute
+  PrintQuoteQuoteIdRoute: typeof PrintQuoteQuoteIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +169,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/client': {
+      id: '/client'
+      path: '/client'
+      fullPath: '/client'
+      preLoaderRoute: typeof ClientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance': {
+      id: '/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof FinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner': {
+      id: '/partner'
+      path: '/partner'
+      fullPath: '/partner'
+      preLoaderRoute: typeof PartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vendor': {
+      id: '/vendor'
+      path: '/vendor'
+      fullPath: '/vendor'
+      preLoaderRoute: typeof VendorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
@@ -65,12 +204,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/proof/$woId': {
+      id: '/admin/proof/$woId'
+      path: '/admin/proof/$woId'
+      fullPath: '/admin/proof/$woId'
+      preLoaderRoute: typeof AdminProofWoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/quote/$leadId': {
+      id: '/admin/quote/$leadId'
+      path: '/admin/quote/$leadId'
+      fullPath: '/admin/quote/$leadId'
+      preLoaderRoute: typeof AdminQuoteLeadIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/print/dossier/$campaignId': {
+      id: '/print/dossier/$campaignId'
+      path: '/print/dossier/$campaignId'
+      fullPath: '/print/dossier/$campaignId'
+      preLoaderRoute: typeof PrintDossierCampaignIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/print/quote/$quoteId': {
+      id: '/print/quote/$quoteId'
+      path: '/print/quote/$quoteId'
+      fullPath: '/print/quote/$quoteId'
+      preLoaderRoute: typeof PrintQuoteQuoteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClientRoute: ClientRoute,
+  FinanceRoute: FinanceRoute,
+  PartnerRoute: PartnerRoute,
+  VendorRoute: VendorRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminProofWoIdRoute: AdminProofWoIdRoute,
+  AdminQuoteLeadIdRoute: AdminQuoteLeadIdRoute,
+  PrintDossierCampaignIdRoute: PrintDossierCampaignIdRoute,
+  PrintQuoteQuoteIdRoute: PrintQuoteQuoteIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

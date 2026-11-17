@@ -19,31 +19,31 @@ export type Vendor = { id: string; name: string; owner: string; initials: string
 export type Site = {
   id: string; name: string; city: string; corridor: string; category: Category; size: string; sqft: number;
   monthlyRate: number; printRate: number; mounting: number; lat: number; lng: number; vendorId: string;
-  image: "day" | "led" | "tower" | "night"; status: "live" | "pending" | "rejected"; holdUntil?: number; holdQuoteId?: string; bookedUntil?: number;
+  image: "day" | "led" | "tower" | "night"; status: "live" | "pending" | "rejected"; holdUntil?: number | undefined; holdQuoteId?: string | undefined; bookedUntil?: number | undefined;
   illuminated: boolean; traffic: string;
 };
 export type LeadStatus = "new" | "quoted" | "revision" | "approved" | "rejected";
 export type Lead = {
   id: string; client: string; contact: string; phone: string; email: string; city: string; corridor: string; media: string;
-  siteId?: string; budget: number; durationDays: number; startDate: string; createdAt: number; slaMins: number;
-  status: LeadStatus; quoteId?: string; source: "marketplace" | "partner" | "admin"; partner?: boolean; note?: string;
+  siteId?: string | undefined; budget: number; durationDays: number; startDate: string; createdAt: number; slaMins: number;
+  status: LeadStatus; quoteId?: string | undefined; source: "marketplace" | "partner" | "admin"; partner?: boolean | undefined; note?: string | undefined;
 };
 export type QuoteStatus = "draft" | "sent" | "approved" | "rejected" | "revision" | "expired";
 export type Quote = {
   id: string; leadId: string; siteId: string; vendorId: string; base: number; print: number; mounting: number; payout: number;
-  status: QuoteStatus; holdEnabled: boolean; sentAt?: number; holdUntil?: number; clientNote?: string; version: number;
+  status: QuoteStatus; holdEnabled: boolean; sentAt?: number | undefined; holdUntil?: number | undefined; clientNote?: string | undefined; version: number;
 };
 export type Proof = { image: string; ts: number; lat: number; lng: number; distance: number };
 export type WOStatus = "assigned" | "mounted" | "proof_submitted" | "certified" | "rejected";
 export type WorkOrder = {
   id: string; bookingId: string; leadId: string; quoteId: string; siteId: string; vendorId: string; deadline: number;
-  status: WOStatus; day?: Proof; night?: Proof; rejectReason?: string; installer: string; material: string; campaignId?: string; createdAt: number;
+  status: WOStatus; day?: Proof | undefined; night?: Proof | undefined; rejectReason?: string | undefined; installer: string; material: string; campaignId?: string | undefined; createdAt: number;
 };
 export type Booking = { id: string; quoteId: string; leadId: string; createdAt: number; start: string; end: string };
 export type Campaign = { id: string; woId: string; bookingId: string; certifiedAt: number; certifiedBy: string };
 export type Escrow = {
   id: string; campaignId: string; woId: string; vendorId: string; clientAmount: number; payout: number;
-  status: "checker_pending" | "released" | "held"; makerBy: string; makerAt: number; checkerBy?: string; checkerAt?: number; utr?: string; note?: string;
+  status: "checker_pending" | "released" | "held"; makerBy: string; makerAt: number; checkerBy?: string | undefined; checkerAt?: number | undefined; utr?: string | undefined; note?: string | undefined;
 };
 export type Activity = { t: number; who: string; text: string; ref: string };
 
@@ -96,8 +96,8 @@ function seed(): State {
     q({ id: "QT-0884-A", leadId: "LD-2026-0884", siteId: "ST-105", vendorId: "V-GO", base: 45000, print: 0, mounting: 0, payout: 39000, status: "approved", sentAt: now - 8 * D }),
     q({ id: "QT-0882-A", leadId: "LD-2026-0882", siteId: "ST-104", vendorId: "V-BM", base: 55000, print: 10800, mounting: 12000, payout: 52000, status: "approved", sentAt: now - 4 * D }),
   ];
-  sites[2].holdUntil = quotes[1].holdUntil; sites[2].holdQuoteId = "QT-0888-A";
-  sites[5].holdUntil = quotes[2].holdUntil; sites[5].holdQuoteId = "QT-0886-A";
+  sites[2]!.holdUntil = quotes[1]!.holdUntil; sites[2]!.holdQuoteId = "QT-0888-A";
+  sites[5]!.holdUntil = quotes[2]!.holdUntil; sites[5]!.holdQuoteId = "QT-0886-A";
   const bookings: Booking[] = [
     { id: "BK-5120", quoteId: "QT-0885-A", leadId: "LD-2026-0885", createdAt: now - 4 * D, start: "2026-11-15", end: "2026-12-14" },
     { id: "BK-5114", quoteId: "QT-0884-A", leadId: "LD-2026-0884", createdAt: now - 7 * D, start: "2026-11-12", end: "2026-12-11" },
@@ -110,9 +110,9 @@ function seed(): State {
       day: { image: "seed:led", ts: now - 6 * D, lat: 26.2125, lng: 78.1774, distance: 21 }, night: { image: "seed:led", ts: now - 6 * D + 7 * H, lat: 26.2123, lng: 78.177, distance: 34 } },
     { id: "WO-9040", bookingId: "BK-5117", leadId: "LD-2026-0882", quoteId: "QT-0882-A", siteId: "ST-104", vendorId: "V-BM", deadline: now + 26 * H, status: "assigned", installer: "Raju Kumar", material: "Star Flex 340 GSM", createdAt: now - 3 * D },
   ];
-  sites[0].bookedUntil = now + 26 * D; sites[4].bookedUntil = now + 24 * D; sites[3].bookedUntil = now + 28 * D;
+  sites[4]!.bookedUntil = now + 24 * D; sites[3]!.bookedUntil = now + 28 * D;
   const campaigns: Campaign[] = [{ id: "CMP-3007", woId: "WO-9038", bookingId: "BK-5114", certifiedAt: now - 5 * D, certifiedBy: "RK (Admin)" }];
-  const t = computeQuote(quotes[4]).total;
+  const t = computeQuote(quotes[4]!).total;
   const escrows: Escrow[] = [{ id: "ESC-7701", campaignId: "CMP-3007", woId: "WO-9038", vendorId: "V-GO", clientAmount: t, payout: 39000, status: "checker_pending", makerBy: "RK (Admin)", makerAt: now - 5 * D }];
   return {
     role: "admin", env: "staging", vendors, sites, leads, quotes, bookings, workOrders, campaigns, escrows,
@@ -121,7 +121,7 @@ function seed(): State {
   };
 }
 
-const KEY = "oohrena-state-v1";
+const KEY = "oohrena-state-v2";
 let state: State = seed();
 let loaded = false;
 const subs = new Set<() => void>();
@@ -146,7 +146,7 @@ export function getState() { load(); return state; }
 export function useStore<T>(sel: (s: State) => T): T {
   return useSyncExternalStore((cb) => { subs.add(cb); return () => subs.delete(cb); }, () => sel(getState()), () => sel(state));
 }
-function nextId(s: State, k: string) { s.seq[k] = (s.seq[k] ?? 0) + 1; return s.seq[k]; }
+function nextId(s: State, k: string) { const n = (s.seq[k] ?? 0) + 1; s.seq[k] = n; return n; }
 function who(s: State) { const r = ROLES.find((r) => r.id === s.role)!; return `${r.initials} (${r.label})`; }
 function log(s: State, text: string, ref: string) { s.activity.unshift({ t: Date.now(), who: who(s), text, ref }); }
 
@@ -180,7 +180,7 @@ export const actions = {
     set((s) => {
       const l = s.leads.find((x) => x.id === leadId)!;
       const prev = l.quoteId ? s.quotes.find((q) => q.id === l.quoteId) : undefined;
-      const site = s.sites.find((x) => x.id === (prev?.siteId ?? l.siteId)) ?? s.sites.find((x) => x.city === l.city) ?? s.sites[0];
+      const site = s.sites.find((x) => x.id === (prev?.siteId ?? l.siteId)) ?? s.sites.find((x) => x.city === l.city) ?? s.sites[0]!;
       const num = l.id.slice(-4);
       const version = (prev?.version ?? 0) + 1;
       qid = `QT-${num}-${String.fromCharCode(64 + version)}`;

@@ -32,6 +32,7 @@ export function AppHeader() {
     if (lead) return nav({ to: "/admin/quote/$leadId", params: { leadId: lead.id } });
     if (bk) return nav({ to: "/admin" });
     toast.error(`No record found for ${id}`);
+    return undefined;
   }
 
   function backup() {

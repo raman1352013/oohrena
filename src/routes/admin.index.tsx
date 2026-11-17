@@ -106,7 +106,7 @@ function AdminTower() {
                 <Chip label="SLA Urgency" value={fs} onChange={setFs} options={["Under 1h", "Overdue", "Quote sent"]} />
               </div>}>
               <div className="overflow-x-auto">
-                <table className="w-full text-[13px] min-w-[760px]">
+                <table className="w-full text-[13px] min-w-[860px]">
                   <thead><tr className="text-left text-[12px] text-mute border-b border-line">
                     {["Lead", "Client", "Corridor", "Media", "Budget", "SLA", ""].map((h) => <th key={h} className="font-normal px-5 py-2.5 first:pl-5">{h}</th>)}
                   </tr></thead>
@@ -117,7 +117,7 @@ function AdminTower() {
                       const qs = q ? quoteStatus(q, now) : null;
                       return (
                         <tr key={l.id} onClick={() => setSel(l.id)} className={cn("border-b border-line last:border-0 cursor-pointer hover:bg-canvas h-14", sel === l.id && "bg-saffron/5")}>
-                          <td className="px-5 font-mono text-[12px]">{l.id}</td>
+                          <td className="px-5 font-mono text-[12px] whitespace-nowrap">{l.id}</td>
                           <td className="px-2"><span className="font-semibold">{l.client}</span>{l.client === "Tata Capital" && <span className="text-mute"> {l.contact}</span>}{l.partner && <Pill className="ml-1">Partner</Pill>}</td>
                           <td className="px-2">{l.corridor}</td>
                           <td className="px-2">{l.media}</td>
@@ -130,7 +130,7 @@ function AdminTower() {
                           <td className="px-5 text-right">
                             {l.status === "quoted"
                               ? <Btn variant="secondary" className="h-8 px-3 text-[12px]" onClick={(e) => { e.stopPropagation(); nav({ to: "/admin/quote/$leadId", params: { leadId: l.id } }); }}>View Quote</Btn>
-                              : <Btn variant="dark" className="h-8 px-3 text-[12px]" onClick={(e) => { e.stopPropagation(); assign(l); }}>Assign Vendor & Quote</Btn>}
+                              : <Btn variant="dark" className="h-8 px-3 text-[12px] whitespace-nowrap" onClick={(e) => { e.stopPropagation(); assign(l); }}>Assign Vendor & Quote</Btn>}
                           </td>
                         </tr>
                       );

@@ -32,3 +32,5 @@ use the editor.
 ## Project rules
 - App state lives in a browser-persisted store (`src/lib/store.ts`, localStorage) and routes render client-side (`defaultSsr: false` in `src/start.ts`); why: staging demo with role switcher and no backend yet — move to Lovable Cloud tables when real accounts are needed.
 - Money rules (18% GST as 9% CGST + 9% SGST, 48h hold, <50m GPS check) live only in `src/lib/gst.ts` with tests; why: one source of truth for quotes, holds and proof checks.
+- Frontend discovery filters use the pure `src/lib/discovery.ts` helper; why: map/list results share the same tested location and budget filtering.
+- Sample reports derive scoped counts and activity from the browser store in `/reports`; why: reports must reflect existing records without presenting sample logs as protected production audit evidence.

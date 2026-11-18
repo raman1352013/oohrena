@@ -14,6 +14,8 @@ export const Route = createFileRoute("/finance")({
     { name: "description", content: "Dual-party escrow release after proof certification with CSV reconciliation." },
     { property: "og:title", content: "Finance Ledger — OOHRENA" },
     { property: "og:description", content: "Maker-checker escrow ledger." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: Finance,
 });

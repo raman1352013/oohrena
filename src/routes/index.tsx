@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
-import { LayoutGrid, Map as MapIcon, MapPin, Lock } from "lucide-react";
+import { LayoutGrid, Map as MapIcon, MapPin, Lock, Heart, Search, LocateFixed, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { matchesDiscovery } from "@/lib/discovery";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CATEGORIES, CITIES, useStore, type Site } from "@/lib/store";
 import { computeQuote } from "@/lib/gst";
@@ -18,7 +21,9 @@ export const Route = createFileRoute("/")({
     { title: "OOHRENA Media Marketplace — Hoardings, LED, Transit across India" },
     { name: "description", content: "Browse hoardings, digital LED screens, transit and gantry media in Delhi, Mumbai, Bengaluru, Hyderabad and Chennai. Request a GST quote in one click." },
     { property: "og:title", content: "OOHRENA Media Marketplace" },
-    { property: "og:description", content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!" },
+     { property: "og:description", content: "Explore sample outdoor media and compare indicative campaign costs." },
+     { property: "og:type", content: "website" },
+     { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: Marketplace,
 });
@@ -34,10 +39,27 @@ function Marketplace() {
   const [open, setOpen] = useState<string>();
   const [months, setMonths] = useState(1);
   const [req, setReq] = useState(false);
-  const list = s.sites.filter((x) => x.status === "live" && (!city || x.city === city) && (!cat || x.category === cat));
+  const [query, setQuery] = useState("");
+  const [budget, setBudget] = useState("");
+  const [point, setPoint] = useState<{ lat: number; lng: number }>();
+  const [radius, setRadius] = useState(5);
+  const [shortlist, setShortlist] = useState<string[]>([]);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [compare, setCompare] = useState(false);
+  const saved = s.sites.filter((x) => shortlist.includes(x.id));
+  const list = s.sites.filter((x) => matchesDiscovery(x, { query, min: 0, max: budget ? Number(budget) : Infinity, point, radiusKm: radius }) && (!city || x.city === city) && (!cat || x.category === cat) && (!savedOnly || shortlist.includes(x.id)));
   const site = s.sites.find((x) => x.id === open);
   const avail = (x: Site) => x.bookedUntil && x.bookedUntil > now ? { tone: "neutral" as const, t: `Booked till ${new Date(x.bookedUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` }
-    : x.holdUntil && x.holdUntil > now ? { tone: "hold" as const, t: `On 48h hold · ${left(x.holdUntil - now)}` } : { tone: "verified" as const, t: "Available" };
+    : x.holdUntil && x.holdUntil > now ? { tone: "hold" as const, t: `Demo hold · ${left(x.holdUntil - now)}` } : { tone: "neutral" as const, t: "Not bookable · sample" };
+
+  function toggleSave(id: string) {
+    setShortlist((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
+  }
+  function locate() {
+    if (!navigator.geolocation) return toast.error("Location unavailable on this device");
+    navigator.geolocation.getCurrentPosition((position) => setPoint({ lat: position.coords.latitude, lng: position.coords.longitude }), () => toast.error("Location permission denied"));
+    return undefined;
+  }
 
   return (
     <div>
@@ -45,17 +67,28 @@ function Marketplace() {
         <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-10 flex flex-wrap items-center gap-8">
           <div className="flex-1 min-w-72">
             <div className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.2em] text-mute uppercase"><PinLogo size={20} />Outdoor x Digital x Trackable</div>
-            <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">360° outdoor & digital media,<br />booked with proof you can verify.</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">OOHRENA Media Marketplace</h1>
             <p className="text-saffron-deep font-semibold mt-3">Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!</p>
           </div>
-          <div className="grid grid-cols-3 gap-6 text-center">
-            {[["Live sites", list.length || s.sites.filter((x) => x.status === "live").length], ["Pilot cities", 5], ["GPS-verified", "Day+Night"]].map(([k, v]) => (
-              <div key={k as string}><div className="text-2xl font-bold">{v}</div><div className="text-[12px] text-mute">{k}</div></div>))}
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center w-full sm:w-auto min-w-0">
+            {[["Sample results", list.length], ["Demo cities", new Set(s.sites.map((x) => x.city)).size], ["Proof samples", "Day+Night"]].map(([k, v]) => (
+               <div key={k as string} className="min-w-0"><div className="text-xl sm:text-2xl font-bold">{v}</div><div className="text-[12px] text-mute">{k}</div></div>))}
           </div>
         </div>
       </section>
 
       <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6">
+        <div className="grid sm:grid-cols-[1fr_180px_auto] gap-3 mb-4">
+          <label className="relative"><Search size={15} className="absolute left-3 top-3 text-mute" /><Input aria-label="Search media location" placeholder="City, locality, landmark or inventory ID" className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} /></label>
+          <Input aria-label="Maximum monthly budget" type="number" min={0} placeholder="Max monthly budget ₹" value={budget} onChange={(e) => setBudget(e.target.value)} />
+          <Btn variant="secondary" onClick={locate}><LocateFixed size={15} />Near me</Btn>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mb-4 text-[12px]">
+          {point && <><label>Radius <select aria-label="Search radius" value={radius} onChange={(e) => setRadius(Number(e.target.value))} className="bg-card border border-line rounded-md p-2">{[5, 10, 25, 50].map((km) => <option key={km} value={km}>{km} km</option>)}</select></label><Btn variant="ghost" aria-label="Clear location" onClick={() => setPoint(undefined)}><X size={15} /></Btn></>}
+          <Btn variant={savedOnly ? "dark" : "secondary"} className="h-9 px-3" onClick={() => setSavedOnly(!savedOnly)}><Heart size={14} />Shortlist ({saved.length})</Btn>
+          <Btn variant="secondary" className="h-9 px-3" disabled={saved.length < 2} onClick={() => setCompare(true)}>Compare ({saved.length})</Btn>
+          <span className="ml-auto text-mute">{list.length} sample results · Subject to vendor confirmation</span>
+        </div>
         <div className="flex flex-wrap gap-2 items-center">
           {["", ...CITIES].map((c) => (
             <button key={c || "all"} onClick={() => setCity(c)} className={cn("h-8 px-3 rounded-lg border text-[12px] font-medium", city === c ? "bg-navy text-navy-foreground border-navy" : "bg-card border-line")}>{c || "All cities"}</button>
@@ -77,13 +110,15 @@ function Marketplace() {
             : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {list.map((x) => { const a = avail(x); return (
-                  <button key={x.id} onClick={() => { setOpen(x.id); setMonths(1); }} className="text-left bg-card border border-line rounded-xl overflow-hidden hover:border-saffron transition">
+                  <article key={x.id} className="text-left bg-card border border-line rounded-xl overflow-hidden hover:border-saffron transition min-w-0">
                     <img src={img(x)} alt={x.name} loading="lazy" className="h-44 w-full object-cover" />
                     <div className="p-4">
-                      <div className="flex items-start gap-2"><div className="flex-1"><div className="font-semibold">{x.name}</div><div className="text-[12px] text-mute flex items-center gap-1 mt-0.5"><MapPin size={12} />{x.corridor}, {x.city}</div></div><Pill tone={a.tone}>{a.t}</Pill></div>
+                      <div className="flex flex-wrap items-start gap-2"><div className="flex-1 min-w-40"><div className="font-semibold">{x.name}</div><div className="text-[12px] text-mute flex items-center gap-1 mt-0.5"><MapPin size={12} />{x.corridor}, {x.city}</div></div><Pill tone={a.tone}>{a.t}</Pill></div>
                       <div className="flex justify-between mt-4 text-[13px]"><span className="text-mute">{x.category.split("/")[0]} · {x.size}</span><span className="font-semibold">{inr(x.monthlyRate)}<span className="text-mute font-normal">/mo</span></span></div>
+                      <div className="flex items-center justify-between mt-3"><Btn variant="secondary" className="h-9 px-3" onClick={() => { setOpen(x.id); setMonths(1); }}>View details</Btn><Btn variant={shortlist.includes(x.id) ? "dark" : "ghost"} className="h-9 w-9 p-0" aria-label={`${shortlist.includes(x.id) ? "Remove" : "Shortlist"} ${x.name}`} onClick={() => toggleSave(x.id)}><Heart size={16} /></Btn></div>
+                      <p className="text-[11px] text-mute mt-2">DEMO / SAMPLE · Snapshot {new Date(s.seededAt).toLocaleDateString("en-IN")}</p>
                     </div>
-                  </button>); })}
+                  </article>); })}
               </div>
             )}
         </div>
@@ -97,16 +132,17 @@ function Marketplace() {
               <DialogHeader><DialogTitle className="text-xl">{site.name}</DialogTitle></DialogHeader>
               <div className="text-[13px] text-mute">{site.corridor}, {site.city} · {site.id}</div>
               <div className="grid sm:grid-cols-2 gap-x-8 mt-4 divide-y sm:divide-y-0 divide-line">
-                <div><Row k="Category" v={site.category} /><Row k="Size" v={`${site.size} · ${site.sqft} sq.ft`} /><Row k="Traffic" v={site.traffic} /><Row k="Illumination" v={site.illuminated ? "Front-lit" : "Non-lit"} /><Row k="Vendor" v={<span className="inline-flex items-center gap-1">{s.vendors.find((v) => v.id === site.vendorId)?.name}<Pill tone="verified">KYC</Pill></span>} /></div>
+                <div><Row k="Category" v={site.category} /><Row k="Size" v={`${site.size} · ${site.sqft} sq.ft`} /><Row k="Inventory ID" v={site.id} /><Row k="Illumination" v={site.illuminated ? "Front-lit" : "Non-lit"} /><Row k="Verification" v={<Pill>DEMO / SAMPLE</Pill>} /><Row k="Availability" v="Subject to vendor confirmation" /></div>
                 <RateCard site={site} months={months} setMonths={setMonths} />
               </div>
-              {(() => { const a = avail(site); return a.tone !== "verified" && <p className="mt-4 text-[12px] text-mute flex items-center gap-1"><Lock size={12} />{a.t}. You can still request a quote for later dates.</p>; })()}
-              <Btn className="w-full mt-5" onClick={() => setReq(true)}>Request Quotation</Btn>
+              <p className="mt-4 text-[12px] text-mute flex items-center gap-1"><Lock size={12} />Sample inventory cannot be quoted or booked for a real campaign.</p>
+               <Btn className="w-full mt-5" onClick={() => setReq(true)}>Try demo inquiry</Btn>
             </div>
           </DialogContent>
         )}
       </Dialog>
       <RequestQuoteDialog site={site} months={months} open={req} onOpenChange={(v) => { setReq(v); if (!v) setOpen(undefined); }} />
+      <Dialog open={compare} onOpenChange={setCompare}><DialogContent className="max-w-4xl"><DialogHeader><DialogTitle>Compare shortlisted samples</DialogTitle></DialogHeader><div className="overflow-x-auto"><table className="w-full text-[13px] min-w-[540px]"><thead><tr><th className="text-left p-3">Specification</th>{saved.map((x) => <th key={x.id} className="text-left p-3">{x.name}</th>)}</tr></thead><tbody>{["City", "Category", "Size", "Monthly estimate", "Availability"].map((label, i) => <tr key={label} className="border-t border-line"><td className="p-3 text-mute">{label}</td>{saved.map((x) => <td key={x.id} className="p-3">{[x.city, x.category, x.size, inr(x.monthlyRate), "Sample · not bookable"][i]}</td>)}</tr>)}</tbody></table></div></DialogContent></Dialog>
     </div>
   );
 }

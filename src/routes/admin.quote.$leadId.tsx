@@ -15,6 +15,8 @@ export const Route = createFileRoute("/admin/quote/$leadId")({
     { name: "description", content: "Itemized 18% GST quotation builder with 48-hour auto-hold." },
     { property: "og:title", content: `Quotation ${params.leadId} — OOHRENA` },
     { property: "og:description", content: "Itemized 18% GST quotation builder with 48-hour auto-hold." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: QuotePage,
 });

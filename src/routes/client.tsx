@@ -15,9 +15,11 @@ import { Btn, Empty, Eyebrow, KCard, Pill } from "@/components/app/kit";
 export const Route = createFileRoute("/client")({
   head: () => ({ meta: [
     { title: "Client Portal — OOHRENA" },
-    { name: "description", content: "Approve quotations, track live campaigns and view GPS-certified day and night proofs." },
+    { name: "description", content: "Review sample quotations, campaign status and day/night display evidence." },
     { property: "og:title", content: "Client Portal — OOHRENA" },
     { property: "og:description", content: "Track every campaign with certified proof of display." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: ClientPortal,
 });
@@ -53,7 +55,8 @@ function ClientPortal() {
 
       <KCard title="Open quotations" bodyClass="divide-y divide-line">
         {open.length ? open.map((q) => {
-          const l = s.leads.find((x) => x.id === q.leadId)!; const site = s.sites.find((x) => x.id === q.siteId)!;
+          const l = s.leads.find((x) => x.id === q.leadId); const site = s.sites.find((x) => x.id === q.siteId);
+          if (!l || !site) return null;
           const c = computeQuote(q); const st = quoteStatus(q, now);
           return (
             <div key={q.id} className="px-5 py-4 flex flex-wrap gap-4 items-center text-[13px]">
@@ -77,14 +80,15 @@ function ClientPortal() {
 
       <KCard title="Campaign tracking" bodyClass="divide-y divide-line">
         {wos.length ? wos.map((w) => {
-          const site = s.sites.find((x) => x.id === w.siteId)!; const bk = s.bookings.find((b) => b.id === w.bookingId)!; const step = stepOf(w);
+          const site = s.sites.find((x) => x.id === w.siteId); const bk = s.bookings.find((b) => b.id === w.bookingId); const step = stepOf(w);
+          if (!site || !bk) return null;
           return (
             <div key={w.id} className="p-5 space-y-4">
               <div className="flex flex-wrap items-center gap-3 text-[13px]">
                 <div className="font-mono text-[12px] text-mute">{w.bookingId} · {w.id}{w.campaignId && ` · ${w.campaignId}`}</div>
                 <div className="font-semibold text-[15px] w-full sm:w-auto">{site.name} <span className="text-mute font-normal">· {site.city}</span></div>
                 <span className="text-mute text-[12px]">{bk.start} → {bk.end}</span>
-                {w.status === "certified" && <Link to="/print/dossier/$campaignId" params={{ campaignId: w.campaignId! }} target="_blank" className="ml-auto"><Btn variant="dark" className="h-9 px-4">Campaign Audit Dossier PDF</Btn></Link>}
+                {w.status === "certified" && w.campaignId && <Link to="/print/dossier/$campaignId" params={{ campaignId: w.campaignId }} target="_blank" className="ml-auto"><Btn variant="dark" className="h-9 px-4">Campaign Audit Dossier PDF</Btn></Link>}
               </div>
               <ol className="grid grid-cols-4 gap-2">
                 {STEPS.map((t, i) => (
@@ -99,13 +103,16 @@ function ClientPortal() {
                     <div key={k} className="rounded-lg border border-line overflow-hidden">
                       <img src={proofSrc(p.image)} alt={k} className="h-44 w-full object-cover" loading="lazy" />
                       <div className="p-3 text-[12px] flex flex-wrap gap-x-4 gap-y-1"><span className="font-semibold">{k}</span><span className="text-mute">{ist(p.ts)}</span>
-                        <span className="text-mute flex items-center gap-1"><MapPin size={11} />{latlng(p.lat, p.lng)}</span><Pill tone="verified"><Check size={11} />{p.distance}m · GPS verified</Pill></div>
+                        <span className="text-mute flex items-center gap-1"><MapPin size={11} />{latlng(p.lat, p.lng)}</span><Pill><Check size={11} />{p.distance}m · Simulated GPS</Pill></div>
                     </div>))}
                 </div>)}
             </div>);
         }) : <Empty title="No campaigns yet" hint="Approve a quotation to start a campaign." />}
       </KCard>
 
+      <KCard title="Quotation history" bodyClass="divide-y divide-line">{quotes.filter((q) => q.status !== "draft").map((q) => <div key={q.id} className="px-5 py-3 flex flex-wrap items-center gap-3 text-[13px]"><span className="font-mono">{q.id} · V{q.version}</span><Pill>{quoteStatus(q, now)}</Pill><span className="flex-1 text-mute">{q.clientNote || "No decision comment"}</span><span className="font-semibold">{inr(quoteTotal(q))}</span><Link to="/print/quote/$quoteId" params={{ quoteId: q.id }} target="_blank"><Btn variant="secondary" className="h-8 px-3">View version</Btn></Link></div>)}</KCard>
+      <KCard title="Booking & payment status" bodyClass="divide-y divide-line">{s.bookings.filter((b) => ids.has(b.leadId)).map((b) => <div key={b.id} className="px-5 py-3 flex flex-wrap gap-3 text-[13px]"><span className="font-mono">{b.id}</span><span>{b.start} → {b.end}</span><Pill>Invoice not issued</Pill><Pill tone="hold">Payment not recorded</Pill></div>)}</KCard>
+      <Link to="/reports"><Btn variant="secondary">Reports & activity</Btn></Link>
       <Dialog open={!!dlg} onOpenChange={(v) => !v && setDlg(undefined)}>
         <DialogContent>
           <DialogHeader><DialogTitle>{dlg?.kind === "reject" ? "Reject quotation" : "Request revision"}</DialogTitle></DialogHeader>

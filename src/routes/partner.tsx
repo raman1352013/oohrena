@@ -12,6 +12,8 @@ export const Route = createFileRoute("/partner")({
     { name: "description", content: "Refer advertisers to OOHRENA media and track referral commission." },
     { property: "og:title", content: "City Growth Partner — OOHRENA" },
     { property: "og:description", content: "Refer advertisers and track commission." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: Partner,
 });

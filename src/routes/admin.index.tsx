@@ -16,6 +16,8 @@ export const Route = createFileRoute("/admin/")({
     { name: "description", content: "Priority lead queue, GST quotes, 48h holds, work orders and proof certification." },
     { property: "og:title", content: "Central Control Tower — OOHRENA" },
     { property: "og:description", content: "Admin operations tower for outdoor and digital campaigns." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: AdminTower,
 });
@@ -46,7 +48,7 @@ function AdminTower() {
   const newLeads = s.leads.filter((l) => l.status === "new" || l.status === "revision");
   const holds = s.sites.filter((x) => x.holdUntil && x.holdUntil > now).length;
   const proofs = s.workOrders.filter((w) => w.status === "proof_submitted");
-  const active = s.workOrders.filter((w) => w.status !== "certified" || true);
+  const active = s.workOrders.filter((w) => w.status !== "certified");
   const gmv = s.quotes.filter((q) => q.status === "approved").reduce((a, q) => a + computeQuote(q).total, 0);
   const pendingKyc = s.vendors.filter((v) => v.kyc === "pending").length + s.sites.filter((x) => x.status === "pending").length;
   const slaLeft = (l: Lead) => l.createdAt + l.slaMins * 60000 - now;
@@ -147,6 +149,7 @@ function AdminTower() {
         {tab === "proofs" && <KCard title="Proof of Display Certification Queue" bodyClass=""><WorkOrderRows only="proof_submitted" /></KCard>}
         {tab === "vendors" && <VendorKyc />}
 
+        <Link to="/reports"><Btn variant="secondary">Reports & activity</Btn></Link>
         <KCard title="Recent activity" bodyClass="divide-y divide-line">
           {s.activity.slice(0, 6).map((a, i) => (
             <div key={i} className="px-5 py-3 text-[13px] flex gap-3"><span className="font-mono text-[12px] text-mute w-28 shrink-0">{a.ref}</span><span className="flex-1">{a.text}</span><span className="text-mute text-[12px]">{a.who}</span></div>

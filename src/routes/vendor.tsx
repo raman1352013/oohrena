@@ -16,6 +16,8 @@ export const Route = createFileRoute("/vendor")({
     { name: "description", content: "List media assets with GPS, manage work orders and upload day/night proof of display." },
     { property: "og:title", content: "Vendor Space Hub — OOHRENA" },
     { property: "og:description", content: "Media owners list sites and upload GPS-stamped proofs." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: VendorHub,
 });
@@ -33,7 +35,7 @@ function compress(file: File): Promise<string> {
     img.src = URL.createObjectURL(file);
   });
 }
-/** Simulated hardware GPS stamp: offset from the registered asset by a few metres (or far, to test rejection). */
+/** Simulated hardware simulated GPS stamp: offset from the registered asset by a few metres (or far, to test rejection). */
 function gpsStamp(site: { lat: number; lng: number }, offsite: boolean) {
   const m = offsite ? 120 + Math.random() * 200 : 5 + Math.random() * 35;
   const ang = Math.random() * Math.PI * 2;
@@ -50,7 +52,7 @@ function VendorHub() {
   return (
     <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
       <div className="flex items-center gap-3"><Avatar dark>{v.initials}</Avatar><div><Eyebrow>Vendor Space Hub</Eyebrow><h1 className="text-[22px] font-semibold">{v.name}</h1></div>
-        <Pill tone={v.kyc === "verified" ? "verified" : "hold"} className="ml-auto">{v.kyc === "verified" ? "KYC Verified — GSTIN & PAN Active" : "KYC under review"}</Pill></div>
+        <Pill tone={v.kyc === "verified" ? "verified" : "hold"} className="ml-auto">{v.kyc === "verified" ? "Demo KYC approved" : "KYC under review"}</Pill></div>
       {!currentVendorId(s.role) && <p className="text-[12px] text-mute">Viewing as Bundelkhand Media. Switch role in the header to act as another vendor.</p>}
       <KCard title="Assigned work orders" bodyClass="divide-y divide-line">
         {wos.length ? wos.map((w) => <WORow key={w.id} w={w} />) : <Empty title="No work orders assigned" hint="Work orders arrive when a client approves a quote for your site." />}
@@ -88,7 +90,7 @@ function WORow({ w }: { w: WorkOrder }) {
       const img = await compress(f);
       await new Promise((r) => setTimeout(r, 900)); // acquiring GPS fix
       actions.submitProof(w.id, kind, img, gpsStamp(site, offsite));
-      toast.success(`${kind === "day" ? "Day" : "Night"} proof uploaded with GPS stamp`);
+      toast.success(`${kind === "day" ? "Day" : "Night"} proof uploaded with simulated GPS`);
     } catch { toast.error("Could not read that photo"); }
     setBusy(undefined);
     return undefined;
@@ -106,7 +108,7 @@ function WORow({ w }: { w: WorkOrder }) {
           <Input className="w-48 h-9" placeholder="Installer name" value={w.installer} onChange={(e) => actions.vendorUpdateWO(w.id, { installer: e.target.value })} />
           {(["day", "night"] as const).map((k) => (
             <label key={k} className={`h-9 px-3 rounded-lg border text-[12px] font-medium flex items-center gap-2 cursor-pointer ${w[k] ? "border-verified text-verified" : "border-line bg-card"}`}>
-              <Camera size={14} />{busy === k ? "Acquiring GPS…" : w[k] ? `${k === "day" ? "Day" : "Night"} ✓ ${w[k]!.distance}m` : `Capture ${k === "day" ? "Day" : "Night"} proof`}
+              <Camera size={14} />{busy === k ? "Preparing photo…" : w[k] ? `${k === "day" ? "Day" : "Night"} ✓ ${w[k]!.distance}m` : `Capture ${k === "day" ? "Day" : "Night"} proof`}
               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => upload(k, e.target.files?.[0])} />
             </label>))}
           <label className="text-[12px] text-mute flex items-center gap-1"><input type="checkbox" checked={offsite} onChange={(e) => setOffsite(e.target.checked)} />Simulate off-site GPS</label>

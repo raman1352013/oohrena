@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as PartnerRouteImport } from './routes/partner'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as VendorRouteImport } from './routes/vendor'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminProofWoIdRouteImport } from './routes/admin.proof.$woId'
@@ -38,6 +39,11 @@ const FinanceRoute = FinanceRouteImport.update({
 const PartnerRoute = PartnerRouteImport.update({
   id: '/partner',
   path: '/partner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VendorRoute = VendorRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/client': typeof ClientRoute
   '/finance': typeof FinanceRoute
   '/partner': typeof PartnerRoute
+  '/reports': typeof ReportsRoute
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/proof/$woId': typeof AdminProofWoIdRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/client': typeof ClientRoute
   '/finance': typeof FinanceRoute
   '/partner': typeof PartnerRoute
+  '/reports': typeof ReportsRoute
   '/vendor': typeof VendorRoute
   '/admin': typeof AdminIndexRoute
   '/admin/proof/$woId': typeof AdminProofWoIdRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/client': typeof ClientRoute
   '/finance': typeof FinanceRoute
   '/partner': typeof PartnerRoute
+  '/reports': typeof ReportsRoute
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/proof/$woId': typeof AdminProofWoIdRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/finance'
     | '/partner'
+    | '/reports'
     | '/vendor'
     | '/admin/'
     | '/admin/proof/$woId'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/finance'
     | '/partner'
+    | '/reports'
     | '/vendor'
     | '/admin'
     | '/admin/proof/$woId'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/client'
     | '/finance'
     | '/partner'
+    | '/reports'
     | '/vendor'
     | '/admin/'
     | '/admin/proof/$woId'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   ClientRoute: typeof ClientRoute
   FinanceRoute: typeof FinanceRoute
   PartnerRoute: typeof PartnerRoute
+  ReportsRoute: typeof ReportsRoute
   VendorRoute: typeof VendorRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminProofWoIdRoute: typeof AdminProofWoIdRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/partner'
       fullPath: '/partner'
       preLoaderRoute: typeof PartnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vendor': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClientRoute: ClientRoute,
   FinanceRoute: FinanceRoute,
   PartnerRoute: PartnerRoute,
+  ReportsRoute: ReportsRoute,
   VendorRoute: VendorRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminProofWoIdRoute: AdminProofWoIdRoute,

@@ -10,6 +10,8 @@ export const Route = createFileRoute("/print/quote/$quoteId")({
     { name: "description", content: "Printable 18% GST quotation." },
     { property: "og:title", content: `Quotation ${params.quoteId} — OOHRENA` },
     { property: "og:description", content: "Printable 18% GST quotation." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: PrintQuote,
 });

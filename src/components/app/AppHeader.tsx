@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ChevronDown, Search } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ROLES, actions, getState, useStore } from "@/lib/store";
+import { Btn } from "@/components/app/kit";
 import { cn } from "@/lib/utils";
 
 const TITLES: [string, string][] = [
@@ -41,7 +42,7 @@ export function AppHeader() {
     a.href = URL.createObjectURL(blob);
     a.download = `oohrena-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    toast.success("Database backup downloaded");
+    toast.success("Browser demo data exported");
   }
 
   return (
@@ -79,12 +80,13 @@ export function AppHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <button onClick={backup} className="hidden md:block h-8 px-3 rounded-lg border border-navy-foreground/20 text-[12px] text-navy-foreground/80 hover:bg-navy-foreground/10">DB Backup</button>
+        <Btn variant="ghost" onClick={backup} className="hidden md:block h-8 px-3 border border-navy-foreground/20 text-navy-foreground/80">Export demo</Btn>
         <DropdownMenu>
           <DropdownMenuTrigger className="w-8 h-8 rounded-full bg-navy-foreground/15 grid place-items-center text-[12px] font-semibold">{r.initials}</DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>{r.sub}</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => nav({ to: r.home })}>My workspace</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => nav({ to: "/reports" })}>Reports & activity</DropdownMenuItem>
             <DropdownMenuItem onClick={() => { if (confirm("Reset all demo data to the seeded dossier?")) { actions.reset(); toast.success("Demo data reset"); } }}>Reset demo data</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

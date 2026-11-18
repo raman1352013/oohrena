@@ -34,13 +34,13 @@ export function RequestQuoteDialog({ site, months, open, onOpenChange, source = 
         {done ? (
           <div className="text-center py-4">
             <CheckCircle2 className="mx-auto text-verified" size={40} />
-            <h3 className="text-lg font-semibold mt-3">Quotation requested</h3>
+            <h3 className="text-lg font-semibold mt-3">Demo inquiry saved</h3>
             <p className="text-[13px] text-mute mt-2">Your reference is <b className="font-mono text-ink">{done}</b>. Our operations team reviews every inquiry and sends an itemized GST quote within 2 hours.</p>
             <div className="flex justify-center gap-2 mt-5"><Btn variant="secondary" onClick={() => onOpenChange(false)}>Keep browsing</Btn><Link to="/client"><Btn>Go to Client Portal</Btn></Link></div>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
-            <DialogHeader><DialogTitle>Request Quotation</DialogTitle><DialogDescription>{site?.name} · {site?.city} · {months} month{months > 1 ? "s" : ""}</DialogDescription></DialogHeader>
+            <DialogHeader><DialogTitle>Demo inquiry</DialogTitle><DialogDescription>{site?.name} · {site?.city} · {months} month{months > 1 ? "s" : ""}</DialogDescription></DialogHeader>
             <div className="grid sm:grid-cols-2 gap-3">
               <Input placeholder="Company / Brand" value={f.client} onChange={set("client")} />
               <Input placeholder="Contact name" value={f.contact} onChange={set("contact")} />
@@ -51,7 +51,7 @@ export function RequestQuoteDialog({ site, months, open, onOpenChange, source = 
             </div>
             <Textarea placeholder="Creative or targeting notes (optional)" value={f.note} onChange={set("note")} />
             {err && <p className="text-[12px] text-destructive">{err}</p>}
-            <Btn type="submit" className="w-full">Submit for Admin review</Btn>
+            <Btn type="submit" className="w-full">Save demo inquiry for Admin review</Btn>
           </form>
         )}
       </DialogContent>

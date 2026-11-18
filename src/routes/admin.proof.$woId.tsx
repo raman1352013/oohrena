@@ -17,6 +17,8 @@ export const Route = createFileRoute("/admin/proof/$woId")({
     { name: "description", content: "Day & Night proof of display certification with GPS hardware check." },
     { property: "og:title", content: `Proof of Display ${params.woId} — OOHRENA` },
     { property: "og:description", content: "Day & Night proof of display certification with GPS hardware check." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: ProofPage,
 });
@@ -74,7 +76,7 @@ function ProofPage() {
         <div className="p-5 flex items-center gap-4"><span className={`w-8 h-8 rounded-full grid place-items-center ${both ? (slaMet ? "bg-navy text-navy-foreground" : "bg-destructive text-destructive-foreground") : "bg-muted text-mute"}`}><Check size={15} /></span>
           <div><div className="text-[12px] text-mute">Mounting SLA</div><div className="text-[14px]">{!both ? <><b>Pending</b> <span className="text-mute">— awaiting both proofs</span></> : slaMet ? <><b>Met</b> <span className="text-mute">— completed on schedule</span></> : <><b>Missed</b> <span className="text-mute">— uploaded after deadline</span></>}</div></div></div>
         <div className="p-5 flex items-center gap-4"><span className={`w-8 h-8 rounded-full grid place-items-center ${gpsOk ? "bg-navy text-navy-foreground" : both ? "bg-destructive text-destructive-foreground" : "bg-muted text-mute"}`}><MapPin size={15} /></span>
-          <div><div className="text-[12px] text-mute">GPS Hardware Stamp</div><div className="text-[14px]">{w.day || w.night ? <><b className="font-mono">{maxD}m</b> <b>from registered asset</b> <span className="text-mute">— {gpsOk ? `<${GPS_THRESHOLD_M}m check passed` : both ? `exceeds ${GPS_THRESHOLD_M}m threshold` : "awaiting second proof"}</span></> : <span className="text-mute">No stamps yet</span>}</div></div></div>
+          <div><div className="text-[12px] text-mute">Simulated GPS Stamp</div><div className="text-[14px]">{w.day || w.night ? <><b className="font-mono">{maxD}m</b> <b>from registered asset</b> <span className="text-mute">— {gpsOk ? `<${GPS_THRESHOLD_M}m check passed` : both ? `exceeds ${GPS_THRESHOLD_M}m threshold` : "awaiting second proof"}</span></> : <span className="text-mute">No stamps yet</span>}</div></div></div>
       </div>
 
       <div className="mt-5 grid lg:grid-cols-[1fr_1fr_392px] gap-5">
@@ -85,7 +87,7 @@ function ProofPage() {
             <Eyebrow>Vendor & Installer</Eyebrow>
             <div className="mt-3 text-[13px] divide-y divide-line">
               <div className="flex justify-between py-3"><span className="text-mute">Vendor</span><span className="font-medium">{v.name}</span></div>
-              <div className="flex justify-between py-3"><span className="text-mute">Installer</span><span className="text-right font-medium">{w.installer || "Not assigned"}<br /><span className="text-[11px] text-mute font-normal">Android APK v1.2</span></span></div>
+              <div className="flex justify-between py-3"><span className="text-mute">Installer</span><span className="text-right font-medium">{w.installer || "Not assigned"}<br /><span className="text-[11px] text-mute font-normal">Browser demo</span></span></div>
               <div className="flex justify-between py-3"><span className="text-mute">Material</span><span className="font-medium">{w.material}</span></div>
             </div>
           </section>
@@ -102,7 +104,7 @@ function ProofPage() {
                 <label className="flex gap-3 mt-4 text-[13px] cursor-pointer"><Checkbox checked={dayOk} disabled={!w.day} onCheckedChange={(v) => setDayOk(!!v)} className="mt-0.5 rounded-[4px]" />Day mounting verified (no wrinkles, correct creative artwork)</label>
                 <label className="flex gap-3 mt-3 text-[13px] cursor-pointer"><Checkbox checked={nightOk} disabled={!w.night} onCheckedChange={(v) => setNightOk(!!v)} className="mt-0.5 rounded-[4px]" />Night lighting verified (all floodlights operational)</label>
                 {both && !gpsOk && <p className="text-[12px] text-destructive mt-3">GPS stamp is outside {GPS_THRESHOLD_M}m. This proof can only be rejected.</p>}
-                <Btn className="w-full mt-5" disabled={!dayOk || !nightOk || !gpsOk} onClick={() => { actions.certify(w.id); toast.success("Certified · proof released to client, escrow sent to checker"); }}>Certify Proof & Trigger Maker-Checker Escrow</Btn>
+                <Btn className="w-full mt-5" disabled={!dayOk || !nightOk || !gpsOk} onClick={() => { actions.certify(w.id); toast.success("Certified · proof released to client, escrow sent to checker"); }}>Certify sample proof & create demo payout</Btn>
                 <Btn variant="secondary" className="w-full mt-2.5" disabled={!w.day && !w.night} onClick={() => setRej(true)}>Reject with Mandatory Reason</Btn>
               </>
             )}

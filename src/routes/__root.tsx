@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "OOHRENA — Outdoor x Digital x Trackable" },
-      { name: "description", content: "360° outdoor and digital advertising marketplace with GST quotes, 48h holds and GPS-verified proof of display." },
+      { name: "description", content: "OOHRENA outdoor and digital media marketplace staging preview with sample quotes and campaign tracking." },
       { property: "og:title", content: "OOHRENA — Outdoor x Digital x Trackable" },
       { property: "og:description", content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!" },
       { property: "og:type", content: "website" },
@@ -130,6 +130,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <div className="min-h-screen bg-canvas font-sans text-ink">
         <AppHeader />
+        <div className="no-print border-b border-hold/30 bg-hold-soft text-hold px-4 py-2 text-[12px] text-center">DEMO / SAMPLE — Not bookable. Quotes, payments and GPS proofs are simulated; changes stay in this browser.</div>
         <Outlet />
       </div>
       <Toaster richColors position="top-right" />

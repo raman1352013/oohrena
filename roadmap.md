@@ -6,3 +6,7 @@
 - [x] Vendor hub (asset upload, work orders, proof upload)
 - [x] Finance maker-checker ledger + CSV
 - [x] Partner referrals
+- [x] Review all ten modules against compulsory-modules v1.0 and document gaps
+- [x] Frontend alignment: honest demo labels, discovery/compare, client history/payment visibility, reports/activity
+- [x] Verify updated frontend flows and layouts
+- [ ] Production MVP acceptance — blocked by absent real accounts, shared data, verified inventory and payment evidence

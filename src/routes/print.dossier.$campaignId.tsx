@@ -11,6 +11,8 @@ export const Route = createFileRoute("/print/dossier/$campaignId")({
     { name: "description", content: "Printable campaign audit dossier with certified day and night GPS proofs." },
     { property: "og:title", content: `Campaign Audit Dossier ${params.campaignId}` },
     { property: "og:description", content: "Certified proof of display with full record chain." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
   ] }),
   component: Dossier,
 });
@@ -38,7 +40,7 @@ function Dossier() {
       <div className="grid grid-cols-2 gap-4 mt-6">
         {([["Day proof", w.day], ["Night illumination", w.night]] as const).map(([k, p]) => p && (
           <div key={k} className="border border-line rounded-lg overflow-hidden"><img src={proofSrc(p.image)} alt={k} className="h-48 w-full object-cover" />
-            <div className="p-3 text-[12px] space-y-0.5"><b>{k}</b><div>{ist(p.ts)}</div><div className="font-mono">{latlng(p.lat, p.lng)}</div><div>GPS distance {p.distance}m (&lt;50m passed)</div></div></div>))}
+            <div className="p-3 text-[12px] space-y-0.5"><b>{k}</b><div>{ist(p.ts)}</div><div className="font-mono">{latlng(p.lat, p.lng)}</div><div>Simulated GPS distance {p.distance}m (demo threshold check)</div></div></div>))}
       </div>
       <table className="w-full mt-6"><tbody>
         {[["Media", `${site.category} · ${site.size}`], ["Vendor", `${v.name} (GSTIN ${v.gstin})`], ["Installer", w.installer], ["Material", w.material], ["Certified", `${ist(c.certifiedAt)} by ${c.certifiedBy}`], ["Campaign value (incl. 18% GST)", inr(computeQuote(q).total)], ["Escrow", e ? (e.status === "released" ? `Released · UTR ${e.utr}` : "Awaiting finance checker") : "—"]].map(([k, val]) => (

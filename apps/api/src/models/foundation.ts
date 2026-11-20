@@ -24,6 +24,15 @@ const userSchema = new Schema(
     lockedUntil: { type: Date, default: null, select: false },
     lastLoginAt: { type: Date, default: null },
     createdBy: { type: String, default: null },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecretEncrypted: { type: String, default: null, select: false },
+    twoFactorRecoveryCodes: { type: [String], default: [], select: false },
+    passwordResetTokenHash: { type: String, default: null, select: false },
+    passwordResetExpiresAt: { type: Date, default: null, select: false },
+    emailVerificationTokenHash: { type: String, default: null, select: false },
+    emailVerificationExpiresAt: { type: Date, default: null, select: false },
+    mobileOtpHash: { type: String, default: null, select: false },
+    mobileOtpExpiresAt: { type: Date, default: null, select: false },
   },
   ts,
 );
@@ -41,6 +50,7 @@ const sessionSchema = new Schema(
     expiresAt: { type: Date, required: true },
     lastSeenAt: { type: Date, default: () => new Date() },
     revokedAt: { type: Date, default: null },
+    reauthAt: { type: Date, default: () => new Date() },
     ip: String,
     device: String,
   },
@@ -49,6 +59,18 @@ const sessionSchema = new Schema(
 // Mongo removes expired sessions automatically.
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 export const Session = mongoose.model("Session", sessionSchema, "sessions");
+
+/* ---------- Two-factor login challenges (5-minute TTL) ---------- */
+const twoFactorChallengeSchema = new Schema(
+  {
+    tokenHash: { type: String, required: true, unique: true },
+    userId: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+  },
+  { versionKey: false },
+);
+twoFactorChallengeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+export const TwoFactorChallenge = mongoose.model("TwoFactorChallenge", twoFactorChallengeSchema, "two_factor_challenges");
 
 /* ---------- Organisation profiles ---------- */
 const contactSchema = new Schema({ name: String, email: String, mobile: String, designation: String }, { _id: false });

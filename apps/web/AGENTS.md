@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -27,9 +28,11 @@ use the editor.
   `LOVABLE_API_KEY`. When Lovable does not provide one, users can bring their
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
+
 <!-- LOVABLE:END -->
 
 ## Project rules
+
 - Accounts and sessions are real: the Express API in `apps/api` (MongoDB) owns them. `src/lib/api.ts` is the only fetch wrapper and `src/lib/auth.ts` holds session hooks and the route→role map that `AuthGate` uses; why: one place to change API contracts, and access is enforced server-side (the UI gate is UX only).
 - Workspace screens for modules 2–9 still read the browser demo store (`src/lib/store.ts`, localStorage); its `role` is synced from the signed-in role by `useSyncDemoRole`. Move each screen onto `/api/v1` module by module and delete the matching store code; why: no screen may present sample data as real once its module is live.
 - Routes render client-side (`defaultSsr: false` in `src/start.ts`); in dev, Vite proxies `/api` to `http://localhost:4000` (override with `API_PROXY_TARGET`); deployed builds use `VITE_API_URL`.

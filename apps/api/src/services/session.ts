@@ -16,7 +16,8 @@ export const dummyHashFor = (cfg: Config) => (dummyHash ??= bcrypt.hashSync("not
 export async function startSession(cfg: Config, req: Request, res: Response, userId: string, session?: ClientSession) {
   const token = newToken();
   const expiresAt = new Date(Date.now() + cfg.SESSION_TTL_HOURS * 3600_000);
-  await Session.create([{ tokenHash: hashToken(token), userId, expiresAt, ip: req.ip, device: req.get("user-agent")?.slice(0, 200) }], { session });
+  const now = new Date();
+  await Session.create([{ tokenHash: hashToken(token), userId, expiresAt, ip: req.ip, device: req.get("user-agent")?.slice(0, 200), reauthAt: now }], { session });
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: cfg.secureCookies,
@@ -36,11 +37,24 @@ export async function endSession(req: Request, res: Response) {
 export const revokeAllSessions = (userId: string, session?: ClientSession) =>
   Session.updateMany({ userId, revokedAt: null }, { $set: { revokedAt: new Date() } }, { session });
 
-export const toSessionUser = (u: { _id: string; email: string; fullName: string; role: string; status?: string | null; orgId?: string | null }): SessionUser => ({
+export const toSessionUser = (u: {
+  _id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  status?: string | null;
+  orgId?: string | null;
+  twoFactorEnabled?: boolean | null;
+  emailVerifiedAt?: Date | null;
+  mobileVerifiedAt?: Date | null;
+}): SessionUser => ({
   userId: u._id,
   email: u.email,
   fullName: u.fullName,
   role: u.role as SessionUser["role"],
   status: (u.status ?? "active") as SessionUser["status"],
   orgId: u.orgId ?? null,
+  twoFactorEnabled: !!u.twoFactorEnabled,
+  emailVerified: !!u.emailVerifiedAt,
+  mobileVerified: !!u.mobileVerifiedAt,
 });

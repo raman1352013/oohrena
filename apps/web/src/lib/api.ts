@@ -24,9 +24,13 @@ export class ApiError extends Error {
 }
 
 /** Turns an API-relative URL from a response (e.g. /api/v1/files/…) into one the browser can load. */
-export const assetUrl = (u: string) => (u.startsWith("/api/v1") ? `${BASE}${u.slice("/api/v1".length)}` : u);
+export const assetUrl = (u: string) =>
+  u.startsWith("/api/v1") ? `${BASE}${u.slice("/api/v1".length)}` : u;
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown; form?: FormData; signal?: AbortSignal } = {}): Promise<T> {
+export async function api<T>(
+  path: string,
+  init: { method?: string; body?: unknown; form?: FormData; signal?: AbortSignal } = {},
+): Promise<T> {
   let res: Response;
   const hasBody = init.body !== undefined || init.form !== undefined;
   try {
@@ -34,17 +38,29 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
       method: init.method ?? (hasBody ? "POST" : "GET"),
       credentials: "include",
       // For FormData the browser sets the multipart boundary itself.
-      headers: init.body !== undefined ? { Accept: "application/json", "Content-Type": "application/json" } : { Accept: "application/json" },
+      headers:
+        init.body !== undefined
+          ? { Accept: "application/json", "Content-Type": "application/json" }
+          : { Accept: "application/json" },
       body: init.form ?? (init.body === undefined ? null : JSON.stringify(init.body)),
       signal: init.signal ?? null,
     });
   } catch {
-    throw new ApiError(0, "NETWORK_ERROR", "Can't reach the OOHRENA server. Check your connection and try again.");
+    throw new ApiError(
+      0,
+      "NETWORK_ERROR",
+      "Can't reach the OOHRENA server. Check your connection and try again.",
+    );
   }
   const json = (await res.json().catch(() => null)) as ({ data: T } & Partial<ApiErrorBody>) | null;
   if (!res.ok || !json || json.error) {
     const e = json?.error;
-    throw new ApiError(res.status, e?.code ?? "INTERNAL_ERROR", e?.message ?? `Request failed (${res.status})`, e?.details);
+    throw new ApiError(
+      res.status,
+      e?.code ?? "INTERNAL_ERROR",
+      e?.message ?? `Request failed (${res.status})`,
+      e?.details,
+    );
   }
   return json.data;
 }

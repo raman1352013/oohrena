@@ -1,6 +1,6 @@
 import { Router } from "express";
 import mongoose from "mongoose";
-import type { z } from "zod";
+import { z } from "zod";
 import { consentInput } from "@oohrena/shared";
 import { audit } from "../lib/audit.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
@@ -44,5 +44,42 @@ export function adminSystemRoutes() {
     const items = await SystemEvent.find({ type: { $in: ["deploy", "backup", "restore"] } }).sort({ at: -1 }).limit(100).lean();
     res.json({ data: items });
   });
+
+  /** System overview: deployments, backups, error counts. */
+  r.get("/system/overview", requirePermission("system.deployments.read"), async (_req, res) => {
+    const [deployments, backups, errorCount, recentErrors] = await Promise.all([
+      SystemEvent.find({ type: "deploy" }).sort({ at: -1 }).limit(20).lean(),
+      SystemEvent.find({ type: { $in: ["backup", "restore"] } }).sort({ at: -1 }).limit(20).lean(),
+      SystemEvent.countDocuments({ type: "error" }),
+      SystemEvent.find({ type: "error" }).sort({ at: -1 }).limit(10).lean(),
+    ]);
+    res.json({
+      data: {
+        deployments,
+        backups,
+        errorCount,
+        recentErrors,
+      },
+    });
+  });
+
+  /** Record deploy or backup event (e.g. from CI or backup job). */
+  r.post(
+    "/system/events",
+    requirePermission("system.deployments.read"),
+    validateBody(
+      z.object({
+        type: z.enum(["deploy", "backup", "restore", "error"]),
+        detail: z.record(z.string(), z.unknown()).default({}),
+      }),
+    ),
+    async (req, res) => {
+      const { type, detail } = req.body as { type: "deploy" | "backup" | "restore" | "error"; detail: Record<string, unknown> };
+      const event = await SystemEvent.create({ type, detail, at: new Date() });
+      await audit(req, { action: `system.${type}`, entity: "system", entityId: String(event._id), after: { detail } });
+      res.status(201).json({ data: event });
+    },
+  );
+
   return r;
 }

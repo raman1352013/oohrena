@@ -17,6 +17,8 @@ export type ErrorCode =
   | "ACCOUNT_LOCKED"
   | "RATE_LIMITED"
   | "INVALID_TRANSITION"
+  | "REAUTH_REQUIRED"
+  | "TWO_FACTOR_REQUIRED"
   | "INTERNAL_ERROR";
 
 export type SessionUser = {
@@ -27,4 +29,7 @@ export type SessionUser = {
   status: "active" | "pending" | "suspended";
   /** CLT-/VND-/GP- id of the organisation profile tied to this login, if any. */
   orgId: string | null;
+  twoFactorEnabled?: boolean;
+  emailVerified?: boolean;
+  mobileVerified?: boolean;
 };

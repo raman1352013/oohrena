@@ -1,6 +1,6 @@
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ROLE_HOME, ROLE_LABEL, rolesFor, useSession, useSyncDemoRole } from "@/lib/auth";
+import { ROLE_HOME, ROLE_LABEL, rolesFor, useSession } from "@/lib/auth";
 import { Btn } from "@/components/app/kit";
 
 /**
@@ -11,14 +11,16 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const href = useRouterState({ select: (s) => s.location.href });
   const session = useSession();
-  useSyncDemoRole(session.data);
   const roles = rolesFor(path);
 
   if (!roles) return <>{children}</>;
   if (session.isPending) return <GateMessage title="Checking your session…" />;
   if (session.isError) {
     return (
-      <GateMessage title="Can't reach the OOHRENA server" body="We couldn't confirm your sign-in. Check your connection and try again.">
+      <GateMessage
+        title="Can't reach the OOHRENA server"
+        body="We couldn't confirm your sign-in. Check your connection and try again."
+      >
         <Btn onClick={() => void session.refetch()}>Try again</Btn>
       </GateMessage>
     );
@@ -27,15 +29,28 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!user) return <Navigate to="/login" search={{ redirect: href }} replace />;
   if (!roles.includes(user.role)) {
     return (
-      <GateMessage title="This workspace isn't available to your account" body={`You're signed in as ${ROLE_LABEL[user.role]}. Ask an OOHRENA admin if you need different access.`}>
-        <Link to={ROLE_HOME[user.role]}><Btn>Go to my workspace</Btn></Link>
+      <GateMessage
+        title="This workspace isn't available to your account"
+        body={`You're signed in as ${ROLE_LABEL[user.role]}. Ask an OOHRENA admin if you need different access.`}
+      >
+        <Link to={ROLE_HOME[user.role]}>
+          <Btn>Go to my workspace</Btn>
+        </Link>
       </GateMessage>
     );
   }
   return <>{children}</>;
 }
 
-function GateMessage({ title, body, children }: { title: string; body?: string; children?: ReactNode }) {
+function GateMessage({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body?: string;
+  children?: ReactNode;
+}) {
   return (
     <main className="px-4 py-24 flex justify-center">
       <div className="max-w-md text-center">

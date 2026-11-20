@@ -11,21 +11,24 @@ import { decryptString } from "../lib/crypto.js";
 import { badRequest, notFound } from "../lib/errors.js";
 import { renderPdf, pdfMoney } from "../lib/pdf.js";
 import { readUpload } from "../lib/storage.js";
-import { requirePermission } from "../middleware/auth.js";
+import { requireAuth, requirePermission, requireRecentAuth } from "../middleware/auth.js";
 import { currentVendor } from "../middleware/upload.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
 import { Booking } from "../models/booking.js";
 import { StoredFile } from "../models/files.js";
-import { Invoice, Payment, PaymentHistory, VendorPayable } from "../models/finance.js";
+import { CreditNote, Invoice, Payment, PaymentHistory, VendorPayable } from "../models/finance.js";
 import { Vendor } from "../models/foundation.js";
 import { VendorBank } from "../models/vendor-kyc.js";
-import { createInvoice, decidePayment, editPayment, paymentView, reconcile, reconciliationCsv, recordPayment, syncPayables } from "../services/finance.js";
+import { createInvoice, decidePayment, editPayment, paymentView, reconcile, reconciliationCsv, recordPayment, renderCreditNotePdf, renderInvoicePdf, syncPayables } from "../services/finance.js";
+import { logReportExport } from "../services/reports.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_DOC_BYTES, files: 1, fields: 20 } });
 type InvDoc = Awaited<ReturnType<typeof createInvoice>>;
 const invoiceView = (i: InvDoc) => ({
   invoiceId: i._id, bookingId: i.bookingId, clientId: i.clientId ?? null, billTo: i.billTo, lines: i.lines, subtotal: i.subtotal, serviceFee: i.serviceFee,
-  cgst: i.cgst, sgst: i.sgst, gst: i.gst, total: i.total, advancePct: i.advancePct, advanceAmount: i.advanceAmount,
+  cgst: i.cgst, sgst: i.sgst, igst: i.igst ?? 0, gst: i.gst, total: i.total,
+  sacCode: i.sacCode ?? "998361", placeOfSupply: i.placeOfSupply ?? null, isInterState: i.isInterState ?? false,
+  advancePct: i.advancePct, advanceAmount: i.advanceAmount,
   issuedAt: i.issuedAt, dueDate: fromDay(i.dueDate.getTime()), status: i.status,
 });
 const payableView = (p: { bookingId: string; vendorId: string; base: number; gst: number; amount: number; paid: number; status: string; dueDate: Date }) => ({
@@ -71,11 +74,49 @@ export function financeRoutes(cfg: Config) {
     res.json({ data: (await Invoice.find({}).sort({ issuedAt: -1 }).limit(200).lean()).map((i) => invoiceView(i as never)) });
   });
 
+  r.get("/invoices/:id", requireAuth, async (req, res) => {
+    const role = req.user!.role;
+    const inv = await Invoice.findById(String(req.params.id)).lean<InvDoc>();
+    if (!inv) throw notFound("Invoice not found");
+    if (role === "client" && inv.clientId !== req.user!.orgId) throw notFound("Invoice not found");
+    if (role !== "admin" && role !== "finance" && role !== "client") throw notFound("Invoice not found");
+
+    if (req.query.format === "pdf") {
+      await audit(req, { action: "invoice.export.pdf", entity: "invoice", entityId: inv._id });
+      const pdf = await renderInvoicePdf(inv);
+      res.setHeader("Content-Disposition", `inline; filename="invoice-${inv._id}.pdf"`);
+      return res.type("application/pdf").send(pdf);
+    }
+    res.json({ data: invoiceView(inv) });
+  });
+
+  /* ---------- Credit Notes ---------- */
+  r.get("/credit-notes", requirePermission("finance.manage"), async (_req, res) => {
+    const items = await CreditNote.find({}).sort({ issuedAt: -1 }).limit(200).lean();
+    res.json({ data: items });
+  });
+
+  r.get("/credit-notes/:id", requireAuth, async (req, res) => {
+    const role = req.user!.role;
+    const cn = await CreditNote.findById(String(req.params.id)).lean();
+    if (!cn) throw notFound("Credit note not found");
+    if (role === "client" && cn.clientId !== req.user!.orgId) throw notFound("Credit note not found");
+    if (role !== "admin" && role !== "finance" && role !== "client") throw notFound("Credit note not found");
+
+    if (req.query.format === "pdf") {
+      await audit(req, { action: "credit_note.export.pdf", entity: "credit_note", entityId: cn._id });
+      const pdf = await renderCreditNotePdf(cn);
+      res.setHeader("Content-Disposition", `inline; filename="credit-note-${cn._id}.pdf"`);
+      return res.type("application/pdf").send(pdf);
+    }
+    res.json({ data: cn });
+  });
+
   /* ---------- Payments: record (maker) → verify (checker) ---------- */
   const recorder = (direction: PaymentDirection, schema: z.ZodTypeAny) => async (req: import("express").Request, res: import("express").Response) => {
     const meta = schema.safeParse(req.body ?? {});
     if (!meta.success) throw badRequest("Please check the payment details", meta.error.flatten());
-    const p = await recordPayment(cfg, req, direction, meta.data, req.file);
+    const p = await recordPayment(cfg, req, direction, meta.data as never, req.file);
     res.status(201).json({ data: paymentView(p as never, "finance") });
   };
   r.post("/payments", requirePermission("finance.record"), upload.single("file"), recorder("client_receipt", paymentMetaInput));
@@ -96,7 +137,7 @@ export function financeRoutes(cfg: Config) {
     res.json({ data: paymentView((await editPayment(req, String(req.params.id), req.body as z.infer<typeof paymentEditInput>)) as never, "finance") });
   });
 
-  r.post("/payments/:id/verify", requirePermission("finance.verify"), validateBody(paymentDecisionInput), async (req, res) => {
+  r.post("/payments/:id/verify", requirePermission("finance.verify"), requireRecentAuth(), validateBody(paymentDecisionInput), async (req, res) => {
     const { decision, reason } = req.body as z.infer<typeof paymentDecisionInput>;
     res.json({ data: await decidePayment(req, String(req.params.id), decision, reason) });
   });
@@ -129,8 +170,8 @@ export function financeRoutes(cfg: Config) {
     res.json({ data: items.map((p) => ({ ...payableView(p), vendorName: vendors.find((v) => v._id === p.vendorId)?.legalName ?? null })) });
   });
 
-  /** Full account number for making a payout — Finance only, logged every time. */
-  r.get("/vendors/:id/bank", requirePermission("vendor.bank.read"), async (req, res) => {
+  /** Full account number for making a payout — Finance only, logged every time. Requires recent re-auth. */
+  r.get("/vendors/:id/bank", requirePermission("vendor.bank.read"), requireRecentAuth(), async (req, res) => {
     if (req.user!.role !== "finance") throw notFound();
     const b = await VendorBank.findOne({ vendorId: String(req.params.id) }).select("+accountNoEnc").lean();
     if (!b) throw notFound("No bank details on file for this vendor");
@@ -138,7 +179,7 @@ export function financeRoutes(cfg: Config) {
     res.json({ data: { vendorId: b.vendorId, accountName: b.accountName, accountNo: decryptString(cfg.encryptionKey, b.accountNoEnc!), ifsc: b.ifsc, bankName: b.bankName, verified: !!b.verifiedAt } });
   });
 
-  r.post("/vendors/:id/bank/verify", requirePermission("finance.verify"), async (req, res) => {
+  r.post("/vendors/:id/bank/verify", requirePermission("finance.verify"), requireRecentAuth(), async (req, res) => {
     const b = await VendorBank.findOneAndUpdate({ vendorId: String(req.params.id) }, { $set: { verifiedBy: req.user!.userId, verifiedAt: new Date() } }, { returnDocument: "after" }).lean();
     if (!b) throw notFound("No bank details on file for this vendor");
     await audit(req, { action: "vendor.bank.verify", entity: "vendor", entityId: b.vendorId });
@@ -150,7 +191,7 @@ export function financeRoutes(cfg: Config) {
     const { format } = parseQuery(z.object({ format: z.enum(["json", "csv", "pdf"]).default("json") }), req);
     const rec = await reconcile(String(req.params.bookingId));
     if (format === "json") return res.json({ data: rec });
-    await audit(req, { action: "finance.export", entity: "booking", entityId: rec.bookingId, after: { report: "reconciliation", format } });
+    await logReportExport(req, "reconciliation", { bookingId: rec.bookingId }, format);
     const name = `reconciliation-${rec.bookingId}.${format}`;
     res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
     if (format === "csv") return res.type("text/csv").send(reconciliationCsv(rec));
@@ -184,6 +225,10 @@ export function ownFinanceRoutes() {
   r.get("/clients/me/payments", requirePermission("payments.read.own"), async (req, res) => {
     const [invoices, payments] = await Promise.all([Invoice.find({ clientId: req.user!.orgId }).sort({ issuedAt: -1 }).lean(), Payment.find({ clientId: req.user!.orgId, direction: { $in: ["client_receipt", "refund"] }, status: { $ne: "rejected" } }).sort({ paidOn: -1 }).lean()]);
     res.json({ data: { invoices: invoices.map((i) => invoiceView(i as never)), payments: payments.map((p) => paymentView(p as never, "client")) } });
+  });
+  r.get("/clients/me/credit-notes", requirePermission("payments.read.own"), async (req, res) => {
+    const items = await CreditNote.find({ clientId: req.user!.orgId }).sort({ issuedAt: -1 }).lean();
+    res.json({ data: items });
   });
   return r;
 }

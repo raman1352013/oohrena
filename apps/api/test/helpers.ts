@@ -37,10 +37,15 @@ export function testApp(overrides: Record<string, unknown> = {}): { app: Express
 }
 
 let n = 0;
+let panSeq = 1000;
+let mobileSeq = 100000;
 export const uniq = () => `${Date.now().toString(36)}${(n++).toString(36)}`;
 
 /** Unique 10-digit mobile per call. */
-export const mobileFor = () => `+91${String(7000000000 + Math.floor(Math.random() * 999999999)).slice(0, 10)}`;
+export const mobileFor = () => `+917${String(100000000 + (mobileSeq++ % 800000000))}`;
+
+/** Unique valid PAN per call (5 letters + 4 digits + 1 letter). */
+export const panFor = () => `ABCDE${String(1000 + (panSeq++ % 8999))}F`;
 
 export const clientPayload = (o: Record<string, unknown> = {}) => ({
   fullName: "Ananya Test",
@@ -58,7 +63,7 @@ export const vendorPayload = (o: Record<string, unknown> = {}) => ({
   mobile: mobileFor(),
   password: GOOD_PW,
   legalName: "Test Media Pvt Ltd",
-  pan: `ABCDE${String(Math.floor(1000 + Math.random() * 8999))}F`,
+  pan: panFor(),
   city: "Gwalior",
   acceptTerms: true,
   ...o,

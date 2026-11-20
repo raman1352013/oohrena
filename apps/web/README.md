@@ -3,6 +3,7 @@
 OOHRENA — 360° Outdoor + Digital Advertising Marketplace web application banani hai, jisme Admin Control Tower, Public Media Marketplace, Client Portal aur Vendor Hub included ho. Ab advertising sirf dikhegi nahi... track bhi hogi.
 
 ### Locked
+
 - Visual Direction: "Clean Commercial" adopted look. Midnight Navy top navigation and header (#0B192C), crisp off-white workspace canvas (#F8FAFC), pure white cards (#FFFFFF) with crisp borders (#E2E8F0), vibrant Saffron/Orange (#F97316 / #EA580C) for primary CTA buttons, SLA urgency alerts, and active indicators. Emerald green for verified status, amber for 48h hold locks.
 - Branding & Identity: OOHRENA logo with gradient location pin mark, tagline "Outdoor x Digital x Trackable" and "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!".
 - 1-Click Staging Quick Role Switcher in header: Seamlessly test and switch between all verified roles (Admin: Central Operations Tower, Vendor: Bundelkhand Media & Gwalior Outdoor, Client: Tata Capital - Ananya Deshmukh, Finance: Meera Joshi Checker, Partner: City Growth Partner).
@@ -15,6 +16,7 @@ OOHRENA — 360° Outdoor + Digital Advertising Marketplace web application bana
 - Core Operating Principle: Client Transparency First. Every record follows the parent-child relational chain: Lead ID -> Quote ID -> Booking ID -> Work Order ID -> Campaign ID -> Escrow Payment Reference. No lead bypasses Admin review.
 
 ### Open
+
 - Public Media Inventory Marketplace: City selector (Delhi, Mumbai, Bengaluru, Hyderabad, Chennai, etc.), category filters (Hoardings/Billboards, Digital LED Screens, E-Rickshaw/Promo Vans, Bus/Metro Transit, Gantry, Retail Indoor), map and grid view, media detail modal with dynamic rate card, and "Request Quotation" modal.
 - Client Portal: Self-service client dashboard showing open quotations (Approve, Reject, Request Revision), 48h hold status, certified Day/Night GPS proofs, and 1-click printable Campaign Audit Dossier PDF.
 - Vendor Space Hub: Media asset upload form with GPS coordinates, size, rate card, assigned work orders, and camera proof upload simulation.

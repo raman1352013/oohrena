@@ -8,9 +8,10 @@ import { AppError, notFound } from "../lib/errors.js";
 import { withTransaction } from "../lib/tx.js";
 import { requirePermission } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
-import { Vendor } from "../models/foundation.js";
+import { User, Vendor } from "../models/foundation.js";
 import { DuplicateFlag, Inventory, InventoryHistory, type InventoryDoc } from "../models/inventory.js";
 import { toOwnerView, writeHistory } from "../services/inventory.js";
+import { notify } from "../services/notifications.js";
 
 const listQuery = z.object({
   status: z.enum(LISTING_STATUSES).optional(),
@@ -91,6 +92,14 @@ export function adminInventoryRoutes(cfg: Config) {
       if (set.dataType && set.dataType !== i.dataType) changes.push({ field: "dataType", old: (i.dataType ?? null) as never, new: set.dataType as never });
       await writeHistory(i._id, changes, req.user!.userId, i.version, session);
       await audit(req, { action: `inventory.${decision}`, entity: "inventory", entityId: i._id, before: { status: from, indicativePrice: i.indicativePrice ?? null, dataType: i.dataType ?? null }, after: { status: to, indicativePrice: updated.indicativePrice ?? null, dataType: updated.dataType ?? null }, reason: reason ?? null }, session);
+      const vUser = await User.findOne({ orgId: i.vendorId }).select("_id email mobile").lean();
+      if (vUser) {
+        await notify("inventory.decision", [{ userId: vUser._id, email: vUser.email, mobile: vUser.mobile }], {
+          inventoryId: i._id,
+          status: to,
+          reason: reason ?? "",
+        });
+      }
       return toOwnerView(updated);
     });
     res.json({ data: out });

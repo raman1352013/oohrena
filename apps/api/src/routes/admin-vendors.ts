@@ -10,6 +10,7 @@ import { User, Vendor } from "../models/foundation.js";
 import { Inventory } from "../models/inventory.js";
 import { VendorDocument } from "../models/vendor-kyc.js";
 import { kycDocsFor, maskPan, maskedBank } from "./vendors.js";
+import { notify } from "../services/notifications.js";
 
 const listQuery = z.object({
   kycStatus: z.enum(KYC_STATUSES).optional(),
@@ -96,6 +97,14 @@ export function adminVendorRoutes() {
       // A suspended vendor's live listings stop being visible immediately.
       if (to === "suspended") await Inventory.updateMany({ vendorId: v._id, status: "approved" }, { $set: { status: "suspended", statusReason: "Vendor suspended" } }, { session });
       await audit(req, { action: `vendor.kyc.${decision}`, entity: "vendor", entityId: v._id, before: { kycStatus: from }, after: { kycStatus: to }, reason: reason ?? null }, session);
+      const vUser = await User.findById(v.userId).select("_id email mobile").lean();
+      if (vUser) {
+        await notify("vendor.kyc.decision", [{ userId: vUser._id, email: vUser.email, mobile: vUser.mobile }], {
+          vendorId: v._id,
+          status: to,
+          reason: reason ?? "",
+        });
+      }
       return { vendorId: v._id, kycStatus: to, kycReason: reason ?? null };
     });
     res.json({ data: out });

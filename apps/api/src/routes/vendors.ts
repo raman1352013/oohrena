@@ -82,7 +82,7 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
   r.post("/me/documents", upload.single("file"), async (req, res) => {
     const v = await currentVendor(req);
     if (v.kycStatus === "approved") throw new AppError(409, "CONFLICT", "KYC is already approved. Contact OOHRENA to update documents.");
-    const type = z.enum(KYC_DOC_TYPES, { errorMap: () => ({ message: "Choose a document type" }) }).safeParse(req.body?.type);
+    const type = z.enum(KYC_DOC_TYPES, { error: "Choose a document type" }).safeParse(req.body?.type);
     if (!type.success) throw badRequest("Choose a document type", { fieldErrors: { type: [type.error.issues[0]!.message] } });
     if (!req.file) throw badRequest("Attach a file", { fieldErrors: { file: ["Attach a file"] } });
     const f = await saveUpload(cfg, req.file.buffer, {

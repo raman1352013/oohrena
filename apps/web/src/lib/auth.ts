@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import type { LoginInput, RegisterClientInput, RegisterVendorInput, Role, SessionUser } from "@oohrena/shared";
+import type {
+  LoginInput,
+  RegisterClientInput,
+  RegisterVendorInput,
+  Role,
+  SessionUser,
+} from "@oohrena/shared";
 import { api, ApiError } from "./api";
-import { actions, getState, type Role as DemoRole } from "./store";
 
 export const SESSION_KEY = ["session"] as const;
 
@@ -29,12 +33,15 @@ export const ROUTE_ROLES: { prefix: string; roles: readonly Role[] }[] = [
   { prefix: "/print", roles: ["admin", "finance", "client"] },
 ];
 /** Only same-app paths are accepted as a post-login destination. */
-export const safeRedirect = (v: unknown) => (typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : undefined);
+export const safeRedirect = (v: unknown) =>
+  typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : undefined;
 
-export const PUBLIC_PATHS = ["/", "/login", "/register"];
+export const PUBLIC_PATHS = ["/", "/login", "/register", "/privacy", "/terms", "/confidentiality"];
 
 export function rolesFor(path: string) {
-  return ROUTE_ROLES.find((r) => path === r.prefix || path.startsWith(`${r.prefix}/`))?.roles ?? null;
+  return (
+    ROUTE_ROLES.find((r) => path === r.prefix || path.startsWith(`${r.prefix}/`))?.roles ?? null
+  );
 }
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -61,13 +68,33 @@ export function useSession() {
   });
 }
 
-type AuthResult = { user: SessionUser };
+export const useCurrentUser = useSession;
+
+type AuthResult = {
+  user?: SessionUser;
+  status?: "2FA_REQUIRED" | "2FA_SETUP_REQUIRED";
+  challengeToken?: string;
+  email?: string;
+};
 
 export function useLogin() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: LoginInput) => api<AuthResult>("/auth/login", { body: input }),
-    onSuccess: (r) => qc.setQueryData(SESSION_KEY, r.user),
+    onSuccess: (r) => {
+      if (r.user) qc.setQueryData(SESSION_KEY, r.user);
+    },
+  });
+}
+
+export function useLogin2FA() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { challengeToken: string; code: string }) =>
+      api<{ user: SessionUser }>("/auth/2fa/login", { body: input }),
+    onSuccess: (r) => {
+      if (r.user) qc.setQueryData(SESSION_KEY, r.user);
+    },
   });
 }
 
@@ -82,7 +109,8 @@ export function useRegisterClient() {
 export function useRegisterVendor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: RegisterVendorInput) => api<AuthResult & { vendorId: string }>("/vendors/register", { body: input }),
+    mutationFn: (input: RegisterVendorInput) =>
+      api<AuthResult & { vendorId: string }>("/vendors/register", { body: input }),
     onSuccess: (r) => qc.setQueryData(SESSION_KEY, r.user),
   });
 }
@@ -104,11 +132,4 @@ export function useLogout() {
  * from that store, so keep it in step with the real signed-in role. Removed module by module
  * as each screen moves onto the API.
  */
-const DEMO_ROLE: Record<Role, DemoRole> = { admin: "admin", client: "client", vendor: "vendor-bm", finance: "finance", growth_partner: "partner" };
-export function useSyncDemoRole(user: SessionUser | null | undefined) {
-  useEffect(() => {
-    if (!user) return;
-    const want = DEMO_ROLE[user.role];
-    if (getState().role !== want) actions.setRole(want);
-  }, [user]);
-}
+export function useSyncDemoRole(_user?: SessionUser | null | undefined) {}

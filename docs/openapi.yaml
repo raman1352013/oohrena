@@ -1,0 +1,255 @@
+openapi: 3.1.0
+info:
+  title: OOHRENA Platform REST API
+  description: Official REST API specification for OOHRENA outdoor advertising marketplace.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Local development
+  - url: https://api.staging.oohrena.com/api/v1
+    description: Staging environment
+  - url: https://api.oohrena.com/api/v1
+    description: Production environment
+
+paths:
+  /system/health:
+    get:
+      summary: System health check
+      responses:
+        "200":
+          description: Health check OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: "ok" }
+                      db: { type: string, example: "up" }
+                      version: { type: string, example: "1.0.0" }
+
+  /auth/login:
+    post:
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Session issued or 2FA required
+        "401":
+          description: Invalid credentials
+        "429":
+          description: Account locked or rate limited
+
+  /auth/2fa/verify:
+    post:
+      summary: Verify TOTP code for 2FA challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pendingToken, code]
+              properties:
+                pendingToken: { type: string }
+                code: { type: string }
+      responses:
+        "200":
+          description: Session issued
+
+  /inventory/search:
+    get:
+      summary: Search available media inventory
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: List of verified media listings
+
+  /leads:
+    post:
+      summary: Submit inquiry / create lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to, requirement]
+              properties:
+                from: { type: string, format: date }
+                to: { type: string, format: date }
+                requirement: { type: string }
+                inventoryIds:
+                  type: array
+                  items: { type: string }
+      responses:
+        "201":
+          description: Lead created with unique LD ID
+
+  /quotes/{id}:
+    get:
+      summary: Fetch quote details or download branded PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, pdf] }
+      responses:
+        "200":
+          description: Quote JSON or application/pdf
+
+  /quotes/{id}/decision:
+    post:
+      summary: Client approves, rejects, or requests revision on quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject, revise] }
+                comment: { type: string }
+      responses:
+        "200":
+          description: Decision applied
+
+  /bookings/{id}/cancel:
+    post:
+      summary: Cancel booking and generate credit note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        "200":
+          description: Booking cancelled, fee computed, credit note issued
+
+  /work-orders/{id}/proofs:
+    post:
+      summary: Upload campaign execution proof photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, type]
+              properties:
+                file: { type: string, format: binary }
+                type: { type: string, enum: [mounting, newspaper_day, newspaper_night, geotagged, completion] }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        "201":
+          description: Proof uploaded with server timestamp
+
+  /finance/invoices/{id}:
+    get:
+      summary: Fetch invoice or download Tax Invoice PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, pdf] }
+      responses:
+        "200":
+          description: Invoice data or PDF stream
+
+  /finance/payments:
+    post:
+      summary: Record payment (maker step)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [bookingId, amount, mode, reference, paidOn, file]
+              properties:
+                bookingId: { type: string }
+                amount: { type: number }
+                mode: { type: string }
+                reference: { type: string }
+                paidOn: { type: string, format: date }
+                file: { type: string, format: binary }
+      responses:
+        "201":
+          description: Unverified payment recorded
+
+  /finance/payments/{id}/verify:
+    post:
+      summary: Verify payment (checker step)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Payment verified (maker-checker enforced)
+
+  /reports/client-campaign/{id}:
+    get:
+      summary: Client campaign report (JSON, CSV, PDF)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, csv, pdf] }
+      responses:
+        "200":
+          description: Full verified proof dossier, execution timeline and spend report

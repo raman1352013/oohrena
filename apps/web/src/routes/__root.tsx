@@ -86,12 +86,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "OOHRENA — Outdoor x Digital x Trackable" },
-      { name: "description", content: "OOHRENA outdoor and digital media marketplace staging preview with sample quotes and campaign tracking." },
+      {
+        name: "description",
+        content:
+          "OOHRENA outdoor and digital media marketplace staging preview with sample quotes and campaign tracking.",
+      },
       { property: "og:title", content: "OOHRENA — Outdoor x Digital x Trackable" },
-      { property: "og:description", content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!" },
+      {
+        property: "og:description",
+        content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-          ],
+    ],
     links: [
       {
         rel: "stylesheet",
@@ -100,7 +107,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap",
+      },
       { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
     ],
   }),
@@ -124,17 +134,6 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** Accounts are real; everything inside the workspaces is still sample data until each module moves to the API. */
-function DemoBanner() {
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  if (path === "/login" || path === "/register") return null;
-  return (
-    <div className="no-print border-b border-hold/30 bg-hold-soft text-hold px-4 py-2 text-[12px] text-center">
-      Everything from inquiry to proof of display, payments and reconciliation is live. Reports and partner screens marked SAMPLE are still demo data and stay in this browser.
-    </div>
-  );
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -143,7 +142,6 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <div className="min-h-screen bg-canvas font-sans text-ink">
         <AppHeader />
-        <DemoBanner />
         <AuthGate>
           <Outlet />
         </AuthGate>

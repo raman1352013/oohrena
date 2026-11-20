@@ -40,11 +40,11 @@ export type Reconciliation = {
 };
 
 /* ---------- Inputs (multipart for anything carrying a proof file) ---------- */
-const money = z.coerce.number({ invalid_type_error: "Enter an amount" }).positive("Amount must be more than 0").max(1e10);
+const money = z.coerce.number({ error: "Enter an amount" }).positive("Amount must be more than 0").max(1e10);
 export const paymentMetaInput = z.object({
   bookingId: z.string().trim().min(1),
   amount: money,
-  mode: z.enum(PAYMENT_MODES, { errorMap: () => ({ message: "Choose how it was paid" }) }),
+  mode: z.enum(PAYMENT_MODES, { error: "Choose how it was paid" }),
   reference: z.string().trim().min(4, "Enter the UTR / cheque / transaction reference").max(80),
   paidOn: isoDate,
   note: z.string().trim().max(1000).optional(),

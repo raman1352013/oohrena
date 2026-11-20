@@ -13,15 +13,35 @@ import { cn } from "@/lib/utils";
 type Kind = "client" | "vendor";
 
 export const Route = createFileRoute("/register")({
-  validateSearch: (s: Record<string, unknown>): { as?: Kind } => (s["as"] === "vendor" ? { as: "vendor" } : {}),
-  head: () => ({ meta: [{ title: "Create account — OOHRENA" }, { name: "description", content: "Register as an advertiser or a media owner on OOHRENA." }] }),
+  validateSearch: (s: Record<string, unknown>): { as?: Kind } =>
+    s["as"] === "vendor" ? { as: "vendor" } : {},
+  head: () => ({
+    meta: [
+      { title: "Create account — OOHRENA" },
+      { name: "description", content: "Register as an advertiser or a media owner on OOHRENA." },
+    ],
+  }),
   component: RegisterPage,
 });
 
-const EMPTY = { fullName: "", email: "", mobile: "", password: "", companyName: "", legalName: "", pan: "", gstin: "", city: "" };
+const EMPTY = {
+  fullName: "",
+  email: "",
+  mobile: "",
+  password: "",
+  companyName: "",
+  legalName: "",
+  pan: "",
+  gstin: "",
+  city: "",
+};
 
 function firstErrors(fe: Record<string, string[] | undefined>) {
-  return Object.fromEntries(Object.entries(fe).filter(([, v]) => v?.length).map(([k, v]) => [k, v![0]!]));
+  return Object.fromEntries(
+    Object.entries(fe)
+      .filter(([, v]) => v?.length)
+      .map(([k, v]) => [k, v![0]!]),
+  );
 }
 
 function RegisterPage() {
@@ -35,13 +55,16 @@ function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
   const pending = regClient.isPending || regVendor.isPending;
-  const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+  const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setF({ ...f, [k]: e.target.value });
 
   function onApiError(err: Error) {
-    if (err instanceof ApiError && Object.keys(err.fieldErrors).length) setErrors(firstErrors(err.fieldErrors));
+    if (err instanceof ApiError && Object.keys(err.fieldErrors).length)
+      setErrors(firstErrors(err.fieldErrors));
     else if (err instanceof ApiError && err.code === "CONFLICT") {
       const field = (err.details as { field?: string } | undefined)?.field;
-      if (field === "email" || field === "mobile" || field === "pan") setErrors({ [field]: err.message });
+      if (field === "email" || field === "mobile" || field === "pan")
+        setErrors({ [field]: err.message });
       else setFormError(err.message);
     } else setFormError(err.message);
   }
@@ -49,21 +72,39 @@ function RegisterPage() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(undefined);
-    const common = { fullName: f.fullName, email: f.email, mobile: f.mobile, password: f.password, acceptTerms: accept, ...(f.gstin.trim() ? { gstin: f.gstin } : {}) };
+    const common = {
+      fullName: f.fullName,
+      email: f.email,
+      mobile: f.mobile,
+      password: f.password,
+      acceptTerms: accept,
+      ...(f.gstin.trim() ? { gstin: f.gstin } : {}),
+    };
     if (kind === "client") {
       const p = registerClientInput.safeParse({ ...common, companyName: f.companyName });
       if (!p.success) return setErrors(firstErrors((p.error as ZodError).flatten().fieldErrors));
       setErrors({});
       regClient.mutate(p.data, {
-        onSuccess: (r) => { toast.success("Account created. Welcome to OOHRENA."); void nav({ to: ROLE_HOME[r.user.role], replace: true }); },
+        onSuccess: (r) => {
+          toast.success("Account created. Welcome to OOHRENA.");
+          void nav({ to: ROLE_HOME[r.user.role], replace: true });
+        },
         onError: onApiError,
       });
     } else {
-      const p = registerVendorInput.safeParse({ ...common, legalName: f.legalName, pan: f.pan, city: f.city });
+      const p = registerVendorInput.safeParse({
+        ...common,
+        legalName: f.legalName,
+        pan: f.pan,
+        city: f.city,
+      });
       if (!p.success) return setErrors(firstErrors((p.error as ZodError).flatten().fieldErrors));
       setErrors({});
       regVendor.mutate(p.data, {
-        onSuccess: (r) => { toast.success(`Registered as ${r.vendorId}. Your KYC is pending admin review.`); void nav({ to: ROLE_HOME[r.user.role], replace: true }); },
+        onSuccess: (r) => {
+          toast.success(`Registered as ${r.vendorId}. Your KYC is pending admin review.`);
+          void nav({ to: ROLE_HOME[r.user.role], replace: true });
+        },
         onError: onApiError,
       });
     }
@@ -74,10 +115,25 @@ function RegisterPage() {
     <AuthShell
       wide
       title="Create your account"
-      sub={kind === "client" ? "Discover media, request quotations and track every campaign with verified proof." : "List verified inventory, receive work orders and get paid against verified proof."}
-      footer={<>Already registered? <Link to="/login" className="text-saffron-deep font-semibold hover:underline">Sign in</Link></>}
+      sub={
+        kind === "client"
+          ? "Discover media, request quotations and track every campaign with verified proof."
+          : "List verified inventory, receive work orders and get paid against verified proof."
+      }
+      footer={
+        <>
+          Already registered?{" "}
+          <Link to="/login" className="text-saffron-deep font-semibold hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
     >
-      <div className="grid grid-cols-2 rounded-lg bg-muted p-1 mb-6 text-[13px]" role="tablist" aria-label="Account type">
+      <div
+        className="grid grid-cols-2 rounded-lg bg-muted p-1 mb-6 text-[13px]"
+        role="tablist"
+        aria-label="Account type"
+      >
         {(["client", "vendor"] as const).map((k) => (
           <Link
             key={k}
@@ -86,8 +142,14 @@ function RegisterPage() {
             replace
             role="tab"
             aria-selected={kind === k}
-            onClick={() => { setErrors({}); setFormError(undefined); }}
-            className={cn("h-9 rounded-md grid place-items-center font-semibold", kind === k ? "bg-card text-ink shadow-sm" : "text-mute")}
+            onClick={() => {
+              setErrors({});
+              setFormError(undefined);
+            }}
+            className={cn(
+              "h-9 rounded-md grid place-items-center font-semibold",
+              kind === k ? "bg-card text-ink shadow-sm" : "text-mute",
+            )}
           >
             {k === "client" ? "Advertiser / Agency" : "Media owner / Vendor"}
           </Link>
@@ -96,35 +158,122 @@ function RegisterPage() {
 
       <FormError message={formError} />
       <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2">
-        <Field id="fullName" label="Your full name" autoComplete="name" value={f.fullName} error={errors["fullName"]} onChange={set("fullName")} />
+        <Field
+          id="fullName"
+          label="Your full name"
+          autoComplete="name"
+          value={f.fullName}
+          error={errors["fullName"]}
+          onChange={set("fullName")}
+        />
         {kind === "client" ? (
-          <Field id="companyName" label="Company name" autoComplete="organization" value={f.companyName} error={errors["companyName"]} onChange={set("companyName")} />
+          <Field
+            id="companyName"
+            label="Company name"
+            autoComplete="organization"
+            value={f.companyName}
+            error={errors["companyName"]}
+            onChange={set("companyName")}
+          />
         ) : (
-          <Field id="legalName" label="Registered business name" autoComplete="organization" value={f.legalName} error={errors["legalName"]} onChange={set("legalName")} />
+          <Field
+            id="legalName"
+            label="Registered business name"
+            autoComplete="organization"
+            value={f.legalName}
+            error={errors["legalName"]}
+            onChange={set("legalName")}
+          />
         )}
-        <Field id="email" label="Work email" type="email" autoComplete="email" value={f.email} error={errors["email"]} onChange={set("email")} />
-        <Field id="mobile" label="Mobile" type="tel" autoComplete="tel" placeholder="+91 98XXXXXXXX" value={f.mobile} error={errors["mobile"]} onChange={(e) => setF({ ...f, mobile: e.target.value.replace(/[\s-]/g, "") })} />
+        <Field
+          id="email"
+          label="Work email"
+          type="email"
+          autoComplete="email"
+          value={f.email}
+          error={errors["email"]}
+          onChange={set("email")}
+        />
+        <Field
+          id="mobile"
+          label="Mobile"
+          type="tel"
+          autoComplete="tel"
+          placeholder="+91 98XXXXXXXX"
+          value={f.mobile}
+          error={errors["mobile"]}
+          onChange={(e) => setF({ ...f, mobile: e.target.value.replace(/[\s-]/g, "") })}
+        />
         {kind === "vendor" && (
           <>
-            <Field id="pan" label="PAN" autoCapitalize="characters" value={f.pan} error={errors["pan"]} onChange={set("pan")} />
-            <Field id="city" label="City" autoComplete="address-level2" value={f.city} error={errors["city"]} onChange={set("city")} />
+            <Field
+              id="pan"
+              label="PAN"
+              autoCapitalize="characters"
+              value={f.pan}
+              error={errors["pan"]}
+              onChange={set("pan")}
+            />
+            <Field
+              id="city"
+              label="City"
+              autoComplete="address-level2"
+              value={f.city}
+              error={errors["city"]}
+              onChange={set("city")}
+            />
           </>
         )}
-        <Field id="gstin" label="GSTIN (optional)" autoCapitalize="characters" value={f.gstin} error={errors["gstin"]} onChange={set("gstin")} />
-        <Field id="password" label="Password" type="password" autoComplete="new-password" value={f.password} error={errors["password"]} hint="10+ characters with upper and lower case, a number and a symbol" onChange={set("password")} />
+        <Field
+          id="gstin"
+          label="GSTIN (optional)"
+          autoCapitalize="characters"
+          value={f.gstin}
+          error={errors["gstin"]}
+          onChange={set("gstin")}
+        />
+        <Field
+          id="password"
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          value={f.password}
+          error={errors["password"]}
+          hint="10+ characters with upper and lower case, a number and a symbol"
+          onChange={set("password")}
+        />
 
         <div className="sm:col-span-2">
           <label className="flex items-start gap-3 text-[13px] text-ink cursor-pointer">
-            <Checkbox checked={accept} onCheckedChange={(v) => setAccept(v === true)} className="mt-0.5" aria-invalid={!!errors["acceptTerms"]} />
+            <Checkbox
+              checked={accept}
+              onCheckedChange={(v) => setAccept(v === true)}
+              className="mt-0.5"
+              aria-invalid={!!errors["acceptTerms"]}
+            />
             <span>
-              I accept the Privacy Policy, Terms of Use and the Confidentiality &amp; Anti-circumvention Agreement (v1.0).
+              I accept the Privacy Policy, Terms of Use and the Confidentiality &amp;
+              Anti-circumvention Agreement (v1.0).
             </span>
           </label>
-          {errors["acceptTerms"] && <p className="text-[12px] text-destructive mt-1.5">{errors["acceptTerms"]}</p>}
+          {errors["acceptTerms"] && (
+            <p className="text-[12px] text-destructive mt-1.5">{errors["acceptTerms"]}</p>
+          )}
         </div>
 
-        <Btn type="submit" className="sm:col-span-2 w-full" disabled={pending}>{pending ? "Creating account…" : kind === "client" ? "Create advertiser account" : "Register as vendor"}</Btn>
-        {kind === "vendor" && <p className="sm:col-span-2 text-[12px] text-mute -mt-1">Your KYC stays pending until an OOHRENA admin reviews it. Listings go live only after admin approval.</p>}
+        <Btn type="submit" className="sm:col-span-2 w-full" disabled={pending}>
+          {pending
+            ? "Creating account…"
+            : kind === "client"
+              ? "Create advertiser account"
+              : "Register as vendor"}
+        </Btn>
+        {kind === "vendor" && (
+          <p className="sm:col-span-2 text-[12px] text-mute -mt-1">
+            Your KYC stays pending until an OOHRENA admin reviews it. Listings go live only after
+            admin approval.
+          </p>
+        )}
       </form>
     </AuthShell>
   );

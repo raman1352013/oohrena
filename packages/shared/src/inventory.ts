@@ -59,12 +59,12 @@ export type DataType = (typeof DATA_TYPES)[number];
 /** Fields whose change on an approved listing sends it back to admin review. */
 export const CRITICAL_FIELDS = ["lat", "lng", "address", "city", "pin", "rate", "pricingUnit"] as const;
 
-const num = (msg: string) => z.coerce.number({ invalid_type_error: msg }).finite(msg);
-const req = (max: number) => z.string({ required_error: "This field is required" }).trim().min(1, "This field is required").max(max, `Use ${max} characters or fewer`);
+const num = (msg: string) => z.coerce.number({ error: msg }).finite(msg);
+const req = (max: number) => z.string({ error: "This field is required" }).trim().min(1, "This field is required").max(max, `Use ${max} characters or fewer`);
 const opt = (max: number) => z.string().trim().max(max).optional().transform((v) => (v ? v : undefined));
 
 const listingCore = z.object({
-  category: z.enum(CATEGORY_IDS, { errorMap: () => ({ message: "Choose a media category" }) }),
+  category: z.enum(CATEGORY_IDS, { error: "Choose a media category" }),
   title: req(140),
   description: opt(2000),
   city: req(80),
@@ -75,9 +75,9 @@ const listingCore = z.object({
   lat: num("Enter latitude").min(6, "Latitude must be inside India").max(37.5, "Latitude must be inside India"),
   lng: num("Enter longitude").min(68, "Longitude must be inside India").max(97.5, "Longitude must be inside India"),
   rate: num("Enter your rate").positive("Rate must be more than 0").max(1e9),
-  pricingUnit: z.enum(PRICING_UNITS, { errorMap: () => ({ message: "Choose a pricing unit" }) }),
+  pricingUnit: z.enum(PRICING_UNITS, { error: "Choose a pricing unit" }),
   quantity: z.coerce.number().int("Use a whole number").min(1, "Quantity must be at least 1").max(100000).default(1),
-  attributes: z.record(z.union([z.string(), z.number(), z.boolean()])).default({}),
+  attributes: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
 });
 
 /** Checks category-specific required attributes and that the pricing unit fits the category. */

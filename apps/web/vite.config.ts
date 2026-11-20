@@ -15,10 +15,30 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  nitro: {
+    routeRules: {
+      "/**": {
+        headers: {
+          "Content-Security-Policy":
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' http://localhost:4000 https://* ws: wss:; frame-ancestors 'none';",
+          "X-Frame-Options": "DENY",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "strict-origin-when-cross-origin",
+          "Permissions-Policy": "camera=(self), geolocation=(self), microphone=()",
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+        },
+      },
+    },
+  },
   vite: {
     server: {
       // Local dev: forward API calls to the Express server so the session cookie stays same-origin.
-      proxy: { "/api": { target: process.env["API_PROXY_TARGET"] ?? "http://localhost:4000", changeOrigin: false } },
+      proxy: {
+        "/api": {
+          target: process.env["API_PROXY_TARGET"] ?? "http://localhost:4000",
+          changeOrigin: false,
+        },
+      },
     },
   },
 });

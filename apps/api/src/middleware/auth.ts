@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 import { scopeFor, type Permission, type Role, type Scope, type SessionUser } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { Session, User } from "../models/foundation.js";
-import { forbidden, unauthenticated } from "../lib/errors.js";
+import { AppError, forbidden, unauthenticated } from "../lib/errors.js";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -34,7 +34,17 @@ export function loadSession() {
     if (!s) return next();
     const u = await User.findById(s.userId).lean();
     if (!u || u.status === "suspended") return next();
-    req.user = { userId: u._id, email: u.email, fullName: u.fullName, role: u.role as Role, status: u.status as SessionUser["status"], orgId: u.orgId ?? null };
+    req.user = {
+      userId: u._id,
+      email: u.email,
+      fullName: u.fullName,
+      role: u.role as Role,
+      status: u.status as SessionUser["status"],
+      orgId: u.orgId ?? null,
+      twoFactorEnabled: !!u.twoFactorEnabled,
+      emailVerified: !!u.emailVerifiedAt,
+      mobileVerified: !!u.mobileVerifiedAt,
+    };
     req.sessionId = String(s._id);
     req.authVia = bearer ? "bearer" : "cookie";
     // Sliding activity marker, at most once a minute.
@@ -65,6 +75,23 @@ export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) return next(unauthenticated());
     if (!roles.includes(req.user.role)) return next(forbidden());
+    next();
+  };
+}
+
+/**
+ * Re-authentication check: sensitive actions require recent re-auth (default 10 minutes).
+ * Caller must re-authenticate via POST /auth/reauth to refresh s.reauthAt.
+ */
+export function requireRecentAuth(maxMinutes = 10) {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user || !req.sessionId) return next(unauthenticated());
+    const s = await Session.findById(req.sessionId).lean();
+    if (!s || !s.reauthAt) return next(new AppError(401, "REAUTH_REQUIRED", "Recent authentication is required for this action"));
+    const ageMinutes = (Date.now() - new Date(s.reauthAt).getTime()) / 60_000;
+    if (ageMinutes > maxMinutes) {
+      return next(new AppError(401, "REAUTH_REQUIRED", `Please re-authenticate to perform this action (requires re-auth within ${maxMinutes} minutes)`));
+    }
     next();
   };
 }

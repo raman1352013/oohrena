@@ -54,13 +54,13 @@ export const holdInput = z.object({
   qty: z.coerce.number().int().min(1).max(10000).default(1),
   leadId: z.string().trim().max(40).optional(),
   note: z.string().trim().max(500).optional(),
-}).superRefine((v, ctx) => { const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i); });
+}).superRefine((v, ctx) => { const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i as never); });
 
 export const blockInput = z.object({
   from: isoDate, to: isoDate,
   qty: z.coerce.number().int().min(1).max(10000).optional(),
   reason: z.string().trim().min(3, "Give a reason").max(500),
-}).superRefine((v, ctx) => { const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i); });
+}).superRefine((v, ctx) => { const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i as never); });
 
 export const vendorResponseInput = z.object({ response: z.enum(["confirm", "decline"]), note: z.string().trim().max(500).optional() });
 export const availabilityModeInput = z.object({ mode: z.enum(AVAILABILITY_MODES) });
@@ -114,7 +114,7 @@ export const leadCreateInput = z.object({
   budget: z.coerce.number().positive("Budget must be more than 0").max(1e10).optional(),
   requirement: z.string().trim().min(10, "Describe your requirement (at least 10 characters)").max(3000),
 }).superRefine((v, ctx) => {
-  const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i);
+  const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i as never);
   if (!v.inventoryIds.length && !v.city) ctx.addIssue({ code: "custom", path: ["city"], message: "Choose media items or tell us the city" });
 });
 export type LeadCreateInput = z.infer<typeof leadCreateInput>;

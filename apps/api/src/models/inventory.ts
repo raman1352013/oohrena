@@ -5,6 +5,7 @@ const photoSchema = new Schema(
   {
     fileId: { type: String, required: true },
     sha256: { type: String, required: true },
+    pHash: { type: String, default: null },
     uploadedBy: { type: String, required: true },
     uploadedAt: { type: Date, required: true },
     /** Device capture time if the client sent one — secondary to uploadedAt. */

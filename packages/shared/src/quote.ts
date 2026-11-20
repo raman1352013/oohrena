@@ -82,7 +82,7 @@ export function cancellationFor(total: number, startDate: string, cancelDate: st
 }
 
 /* ---------- Inputs ---------- */
-const money = (msg: string) => z.coerce.number({ invalid_type_error: msg }).min(0, msg).max(1e10);
+const money = (msg: string) => z.coerce.number({ error: msg }).min(0, msg).max(1e10);
 export const quoteItemInput = z.object({
   inventoryId: z.string().trim().min(1),
   from: isoDate, to: isoDate,
@@ -132,7 +132,7 @@ export const overrideInput = z.object({
   entityId: z.string().trim().min(1),
   field: z.enum(["status", "validUntil"]),
   newValue: z.string().trim().min(1).max(40),
-  reason: z.string({ required_error: "A reason is required for every override" }).trim().min(5, "A reason is required for every override (at least 5 characters)").max(1000),
+  reason: z.string({ error: "A reason is required for every override" }).trim().min(5, "A reason is required for every override (at least 5 characters)").max(1000),
 });
 
 export { PRICING_UNITS };

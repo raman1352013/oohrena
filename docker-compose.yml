@@ -1,0 +1,66 @@
+services:
+  mongo:
+    image: mongo:7.0
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: test $$(mongosh --eval "try { rs.initiate().ok } catch (e) { rs.status().ok }" --quiet) -eq 1
+      interval: 10s
+      start_period: 20s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      MONGODB_URI: mongodb://mongo:27017/oohrena?replicaSet=rs0
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6j7k8l9z0x1c=}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4000
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+    depends_on:
+      - api
+
+volumes:
+  mongo_data:
+  redis_data:
+  api_uploads:

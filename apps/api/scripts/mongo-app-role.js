@@ -7,7 +7,46 @@
 const dbName = "oohrena";
 const target = db.getSiblingDB(dbName);
 const crud = ["find", "insert", "update", "remove", "createIndex", "dropIndex", "listIndexes", "createCollection", "collStats"];
-const appCollections = ["users", "sessions", "clients", "vendors", "growth_partners", "consents", "system_events", "counters"];
+const appCollections = [
+  "users",
+  "sessions",
+  "clients",
+  "vendors",
+  "growth_partners",
+  "consents",
+  "system_events",
+  "counters",
+  "campaigns",
+  "proof_schedule",
+  "proofs",
+  "execution_updates",
+  "issues",
+  "invoices",
+  "credit_notes",
+  "payments",
+  "payment_history",
+  "vendor_payables",
+  "quotes",
+  "bookings",
+  "booking_history",
+  "work_orders",
+  "lead_assignments",
+  "overrides",
+  "leads",
+  "shortlists",
+  "availability",
+  "availability_requests",
+  "inventory",
+  "inventory_history",
+  "duplicate_flags",
+  "files",
+  "vendor_documents",
+  "vendor_bank",
+  "report_exports",
+  "notifications",
+  "notification_templates",
+  "user_tokens",
+];
 
 target.createRole({
   role: "oohrenaApp",

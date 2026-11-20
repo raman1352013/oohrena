@@ -11,6 +11,7 @@ import { Client, User } from "../models/foundation.js";
 import { DuplicateFlag, Inventory, type InventoryDoc } from "../models/inventory.js";
 import { Lead } from "../models/lead.js";
 import { toPublic } from "../services/inventory.js";
+import { notify } from "../services/notifications.js";
 
 type LeadDoc = { _id: string; source: string; clientId?: string | null; inventoryIds: string[]; city?: string | null; category?: string | null; from: Date; to: Date; qty: number; budget?: number | null; requirement: string; status: string; contact?: { name?: string; email?: string; mobile?: string; company?: string } | null; createdAt: Date; updatedAt: Date };
 const view = (l: LeadDoc, admin = false) => ({
@@ -54,6 +55,12 @@ export function leadRoutes() {
       await DuplicateFlag.updateOne({ entityType: "lead", entityA: a, entityB: b }, { $setOnInsert: { entityType: "lead", entityA: a, entityB: b, score: 0.7, reasons: ["Same client, overlapping dates and media"], resolution: "open" } }, { upsert: true });
     }
     await audit(req, { action: "lead.create", entity: "lead", entityId: leadId, after: { source: "web", inventoryIds: ids, from: input.from, to: input.to, possibleDuplicateOf: dup?._id ?? null } });
+    const admins = await User.find({ role: "admin" }).select("_id email mobile").lean();
+    const recipients = [
+      { userId: req.user!.userId, email: user?.email, mobile: user?.mobile },
+      ...admins.map((a) => ({ userId: a._id, email: a.email, mobile: a.mobile })),
+    ];
+    await notify("lead.created", recipients, { leadId, requirement: input.requirement });
     res.status(201).json({ data: { ...view(lead.toObject() as LeadDoc), possibleDuplicateOf: dup?._id ?? null } });
   });
 

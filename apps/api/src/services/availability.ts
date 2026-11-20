@@ -9,7 +9,9 @@ import { audit } from "../lib/audit.js";
 import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { withTransaction } from "../lib/tx.js";
 import { ACTIVE_BLOCK_STATUSES, AvailabilityBlock, AvailabilityRequest } from "../models/availability.js";
+import { User } from "../models/foundation.js";
 import { Inventory, type InventoryDoc } from "../models/inventory.js";
+import { notify } from "./notifications.js";
 
 type Block = { _id: unknown; inventoryId: string; from: Date; to: Date; qty: number; status: string; kind: string; expiresAt?: Date | null; updatedAt?: Date };
 
@@ -107,6 +109,14 @@ export async function placeHold(cfg: Config, req: Request, input: { inventoryId:
     }], { session });
     if (pendingVendor) {
       await AvailabilityRequest.create([{ holdId: String(hold!._id), inventoryId: inv._id, vendorId: inv.vendorId, from: hold!.from, to: hold!.to, qty: input.qty, respondBy: expiresAt }], { session });
+      const vUser = await User.findOne({ orgId: inv.vendorId }).select("_id email mobile").lean();
+      if (vUser) {
+        await notify("hold.requested", [{ userId: vUser._id, email: vUser.email, mobile: vUser.mobile }], {
+          inventoryId: inv._id,
+          from: input.from,
+          to: input.to,
+        });
+      }
     }
     await audit(req, { action: "availability.hold.create", entity: "inventory", entityId: inv._id, after: { holdId: String(hold!._id), from: input.from, to: input.to, qty: input.qty, status: hold!.status, expiresAt, leadId: input.leadId ?? null } }, session);
     return toHoldView(hold!.toObject());

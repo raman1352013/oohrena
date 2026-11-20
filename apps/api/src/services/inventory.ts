@@ -1,5 +1,6 @@
 import type { ClientSession } from "mongoose";
 import { categoryDef, formatInventoryId, type PublicListing } from "@oohrena/shared";
+import { arePhotosSimilar } from "../lib/phash.js";
 import { Counter } from "../models/foundation.js";
 import { DuplicateFlag, Inventory, InventoryHistory, type InventoryDoc } from "../models/inventory.js";
 
@@ -68,6 +69,23 @@ export async function detectDuplicates(item: InventoryDoc) {
       const f = flags.find((x) => x.other === o._id);
       if (f) { f.score = Math.max(f.score, 0.9); f.reasons.push("Identical photo"); }
       else flags.push({ other: o._id, score: 0.9, reasons: ["Identical photo"] });
+    }
+  }
+  const pHashes = (item.photos ?? []).map((p: any) => p.pHash).filter(Boolean);
+  if (pHashes.length) {
+    const candidates = await Inventory.find({ _id: { $ne: item._id }, "photos.pHash": { $exists: true, $ne: null } }).select("_id photos").limit(50).lean();
+    for (const other of candidates) {
+      const otherHashes = (other.photos ?? []).map((p: any) => p.pHash).filter(Boolean);
+      const isVisuallySimilar = pHashes.some((h1: string) => otherHashes.some((h2: string) => arePhotosSimilar(h1, h2)));
+      if (isVisuallySimilar) {
+        const f = flags.find((x) => x.other === other._id);
+        if (f) {
+          f.score = Math.max(f.score, 0.85);
+          if (!f.reasons.includes("Visually similar photo")) f.reasons.push("Visually similar photo");
+        } else {
+          flags.push({ other: other._id, score: 0.85, reasons: ["Visually similar photo"] });
+        }
+      }
     }
   }
   for (const f of flags) {

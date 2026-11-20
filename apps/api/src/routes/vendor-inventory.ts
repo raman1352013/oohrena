@@ -10,6 +10,7 @@ import type { Config } from "../config.js";
 import { audit } from "../lib/audit.js";
 import { parseCsv } from "../lib/csv.js";
 import { AppError, badRequest, notFound } from "../lib/errors.js";
+import { computePerceptualHash } from "../lib/phash.js";
 import { saveUpload } from "../lib/storage.js";
 import { withTransaction } from "../lib/tx.js";
 import { currentVendor, upload } from "../middleware/upload.js";
@@ -192,7 +193,8 @@ export function vendorInventoryRoutes(cfg: Config) {
     const added = [];
     for (const f of files) {
       const s = await saveUpload(cfg, f.buffer, { kind: "inventory_photo", allowed: PHOTO_MIME, maxBytes: MAX_PHOTO_BYTES, encryptAtRest: false, ownerUserId: req.user!.userId, vendorId: v._id, originalName: f.originalname });
-      added.push({ fileId: s._id, sha256: s.sha256, uploadedBy: req.user!.userId, uploadedAt: s.uploadedAt, capturedAt: capturedAt && !isNaN(capturedAt.getTime()) ? capturedAt : null });
+      const pHash = computePerceptualHash(f.buffer);
+      added.push({ fileId: s._id, sha256: s.sha256, pHash, uploadedBy: req.user!.userId, uploadedAt: s.uploadedAt, capturedAt: capturedAt && !isNaN(capturedAt.getTime()) ? capturedAt : null });
     }
     const updated = await Inventory.findOneAndUpdate({ _id: i._id }, { $push: { photos: { $each: added } } }, { returnDocument: "after" }).lean<InventoryDoc>();
     await writeHistory(i._id, added.map((p) => ({ field: "photos", old: null, new: p.fileId })), req.user!.userId, i.version);

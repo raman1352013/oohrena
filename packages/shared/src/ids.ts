@@ -14,8 +14,12 @@ export const ID_FORMATS = {
   CMP: { yearly: true, pad: 6 }, // CMP-2026-000001
   PAY: { yearly: true, pad: 6 }, // PAY-2026-000001
   TXI: { yearly: true, pad: 6 }, // TXI-2026-000001 (tax invoice)
+  CRN: { yearly: true, pad: 6 }, // CRN-2026-000001 (credit note)
   ISS: { yearly: true, pad: 6 }, // ISS-2026-000001 (issue / complaint)
   PRF: { yearly: true, pad: 6 }, // PRF-2026-000001 (proof of display)
+  EXP: { yearly: true, pad: 6 }, // EXP-2026-000001 (report export)
+  NTF: { yearly: true, pad: 6 }, // NTF-2026-000001 (notification)
+  TPL: { yearly: false, pad: 4 }, // TPL-0001 (notification template)
 } as const;
 
 export type IdPrefix = keyof typeof ID_FORMATS;

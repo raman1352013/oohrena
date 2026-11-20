@@ -7,12 +7,14 @@ import type { Config } from "../config.js";
 import { audit } from "../lib/audit.js";
 import { AppError, badRequest, forbidden, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
+import { renderPdf, pdfMoney, type PdfBlock } from "../lib/pdf.js";
 import { saveUpload } from "../lib/storage.js";
 import { withTransaction } from "../lib/tx.js";
 import { Booking } from "../models/booking.js";
 import { Proof } from "../models/execution.js";
 import { Invoice, Payment, PaymentHistory, VendorPayable } from "../models/finance.js";
-import { Client, Vendor } from "../models/foundation.js";
+import { Client, User, Vendor } from "../models/foundation.js";
+import { notify } from "./notifications.js";
 
 type BookingDoc = { _id: string; clientId?: string | null; status: string; items: { inventoryId: string; title: string; vendorId: string; lineTotal: number; vendorCost: number; from: Date; to: Date }[]; subtotal: number; serviceFee: number; gst: number; total: number; end: Date; cancellation?: { fee: number; feePct: number; refundable: number; rule: string } | null };
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
@@ -30,7 +32,18 @@ export async function createInvoice(req: Request, bookingId: string, advancePct:
   if (!["confirmed", "live", "completed", "closed"].includes(b.status)) throw new AppError(409, "CONFLICT", `Invoices are raised for confirmed bookings (this one is ${b.status})`);
   if (await Invoice.exists({ bookingId })) throw new AppError(409, "CONFLICT", "This booking already has an invoice");
   const client = b.clientId ? await Client.findById(b.clientId).lean() : null;
-  const gstHalf = Math.round(b.gst / 2);
+  const clientGstin = client?.gstin?.trim().toUpperCase();
+  const clientState = client?.billingAddress?.state?.trim().toLowerCase();
+  // Default platform state is Maharashtra (27). Inter-state if client GSTIN doesn't start with '27',
+  // or billing address state is outside Maharashtra when GSTIN is unregistered.
+  const isInterState = clientGstin ? !clientGstin.startsWith("27") : (clientState ? clientState !== "maharashtra" : false);
+  const placeOfSupply = client?.billingAddress?.state || (clientGstin ? `State ${clientGstin.slice(0, 2)}` : "Maharashtra");
+
+  const igst = isInterState ? b.gst : 0;
+  const gstHalf = isInterState ? 0 : Math.round(b.gst / 2);
+  const cgst = gstHalf;
+  const sgst = isInterState ? 0 : b.gst - gstHalf;
+
   const due = dueDate ?? fromDay(toDay(todayIST()) + INVOICE_DUE_DAYS * 86_400_000);
   if (toDay(due) < toDay(todayIST())) throw badRequest("Due date can't be in the past");
   const id = await nextId("TXI");
@@ -38,10 +51,15 @@ export async function createInvoice(req: Request, bookingId: string, advancePct:
     _id: id, bookingId, clientId: b.clientId ?? null,
     billTo: { companyName: client?.companyName ?? null, gstin: client?.gstin ?? null, address: client?.billingAddress ?? null },
     lines: [...b.items.map((i) => ({ description: `${i.title} (${fromDay(i.from.getTime())} – ${fromDay(i.to.getTime())})`, inventoryId: i.inventoryId, amount: i.lineTotal })), { description: "Platform / service fee", inventoryId: null, amount: b.serviceFee }],
-    subtotal: b.subtotal, serviceFee: b.serviceFee, cgst: gstHalf, sgst: b.gst - gstHalf, gst: b.gst, total: b.total,
+    subtotal: b.subtotal, serviceFee: b.serviceFee,
+    cgst, sgst, igst, gst: b.gst,
+    sacCode: "998361",
+    placeOfSupply,
+    isInterState,
+    total: b.total,
     advancePct, advanceAmount: Math.round((b.total * advancePct) / 100), dueDate: new Date(toDay(due)), issuedBy: req.user!.userId,
   });
-  await audit(req, { action: "invoice.issue", entity: "invoice", entityId: id, after: { bookingId, total: b.total, advancePct } });
+  await audit(req, { action: "invoice.issue", entity: "invoice", entityId: id, after: { bookingId, total: b.total, advancePct, isInterState, igst, cgst, sgst } });
   return inv.toObject();
 }
 
@@ -157,6 +175,18 @@ export async function decidePayment(req: Request, id: string, decision: "verify"
   });
   await refreshInvoice(p.bookingId);
   await syncPayables(p.bookingId);
+  if (decision === "verify") {
+    const targetOrgId = p.direction === "client_receipt" ? p.clientId : p.vendorId;
+    if (targetOrgId) {
+      const user = await User.findOne({ orgId: targetOrgId }).select("_id email mobile").lean();
+      if (user) {
+        await notify("payment.verified", [{ userId: user._id, email: user.email, mobile: user.mobile }], {
+          paymentId: id,
+          amount: p.amount,
+        });
+      }
+    }
+  }
   return { paymentId: id, status };
 }
 
@@ -209,4 +239,98 @@ export function reconciliationCsv(r: Reconciliation) {
   ];
   const cell = (v: string | number) => (typeof v === "number" ? String(v) : /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
   return rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
+}
+
+export async function renderInvoicePdf(inv: any): Promise<Buffer> {
+  const gstinRow: [string, string | number][] = inv.billTo?.gstin ? [["GSTIN", inv.billTo.gstin]] : [];
+  const addressRow: [string, string | number][] = inv.billTo?.address
+    ? [["Billing Address", [inv.billTo.address.line1, inv.billTo.address.city, inv.billTo.address.state, inv.billTo.address.pin].filter(Boolean).join(", ")]]
+    : [];
+  const taxRows: [string, string | number][] = inv.isInterState
+    ? [["IGST (18%)", pdfMoney(inv.igst || inv.gst)]]
+    : [
+        ["CGST (9%)", pdfMoney(inv.cgst)],
+        ["SGST (9%)", pdfMoney(inv.sgst)],
+      ];
+
+  const blocks: PdfBlock[] = [
+    {
+      kind: "kv",
+      rows: [
+        ["Invoice Number", inv._id],
+        ["Invoice Date", fromDay(new Date(inv.issuedAt).getTime())],
+        ["Due Date", fromDay(new Date(inv.dueDate).getTime())],
+        ["Booking Reference", inv.bookingId],
+        ["Place of Supply", inv.placeOfSupply || "Maharashtra (27)"],
+        ["Supplier", "OOHRENA Advertising Platform Private Limited"],
+        ["Supplier GSTIN", "27AAFCO0000A1Z5"],
+      ],
+    },
+    { kind: "heading", text: "Recipient Details (Bill To)" },
+    {
+      kind: "kv",
+      rows: [
+        ["Company Name", inv.billTo?.companyName || "Client"],
+        ...gstinRow,
+        ...addressRow,
+      ],
+    },
+    { kind: "heading", text: "Particulars & Services" },
+    {
+      kind: "table",
+      head: ["Description", "SAC", "Amount"],
+      widths: [300, 80, 119],
+      rows: (inv.lines || []).map((l: any) => [l.description, inv.sacCode || "998361", pdfMoney(l.amount)]),
+    },
+    { kind: "heading", text: "Tax & Amount Computation" },
+    {
+      kind: "kv",
+      rows: [
+        ["Subtotal", pdfMoney(inv.subtotal)],
+        ["Platform / Service Fee", pdfMoney(inv.serviceFee)],
+        ...taxRows,
+        ["Total Invoice Value (INR)", pdfMoney(inv.total)],
+        ["Advance Required", `${inv.advancePct}% (${pdfMoney(inv.advanceAmount)})`],
+      ],
+    },
+    {
+      kind: "text",
+      text: "Payment Terms: Please pay the advance amount by the due date via NEFT/RTGS to OOHRENA Platform Private Limited, HDFC Bank, A/C: 50200012345678, IFSC: HDFC0000123. Quote invoice number as payment reference.",
+    },
+  ];
+
+  return renderPdf(`TAX INVOICE — ${inv._id}`, `Status: ${inv.status.toUpperCase()} · Booking ${inv.bookingId}`, blocks);
+}
+
+export async function renderCreditNotePdf(cn: any): Promise<Buffer> {
+  const blocks: PdfBlock[] = [
+    {
+      kind: "kv",
+      rows: [
+        ["Credit Note Number", cn._id],
+        ["Date of Issue", fromDay(new Date(cn.issuedAt).getTime())],
+        ["Against Tax Invoice", cn.invoiceId],
+        ["Booking Reference", cn.bookingId],
+        ["Supplier", "OOHRENA Advertising Platform Private Limited"],
+        ["Supplier GSTIN", "27AAFCO0000A1Z5"],
+      ],
+    },
+    { kind: "heading", text: "Credit Note Particulars" },
+    {
+      kind: "kv",
+      rows: [
+        ["Original Invoiced Amount", pdfMoney(cn.originalAmount)],
+        ["Cancellation Fee", pdfMoney(cn.cancellationFee)],
+        ["GST Adjustment", pdfMoney(cn.gstAdjusted)],
+        ["Refundable Amount", pdfMoney(cn.refundAmount)],
+        ["Reason for Cancellation", cn.reason],
+      ],
+    },
+    {
+      kind: "text",
+      text: "Note: This credit note is issued in accordance with GST statutory requirements for booking cancellation and service fee adjustment. Refund processing is initiated within 3-5 business days to the original payment source.",
+    },
+  ];
+
+  return renderPdf(`CREDIT NOTE — ${cn._id}`, `Linked to Invoice ${cn.invoiceId}`, blocks);
 }

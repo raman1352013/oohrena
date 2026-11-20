@@ -21,6 +21,18 @@ const Env = z.object({
   DEFAULT_MARGIN_PCT: z.coerce.number().min(0).max(200).default(20),
   /** Temporary hold length before automatic expiry (MVP default 48 h). */
   HOLD_HOURS: z.coerce.number().positive().max(24 * 30).default(48),
+  /** Require 2FA for admin and finance accounts in production/staging. */
+  REQUIRE_2FA_PRIVILEGED: z.coerce.boolean().default(false),
+  /** Partner commission percentage on completed bookings. */
+  PARTNER_COMMISSION_PCT: z.coerce.number().min(0).max(100).default(5),
+  /** S3-compatible object storage bucket (AWS S3, Cloudflare R2, MinIO). If unset, falls back to local UPLOAD_DIR. */
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().default("auto"),
+  S3_ENDPOINT: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  /** Redis URL for multi-instance distributed rate limiting. If unset, uses memory store. */
+  REDIS_URL: z.string().optional(),
 });
 
 export type Config = z.infer<typeof Env> & { corsOrigins: string[]; secureCookies: boolean; encryptionKey: Buffer };

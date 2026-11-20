@@ -11,11 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientRouteImport } from './routes/client'
+import { Route as ConfidentialityRouteImport } from './routes/confidentiality'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PartnerRouteImport } from './routes/partner'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorRouteImport } from './routes/vendor'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLeadsLeadIdRouteImport } from './routes/admin.leads.$leadId'
@@ -30,6 +33,11 @@ const IndexRoute = IndexRouteImport.update({
 const ClientRoute = ClientRouteImport.update({
   id: '/client',
   path: '/client',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfidentialityRoute = ConfidentialityRouteImport.update({
+  id: '/confidentiality',
+  path: '/confidentiality',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinanceRoute = FinanceRouteImport.update({
@@ -47,6 +55,11 @@ const PartnerRoute = PartnerRouteImport.update({
   path: '/partner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -55,6 +68,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VendorRoute = VendorRouteImport.update({
@@ -86,11 +104,14 @@ const PrintQuoteQuoteIdRoute = PrintQuoteQuoteIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/client': typeof ClientRoute
+  '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/terms': typeof TermsRoute
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/leads/$leadId': typeof AdminLeadsLeadIdRoute
@@ -100,11 +121,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/client': typeof ClientRoute
+  '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/terms': typeof TermsRoute
   '/vendor': typeof VendorRoute
   '/admin': typeof AdminIndexRoute
   '/admin/leads/$leadId': typeof AdminLeadsLeadIdRoute
@@ -115,11 +139,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/client': typeof ClientRoute
+  '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/terms': typeof TermsRoute
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/leads/$leadId': typeof AdminLeadsLeadIdRoute
@@ -131,11 +158,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/client'
+    | '/confidentiality'
     | '/finance'
     | '/login'
     | '/partner'
+    | '/privacy'
     | '/register'
     | '/reports'
+    | '/terms'
     | '/vendor'
     | '/admin/'
     | '/admin/leads/$leadId'
@@ -145,11 +175,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/client'
+    | '/confidentiality'
     | '/finance'
     | '/login'
     | '/partner'
+    | '/privacy'
     | '/register'
     | '/reports'
+    | '/terms'
     | '/vendor'
     | '/admin'
     | '/admin/leads/$leadId'
@@ -159,11 +192,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/client'
+    | '/confidentiality'
     | '/finance'
     | '/login'
     | '/partner'
+    | '/privacy'
     | '/register'
     | '/reports'
+    | '/terms'
     | '/vendor'
     | '/admin/'
     | '/admin/leads/$leadId'
@@ -174,11 +210,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientRoute: typeof ClientRoute
+  ConfidentialityRoute: typeof ConfidentialityRoute
   FinanceRoute: typeof FinanceRoute
   LoginRoute: typeof LoginRoute
   PartnerRoute: typeof PartnerRoute
+  PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
+  TermsRoute: typeof TermsRoute
   VendorRoute: typeof VendorRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminLeadsLeadIdRoute: typeof AdminLeadsLeadIdRoute
@@ -202,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/confidentiality': {
+      id: '/confidentiality'
+      path: '/confidentiality'
+      fullPath: '/confidentiality'
+      preLoaderRoute: typeof ConfidentialityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/finance': {
       id: '/finance'
       path: '/finance'
@@ -223,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PartnerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -235,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vendor': {
@@ -278,11 +338,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientRoute: ClientRoute,
+  ConfidentialityRoute: ConfidentialityRoute,
   FinanceRoute: FinanceRoute,
   LoginRoute: LoginRoute,
   PartnerRoute: PartnerRoute,
+  PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
+  TermsRoute: TermsRoute,
   VendorRoute: VendorRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminLeadsLeadIdRoute: AdminLeadsLeadIdRoute,

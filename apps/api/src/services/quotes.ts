@@ -7,11 +7,13 @@ import {
 import { audit } from "../lib/audit.js";
 import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
+import { renderPdf, pdfMoney, type PdfBlock } from "../lib/pdf.js";
 import { LeadAssignment, Quote } from "../models/booking.js";
-import { Vendor } from "../models/foundation.js";
+import { User, Vendor } from "../models/foundation.js";
 import { Inventory, type InventoryDoc } from "../models/inventory.js";
 import { Lead } from "../models/lead.js";
 import { placeHold, releaseHoldIds } from "./availability.js";
+import { notify } from "./notifications.js";
 
 type ItemIn = z.infer<typeof quoteItemInput>;
 export type QuoteDoc = {
@@ -141,6 +143,17 @@ export async function releaseQuote(req: Request, cfg: Parameters<typeof placeHol
   const after = await Quote.findOneAndUpdate({ _id: id, status: "draft" }, { $set: { status: "released", releasedAt: new Date(), releasedBy: req.user!.userId, holdIds } }, { returnDocument: "after" }).lean<QuoteDoc>();
   await Lead.updateOne({ _id: q.leadId, status: { $in: ["under_review", "assigned", "quoted"] } }, { $set: { status: "quoted" } });
   await audit(req, { action: "quote.release", entity: "quote", entityId: id, before: { status: "draft" }, after: { status: "released", total: q.total, holdIds } });
+  if (q.clientId) {
+    const clientUser = await User.findOne({ orgId: q.clientId }).select("_id email mobile").lean();
+    if (clientUser) {
+      await notify("quote.released", [{ userId: clientUser._id, email: clientUser.email, mobile: clientUser.mobile }], {
+        quoteId: id,
+        leadId: q.leadId,
+        total: q.total,
+        validUntil: fromDay(q.validUntil.getTime()),
+      });
+    }
+  }
   return after!;
 }
 
@@ -177,6 +190,62 @@ export async function clientDecision(req: Request, id: string, decision: "approv
   if (!after) throw new AppError(409, "CONFLICT", "Quote changed while deciding; refresh and try again");
   if (decision === "reject") await releaseHoldIds(req, q.holdIds, `Client rejected ${q._id}`);
   await audit(req, { action: `quote.client.${decision}`, entity: "quote", entityId: id, before: { status: "released" }, after: { status }, reason: comment ?? null });
+  const admins = await User.find({ role: "admin" }).select("_id email mobile").lean();
+  await notify("quote.decision", admins.map((a) => ({ userId: a._id, email: a.email, mobile: a.mobile })), {
+    quoteId: id,
+    decision,
+    comment: comment ?? "",
+  });
   return after;
+}
+
+export async function renderQuotePdf(q: QuoteDoc, client?: { companyName?: string | null; gstin?: string | null } | null): Promise<Buffer> {
+  const blocks: PdfBlock[] = [
+    {
+      kind: "kv",
+      rows: [
+        ["Quotation ID", q._id],
+        ["Lead Reference", q.leadId],
+        ["Status", effectiveStatus(q).toUpperCase()],
+        ["Valid Until", fromDay(q.validUntil.getTime())],
+        ["Billed To", client?.companyName || "Valued Client"],
+        ...(client?.gstin ? [["Client GSTIN", client.gstin] as [string, string]] : []),
+      ],
+    },
+    { kind: "heading", text: "Campaign Media Inventory" },
+    {
+      kind: "table",
+      head: ["Item", "Location", "Dates", "Qty", "Media", "Prod & Install", "Total"],
+      widths: [130, 70, 95, 30, 56, 56, 62],
+      rows: q.items.map((i) => [
+        i.title,
+        i.city,
+        `${fromDay(i.from.getTime())} to ${fromDay(i.to.getTime())}`,
+        i.qty,
+        pdfMoney(i.media),
+        pdfMoney(i.production + i.installation),
+        pdfMoney(i.lineTotal),
+      ]),
+    },
+    { kind: "heading", text: "Commercial Summary" },
+    {
+      kind: "kv",
+      rows: [
+        ["Media Subtotal", pdfMoney(q.mediaTotal)],
+        ["Production & Installation", pdfMoney(q.productionTotal + q.installationTotal)],
+        ["Subtotal", pdfMoney(q.subtotal)],
+        ...(q.serviceFee > 0 ? [["Platform Service Fee", pdfMoney(q.serviceFee)] as [string, string]] : []),
+        ["CGST (9%)", pdfMoney(q.cgst)],
+        ["SGST (9%)", pdfMoney(q.sgst)],
+        ["Total Campaign Cost (incl. GST)", pdfMoney(q.total)],
+      ],
+    },
+    {
+      kind: "text",
+      text: "Notes & Terms: Inventory is held until the validity date specified above. Approving this quotation confirms the booking and triggers work order generation. All payments are subject to 18% GST as per Indian tax laws. OOHRENA Platform terms and conditions apply.",
+    },
+  ];
+
+  return renderPdf(`Quotation ${q._id}`, `Version ${q.version} · Created on ${fromDay(q.createdAt.getTime())}`, blocks);
 }
 

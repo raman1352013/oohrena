@@ -105,9 +105,19 @@
   --border: var(--line);
   --input: var(--line);
   --ring: var(--saffron);
-  --chart-1: var(--saffron); --chart-2: var(--verified); --chart-3: var(--navy); --chart-4: var(--hold); --chart-5: var(--mute);
-  --sidebar: oklch(1 0 0); --sidebar-foreground: var(--ink); --sidebar-primary: var(--navy); --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: var(--canvas); --sidebar-accent-foreground: var(--ink); --sidebar-border: var(--line); --sidebar-ring: var(--saffron);
+  --chart-1: var(--saffron);
+  --chart-2: var(--verified);
+  --chart-3: var(--navy);
+  --chart-4: var(--hold);
+  --chart-5: var(--mute);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--navy);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: var(--canvas);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--saffron);
 }
 
 @theme inline {
@@ -128,8 +138,12 @@
 }
 
 @media print {
-  .no-print { display: none !important; }
-  body { background: white; }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
 }
 
 @layer base {

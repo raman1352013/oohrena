@@ -12,8 +12,10 @@ import { signFileUrl } from "../lib/signed-url.js";
 import { saveUpload } from "../lib/storage.js";
 import { Booking, BookingHistory, WorkOrder } from "../models/booking.js";
 import { Campaign, ExecutionUpdate, Issue, Proof, ProofSchedule } from "../models/execution.js";
+import { User } from "../models/foundation.js";
 import { Inventory } from "../models/inventory.js";
 import { syncPayables } from "./finance.js";
+import { notify } from "./notifications.js";
 
 type WO = { _id: string; bookingId: string; vendorId: string; status: string; previousStatus?: string | null; campaignId?: string | null; items: { inventoryId: string; from: Date; to: Date }[] };
 
@@ -139,6 +141,28 @@ export async function decideProof(req: Request, id: string, decision: "verify" |
   }
   if (decision === "verify") await syncPayables(p.bookingId); // execution evidenced → vendor payable becomes due
   await audit(req, { action: `proof.${decision}`, entity: "proof", entityId: id, before: { status: "uploaded" }, after: { status, workOrderId: p.workOrderId }, reason: reason ?? null });
+  if (decision === "reject") {
+    const vUser = await User.findOne({ orgId: p.vendorId }).select("_id email mobile").lean();
+    if (vUser) {
+      await notify("proof.rejected", [{ userId: vUser._id, email: vUser.email, mobile: vUser.mobile }], {
+        proofId: id,
+        workOrderId: p.workOrderId,
+        reason: reason ?? "Proof does not meet quality standards",
+      });
+    }
+  } else if (decision === "verify") {
+    const campaign = await Campaign.findById(p.campaignId).lean();
+    if (campaign?.clientId) {
+      const cUser = await User.findOne({ orgId: campaign.clientId }).select("_id email mobile").lean();
+      if (cUser) {
+        await notify("proof.verified", [{ userId: cUser._id, email: cUser.email, mobile: cUser.mobile }], {
+          proofId: id,
+          bookingId: p.bookingId,
+          inventoryId: p.inventoryId,
+        });
+      }
+    }
+  }
   return { proofId: id, status, rejectReason: decision === "reject" ? reason ?? null : null };
 }
 
@@ -158,6 +182,29 @@ export async function overdueSlots(filter: Record<string, unknown> = {}) {
   const today = new Date(toDay(todayIST()));
   const activeWOs = (await WorkOrder.find({ status: { $nin: ["cancelled", "completed"] } }).select("_id").lean()).map((w) => w._id);
   return ProofSchedule.find({ ...filter, workOrderId: { $in: activeWOs }, dueDate: { $lt: today }, status: { $in: ["due", "rejected"] } }).sort({ dueDate: 1 }).lean();
+}
+
+/** Periodic job: dispatches proof.overdue notification to vendor and admin. */
+export async function checkOverdueProofsAndNotify() {
+  const slots = await overdueSlots();
+  let notifiedCount = 0;
+  for (const s of slots) {
+    const wo = await WorkOrder.findById(s.workOrderId).lean();
+    if (!wo) continue;
+    const vendorUsers = await User.find({ orgId: wo.vendorId }).select("_id email mobile").lean();
+    const admins = await User.find({ role: "admin" }).select("_id email mobile").lean();
+    const recipients = [...vendorUsers, ...admins].map((u) => ({ userId: u._id, email: u.email, mobile: u.mobile }));
+    if (recipients.length > 0) {
+      await notify("proof.overdue", recipients, {
+        workOrderId: wo._id,
+        inventoryId: s.inventoryId,
+        type: s.type,
+        dueDate: fromDay(s.dueDate.getTime()),
+      });
+      notifiedCount++;
+    }
+  }
+  return { overdueSlotsFound: slots.length, notificationsSent: notifiedCount };
 }
 
 /* ---------- Issues ---------- */
@@ -182,6 +229,13 @@ export async function raiseIssue(req: Request, campaignId: string, input: { work
     await ExecutionUpdate.create({ workOrderId: wo._id, fromStatus: wo.status as never, status: "issue_raised", note: `${id}: ${input.description.slice(0, 200)}`, byUser: u.userId });
   }
   await audit(req, { action: "issue.raise", entity: "issue", entityId: id, after: { campaignId, workOrderId: wo?._id ?? null, category: input.category } });
+  const admins = await User.find({ role: "admin" }).select("_id email mobile").lean();
+  await notify("issue.raised", admins.map((a) => ({ userId: a._id, email: a.email, mobile: a.mobile })), {
+    issueId: id,
+    campaignId,
+    category: input.category,
+    description: input.description,
+  });
   return issue.toObject();
 }
 
@@ -205,5 +259,14 @@ export async function updateIssue(req: Request, id: string, patch: { owner?: str
     }
   }
   await audit(req, { action: "issue.update", entity: "issue", entityId: id, before: { status: before.status, owner: before.owner, dueDate: before.dueDate }, after: { status: after!.status, owner: after!.owner, dueDate: after!.dueDate }, reason: patch.resolutionNote ?? null });
+  if (patch.status === "resolved") {
+    const raiser = await User.findById(before.raisedBy).select("_id email mobile").lean();
+    if (raiser) {
+      await notify("issue.resolved", [{ userId: raiser._id, email: raiser.email, mobile: raiser.mobile }], {
+        issueId: id,
+        resolution: patch.resolutionNote ?? "Issue resolved",
+      });
+    }
+  }
   return after!;
 }

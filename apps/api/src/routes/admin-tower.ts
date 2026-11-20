@@ -9,18 +9,19 @@ import { audit } from "../lib/audit.js";
 import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { withTransaction } from "../lib/tx.js";
-import { requirePermission } from "../middleware/auth.js";
+import { requirePermission, requireRecentAuth } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
 import { AvailabilityBlock, AvailabilityRequest } from "../models/availability.js";
 import { Booking, BookingHistory, LeadAssignment, Override, Quote, WorkOrder } from "../models/booking.js";
-import { Client, Vendor } from "../models/foundation.js";
+import { Client, User, Vendor } from "../models/foundation.js";
 import { DuplicateFlag, Inventory, type InventoryDoc } from "../models/inventory.js";
 import { Lead } from "../models/lead.js";
 import { bookItems, releaseBookingBlocks } from "../services/availability.js";
-import { overdueSlots, startExecution } from "../services/execution.js";
+import { overdueSlots, startExecution, checkOverdueProofsAndNotify } from "../services/execution.js";
 import { syncPayables } from "../services/finance.js";
 import { Issue, Proof } from "../models/execution.js";
 import { toPublic } from "../services/inventory.js";
+import { notify } from "../services/notifications.js";
 import { createQuote, effectiveStatus, quoteView, releaseQuote, reviseQuote, updateDraft, type QuoteDoc } from "../services/quotes.js";
 import { bookingView, workOrderView, type BookingDoc } from "./deals.js";
 
@@ -48,6 +49,14 @@ export function adminTowerRoutes(cfg: Config) {
       requirement: input.requirement, status: "new", contact: input.contact,
     });
     await audit(req, { action: "lead.create", entity: "lead", entityId: leadId, after: { source: input.source, clientId: input.clientId ?? null } });
+    const recipients = [];
+    if (input.clientId) {
+      const clientUser = await User.findOne({ orgId: input.clientId }).select("_id email mobile").lean();
+      if (clientUser) recipients.push({ userId: clientUser._id, email: clientUser.email, mobile: clientUser.mobile });
+    }
+    const admins = await User.find({ role: "admin" }).select("_id email mobile").lean();
+    recipients.push(...admins.map((a) => ({ userId: a._id, email: a.email, mobile: a.mobile })));
+    await notify("lead.created", recipients, { leadId, requirement: input.requirement });
     res.status(201).json({ data: { leadId: lead._id, source: lead.source, status: lead.status } });
   });
 
@@ -176,6 +185,19 @@ export function adminTowerRoutes(cfg: Config) {
       return b!.toObject() as unknown as BookingDoc;
     });
     await syncPayables(booking._id);
+    const bkRecipients = [];
+    if (booking.clientId) {
+      const clientUser = await User.findOne({ orgId: booking.clientId }).select("_id email mobile").lean();
+      if (clientUser) bkRecipients.push({ userId: clientUser._id, email: clientUser.email, mobile: clientUser.mobile });
+    }
+    const vendorIds = [...new Set(booking.items.map((i) => i.vendorId))];
+    const vendorUsers = await User.find({ orgId: { $in: vendorIds } }).select("_id email mobile").lean();
+    bkRecipients.push(...vendorUsers.map((u) => ({ userId: u._id, email: u.email, mobile: u.mobile })));
+    await notify("booking.created", bkRecipients, {
+      bookingId: booking._id,
+      start: fromDay(booking.start.getTime()),
+      end: fromDay(booking.end.getTime()),
+    });
     res.status(201).json({ data: bookingView(booking, "admin") });
   });
 
@@ -197,6 +219,16 @@ export function adminTowerRoutes(cfg: Config) {
     }
     const campaignId = await startExecution(b._id, created.map((w) => w.workOrderId));
     await audit(req, { action: "campaign.start", entity: "campaign", entityId: campaignId, after: { bookingId: b._id, workOrders: created.map((w) => w.workOrderId) } });
+    for (const w of created) {
+      const vUser = await User.findOne({ orgId: w.vendorId }).select("_id email mobile").lean();
+      if (vUser) {
+        await notify("workorder.issued", [{ userId: vUser._id, email: vUser.email, mobile: vUser.mobile }], {
+          workOrderId: w.workOrderId,
+          bookingId: b._id,
+          instructions: instructions || "Mount and upload proof",
+        });
+      }
+    }
     res.status(201).json({ data: created });
   });
 
@@ -226,7 +258,7 @@ export function adminTowerRoutes(cfg: Config) {
   });
 
   /* ---------- Overrides (reason mandatory, permanently logged) ---------- */
-  r.post("/overrides", requirePermission("overrides.create"), validateBody(overrideInput), async (req, res) => {
+  r.post("/overrides", requirePermission("overrides.create"), requireRecentAuth(), validateBody(overrideInput), async (req, res) => {
     const o = req.body as z.infer<typeof overrideInput>;
     let oldValue: unknown;
     if (o.entity === "lead" && o.field === "status") {
@@ -286,6 +318,11 @@ export function adminTowerRoutes(cfg: Config) {
         generatedAt: now,
       },
     });
+  });
+
+  r.post("/jobs/check-overdue-proofs", requirePermission("leads.assign"), async (_req, res) => {
+    const result = await checkOverdueProofsAndNotify();
+    res.json({ data: result });
   });
 
   return r;

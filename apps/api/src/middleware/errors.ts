@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import mongoose from "mongoose";
 import multer from "multer";
 import { AppError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 import { SystemEvent } from "../models/foundation.js";
 
 export function notFoundHandler(_req: Request, res: Response) {
@@ -33,7 +34,7 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
   if (err instanceof mongoose.Error.ValidationError) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: err.message } });
   }
-  console.error(err);
+  logger.error(err);
   void SystemEvent.create({ type: "error", detail: { path: req.path, method: req.method, message: (err as Error)?.message } }).catch(() => {});
   res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Something went wrong. Please try again." } });
 }

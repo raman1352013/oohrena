@@ -55,8 +55,14 @@ export const PERMISSIONS = {
   "payables.read": { vendor: "own", finance: "all" },
   "payments.read.own": { client: "own" },
   "finance.status.read": { admin: "all", finance: "all" },
-  // Module 9 — reports
+  // Module 9 — reports & notifications
   "reports.admin": { admin: "all", finance: "all" },
+  "reports.client_campaign": { client: "own", admin: "all", finance: "all" },
+  "reports.vendor_performance": { vendor: "own", admin: "all", finance: "all" },
+  "notifications.manage": { admin: "all" },
+  "notifications.read": { admin: "all" },
+  // Module 10 — growth partner
+  "partner.earnings.read": { growth_partner: "own", admin: "all", finance: "all" },
 } as const satisfies Record<string, Partial<Record<Role, Scope>>>;
 
 export type Permission = keyof typeof PERMISSIONS;

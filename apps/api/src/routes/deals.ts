@@ -8,8 +8,12 @@ import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { currentVendor } from "../middleware/upload.js";
 import { validateBody } from "../middleware/validate.js";
 import { Booking, BookingHistory, Quote, WorkOrder } from "../models/booking.js";
+import { Campaign } from "../models/execution.js";
+import { CreditNote, Invoice } from "../models/finance.js";
+import { Client } from "../models/foundation.js";
+import { nextId } from "../lib/ids.js";
 import { releaseBookingBlocks } from "../services/availability.js";
-import { clientDecision, quoteView, type QuoteDoc } from "../services/quotes.js";
+import { clientDecision, quoteView, renderQuotePdf, type QuoteDoc } from "../services/quotes.js";
 import { syncPayables } from "../services/finance.js";
 
 type Item = QuoteDoc["items"][number];
@@ -53,12 +57,27 @@ export function dealRoutes() {
     const items = await Quote.find({ clientId: req.user!.orgId, status: { $ne: "draft" } }).sort({ quoteNo: -1, version: -1 }).limit(200).lean<QuoteDoc[]>();
     res.json({ data: items.map((q) => quoteView(q, "client")) });
   });
-  /** Client sees every non-draft version of their own quotes (earlier versions stay readable). Another client's ID → 404. */
-  r.get("/quotes/:id", requirePermission("quotes.decide"), async (req, res) => {
-    const q = await Quote.findOne({ _id: String(req.params.id), clientId: req.user!.orgId, status: { $ne: "draft" } }).lean<QuoteDoc>();
+  /** Client sees every non-draft version of their own quotes; Admin/Finance sees all. format=pdf returns printable PDF. Another client's ID → 404. */
+  r.get("/quotes/:id", requireAuth, async (req, res) => {
+    const role = req.user!.role;
+    let q: QuoteDoc | null = null;
+    if (role === "admin" || role === "finance") {
+      q = await Quote.findById(String(req.params.id)).lean<QuoteDoc>();
+    } else if (role === "client") {
+      q = await Quote.findOne({ _id: String(req.params.id), clientId: req.user!.orgId, status: { $ne: "draft" } }).lean<QuoteDoc>();
+    }
     if (!q) throw notFound("Quote not found");
-    const versions = await Quote.find({ quoteNo: q.quoteNo, status: { $ne: "draft" } }).sort({ version: 1 }).select("_id version status validUntil total").lean();
-    res.json({ data: { ...quoteView(q, "client"), versions: versions.map((v) => ({ quoteId: v._id, version: v.version, status: v.status, total: v.total })) } });
+
+    if (req.query.format === "pdf") {
+      await audit(req, { action: "quote.export.pdf", entity: "quote", entityId: q._id });
+      const client = q.clientId ? await Client.findById(q.clientId).lean() : null;
+      const pdf = await renderQuotePdf(q, client);
+      res.setHeader("Content-Disposition", `inline; filename="quote-${q._id}.pdf"`);
+      return res.type("application/pdf").send(pdf);
+    }
+
+    const versions = await Quote.find({ quoteNo: q.quoteNo, ...(role === "client" ? { status: { $ne: "draft" } } : {}) }).sort({ version: 1 }).select("_id version status validUntil total").lean();
+    res.json({ data: { ...quoteView(q, role === "admin" ? "admin" : "client"), versions: versions.map((v) => ({ quoteId: v._id, version: v.version, status: v.status, total: v.total })) } });
   });
   r.post("/quotes/:id/decision", requirePermission("quotes.decide"), validateBody(quoteDecisionInput), async (req, res) => {
     const { decision, comment } = req.body as z.infer<typeof quoteDecisionInput>;
@@ -69,7 +88,9 @@ export function dealRoutes() {
   r.get("/bookings", requireAuth, async (req, res) => {
     if (req.user!.role !== "client") throw forbidden();
     const items = await Booking.find({ clientId: req.user!.orgId }).sort({ createdAt: -1 }).lean<BookingDoc[]>();
-    res.json({ data: items.map((b) => bookingView(b, "client")) });
+    const campaigns = await Campaign.find({ bookingId: { $in: items.map((b) => b._id) } }).select("_id bookingId").lean();
+    const cmpMap = new Map(campaigns.map((c) => [c.bookingId, c._id]));
+    res.json({ data: items.map((b) => ({ ...bookingView(b, "client"), campaignId: cmpMap.get(b._id) ?? null })) });
   });
   /** Status and timeline, role-scoped: Admin all, client own; anyone else 404. */
   r.get("/bookings/:id", requireAuth, async (req, res) => {
@@ -97,6 +118,33 @@ export function dealRoutes() {
       if (!after) throw new AppError(409, "CONFLICT", "Booking changed while cancelling; refresh and try again");
       await WorkOrder.updateMany({ bookingId: b._id, status: { $in: ["scheduled", "issue_raised"] } }, { $set: { status: "cancelled" } }, { session });
       await BookingHistory.create([{ bookingId: b._id, fromStatus: b.status, toStatus: "cancelled", changedBy: req.user!.userId, reason: `${reason} — ${c.rule}` }], { session });
+
+      const inv = await Invoice.findOne({ bookingId: b._id }).session(session);
+      if (inv) {
+        const crnId = await nextId("CRN");
+        await CreditNote.create(
+          [
+            {
+              _id: crnId,
+              invoiceId: inv._id,
+              bookingId: b._id,
+              clientId: b.clientId ?? null,
+              originalAmount: inv.total,
+              cancellationFee: c.fee,
+              refundAmount: c.refundable,
+              gstAdjusted: Math.round((c.fee * 18) / 118),
+              reason: `${reason} (${c.rule})`,
+              ruleApplied: c.rule,
+              issuedAt: new Date(),
+              issuedBy: req.user!.userId,
+            },
+          ],
+          { session },
+        );
+        await Invoice.updateOne({ _id: inv._id }, { $set: { status: "cancelled" } }, { session });
+        await audit(req, { action: "credit_note.issue", entity: "credit_note", entityId: crnId, after: { invoiceId: inv._id, refundAmount: c.refundable, fee: c.fee } }, session);
+      }
+
       await audit(req, { action: "booking.cancel", entity: "booking", entityId: b._id, before: { status: b.status }, after: { status: "cancelled", ...c }, reason }, session);
       return after;
     });

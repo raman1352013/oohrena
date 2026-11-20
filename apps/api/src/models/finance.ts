@@ -13,7 +13,11 @@ const invoiceSchema = new Schema(
     serviceFee: { type: Number, required: true },
     cgst: { type: Number, required: true },
     sgst: { type: Number, required: true },
+    igst: { type: Number, default: 0 },
     gst: { type: Number, required: true },
+    sacCode: { type: String, default: "998361" },
+    placeOfSupply: { type: String, default: null },
+    isInterState: { type: Boolean, default: false },
     total: { type: Number, required: true },
     advancePct: { type: Number, required: true },
     advanceAmount: { type: Number, required: true },
@@ -86,3 +90,24 @@ const payableSchema = new Schema(
 );
 payableSchema.index({ bookingId: 1, vendorId: 1 }, { unique: true });
 export const VendorPayable = mongoose.model("VendorPayable", payableSchema, "vendor_payables");
+
+/** Credit note raised on cancellation after an invoice has been issued. */
+const creditNoteSchema = new Schema(
+  {
+    _id: { type: String, required: true }, // CRN-2026-000001
+    invoiceId: { type: String, required: true, index: true },
+    bookingId: { type: String, required: true, index: true },
+    clientId: { type: String, default: null, index: true },
+    originalAmount: { type: Number, required: true },
+    cancellationFee: { type: Number, required: true },
+    refundAmount: { type: Number, required: true },
+    gstAdjusted: { type: Number, required: true },
+    reason: { type: String, required: true },
+    ruleApplied: { type: String, default: null },
+    issuedAt: { type: Date, required: true, default: () => new Date() },
+    issuedBy: { type: String, required: true },
+  },
+  { timestamps: true, versionKey: false },
+);
+export const CreditNote = mongoose.model("CreditNote", creditNoteSchema, "credit_notes");
+

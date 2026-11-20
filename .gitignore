@@ -30,3 +30,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Monorepo / API
+.env
+.env.*
+!.env.example
+coverage
+uploads/
+
+# Contains live credentials from the previous vendor — keep out of git
+docs/OOHRENA_Project_Handover_Documentation*.pdf

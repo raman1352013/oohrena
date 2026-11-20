@@ -2,6 +2,8 @@
 
 360° Outdoor + Digital Advertising Marketplace. Requirements: `docs/OOHRENA_MVP_Compulsory_Modules_v1.0 (1).pdf` (primary).
 
+**Start here:** [`AGENTS.md`](AGENTS.md) (rules, structure, how to add features) → [`docs/REMAINING_WORK.md`](docs/REMAINING_WORK.md) (what's left, in order) → [`docs/LAUNCH_GUIDE.md`](docs/LAUNCH_GUIDE.md) (deploy & launch).
+
 ```
 apps/web         React (TanStack Start) frontend
 apps/api         Express + MongoDB (Mongoose) REST API — /api/v1

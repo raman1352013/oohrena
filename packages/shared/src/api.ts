@@ -19,6 +19,8 @@ export type ErrorCode =
   | "INVALID_TRANSITION"
   | "REAUTH_REQUIRED"
   | "TWO_FACTOR_REQUIRED"
+  | "TWO_FACTOR_ALREADY_ENABLED"
+  | "SMS_NOT_CONFIGURED"
   | "INTERNAL_ERROR";
 
 export type SessionUser = {

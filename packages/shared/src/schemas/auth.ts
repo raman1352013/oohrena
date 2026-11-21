@@ -89,6 +89,16 @@ export const twoFactorLoginInput = z.object({
   code: z.string().trim().min(6).max(20),
 });
 
+/** Mandatory-2FA enrolment during login: the challenge token from a 2FA_SETUP_REQUIRED login response. */
+export const twoFactorEnrollStartInput = z.object({
+  challengeToken: z.string().trim().min(1),
+});
+
+export const twoFactorEnrollVerifyInput = z.object({
+  challengeToken: z.string().trim().min(1),
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code from your authenticator app"),
+});
+
 export const twoFactorDisableInput = z.object({
   password: z.string().min(1),
   code: z.string().trim().min(6).max(20),

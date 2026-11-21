@@ -277,7 +277,7 @@ describe("Module 9 — Reporting, Notifications & Audit Trail", () => {
 
     const first = deliveryRes.body.data.items[0];
     expect(first.status).toBe("sent");
-    expect(first.providerRef).toMatch(/^mock_/);
+    expect(first.providerRef).toMatch(/^console_email_/);
 
     // Ensure no sensitive fields (e.g. password, bank) are in the recipient or template content
     const allNotifs = await Notification.find({}).lean();

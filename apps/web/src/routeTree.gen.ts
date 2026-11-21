@@ -13,11 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as ConfidentialityRouteImport } from './routes/confidentiality'
 import { Route as FinanceRouteImport } from './routes/finance'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorRouteImport } from './routes/vendor'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -45,6 +47,11 @@ const FinanceRoute = FinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -68,6 +75,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -106,11 +118,13 @@ export interface FileRoutesByFullPath {
   '/client': typeof ClientRoute
   '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
@@ -123,11 +137,13 @@ export interface FileRoutesByTo {
   '/client': typeof ClientRoute
   '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendor': typeof VendorRoute
   '/admin': typeof AdminIndexRoute
@@ -141,11 +157,13 @@ export interface FileRoutesById {
   '/client': typeof ClientRoute
   '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/partner': typeof PartnerRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
@@ -160,11 +178,13 @@ export interface FileRouteTypes {
     | '/client'
     | '/confidentiality'
     | '/finance'
+    | '/forgot-password'
     | '/login'
     | '/partner'
     | '/privacy'
     | '/register'
     | '/reports'
+    | '/reset-password'
     | '/terms'
     | '/vendor'
     | '/admin/'
@@ -177,11 +197,13 @@ export interface FileRouteTypes {
     | '/client'
     | '/confidentiality'
     | '/finance'
+    | '/forgot-password'
     | '/login'
     | '/partner'
     | '/privacy'
     | '/register'
     | '/reports'
+    | '/reset-password'
     | '/terms'
     | '/vendor'
     | '/admin'
@@ -194,11 +216,13 @@ export interface FileRouteTypes {
     | '/client'
     | '/confidentiality'
     | '/finance'
+    | '/forgot-password'
     | '/login'
     | '/partner'
     | '/privacy'
     | '/register'
     | '/reports'
+    | '/reset-password'
     | '/terms'
     | '/vendor'
     | '/admin/'
@@ -212,11 +236,13 @@ export interface RootRouteChildren {
   ClientRoute: typeof ClientRoute
   ConfidentialityRoute: typeof ConfidentialityRoute
   FinanceRoute: typeof FinanceRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   PartnerRoute: typeof PartnerRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   VendorRoute: typeof VendorRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -255,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -288,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -340,11 +380,13 @@ const rootRouteChildren: RootRouteChildren = {
   ClientRoute: ClientRoute,
   ConfidentialityRoute: ConfidentialityRoute,
   FinanceRoute: FinanceRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   PartnerRoute: PartnerRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   VendorRoute: VendorRoute,
   AdminIndexRoute: AdminIndexRoute,

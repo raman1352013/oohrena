@@ -46,6 +46,7 @@ const appCollections = [
   "notifications",
   "notification_templates",
   "user_tokens",
+  "two_factor_challenges",
 ];
 
 target.createRole({

@@ -162,6 +162,14 @@ function LoginPage() {
           error={errors["password"]}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
         />
+        <div className="text-right -mt-2">
+          <Link
+            to="/forgot-password"
+            className="text-[12px] text-saffron-deep font-semibold hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <Btn type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending ? "Signing in…" : "Sign in"}
         </Btn>

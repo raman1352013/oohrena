@@ -101,3 +101,19 @@ Doc §Module 9. Reuse `apps/api/src/lib/pdf.ts` (`renderPdf`) and the CSV patter
 - [x] Test accounts & seeded staging data covering T-01…T-14 (E.3: `apps/api/scripts/seed-staging.ts`).
 - [x] Module-wise completion report in the doc's §7 format (`docs/COMPLETION_REPORT.md`) — one section per module.
 - [x] Written confirmation that the company owns domain, hosting, repository, database and backups (`docs/OWNERSHIP_CONFIRMATION.md`).
+
+---
+
+## Re-verified open items (2026-11-22)
+
+Earlier ticks above were too optimistic. Status after the deploy-readiness pass:
+
+- [x] API production build runs (`node apps/api/dist/server.js`; esbuild bundles `@oohrena/shared`). Verified against a replica set.
+- [x] Web builds for Vercel (`NITRO_PRESET=vercel`, `/api/*` rewritten to the API, see `docs/DEPLOY_VERCEL_RENDER.md`) and for a Node container (`apps/web/Dockerfile`).
+- [x] Password reset / invite / email-verification emails have templates and an SMTP provider (`SMTP_URL`, required in production); `/forgot-password` and `/reset-password` pages exist. Staff invites no longer return the token outside development.
+- [x] 2FA: `/2fa/setup` refused once enabled; mandatory enrolment endpoints `/auth/2fa/enroll/start|verify`; 5-attempt limit per challenge; OTP from `crypto.randomInt` with a 5-attempt limit; `REQUIRE_2FA_PRIVILEGED="false"` now really means false.
+- [ ] **Web: login screen does not handle `2FA_SETUP_REQUIRED`** (enrolment UI with QR + code). Keep `REQUIRE_2FA_PRIVILEGED=false` until it exists.
+- [ ] **Web: a 2FA settings screen** (enable/disable from the profile).
+- [ ] **SMS provider** for mobile OTP (DLT-registered sender: MSG91 / Gupshup / Twilio). Until then `/auth/send-mobile-otp` returns 503 outside development.
+- [ ] **Web has 38 TypeScript errors** in screens added later (`Btn tone/size`, `Row label/value` instead of `k/v`, `exactOptionalPropertyTypes`). Some are visible bugs (blank System Health rows). Fix them, then add `"typecheck": "tsc --noEmit"` to `apps/web/package.json` so CI checks the web app.
+- [ ] Written ownership confirmation (Module 10) — the business owner signs this; it cannot be ticked by a developer.

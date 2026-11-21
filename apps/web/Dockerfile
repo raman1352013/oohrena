@@ -12,8 +12,11 @@ RUN npm ci --legacy-peer-deps
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
 
-ARG VITE_API_URL=http://localhost:4000
+# Public API origin, baked in at build time, e.g. --build-arg VITE_API_URL=https://api.oohrena.com
+ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
+# The Lovable/nitro default target is Cloudflare Workers; a container needs the Node server output.
+ENV NITRO_PRESET=node-server
 
 RUN npm run build -w @oohrena/web
 

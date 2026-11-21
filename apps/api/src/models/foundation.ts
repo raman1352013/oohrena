@@ -33,6 +33,7 @@ const userSchema = new Schema(
     emailVerificationExpiresAt: { type: Date, default: null, select: false },
     mobileOtpHash: { type: String, default: null, select: false },
     mobileOtpExpiresAt: { type: Date, default: null, select: false },
+    mobileOtpAttempts: { type: Number, default: 0, select: false },
   },
   ts,
 );
@@ -65,6 +66,9 @@ const twoFactorChallengeSchema = new Schema(
   {
     tokenHash: { type: String, required: true, unique: true },
     userId: { type: String, required: true },
+    /** login = enter an existing 2FA code; setup = privileged user must enrol before a session is issued. */
+    purpose: { type: String, enum: ["login", "setup"], default: "login" },
+    attempts: { type: Number, default: 0 },
     expiresAt: { type: Date, required: true },
   },
   { versionKey: false },

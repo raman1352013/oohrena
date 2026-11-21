@@ -176,7 +176,7 @@ function CreateStaffModal({ onClose }: { onClose: () => void }) {
     mobile: "",
     role: "admin",
   });
-  const [inviteResult, setInviteResult] = useState<{ inviteToken: string; email: string } | null>(
+  const [inviteResult, setInviteResult] = useState<{ inviteSent: boolean; devInviteLink?: string | undefined; email: string } | null>(
     null,
   );
   const [error, setError] = useState<string | null>(null);
@@ -186,7 +186,7 @@ function CreateStaffModal({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       const res = await createStaff.mutateAsync(form);
-      setInviteResult({ inviteToken: res.inviteToken, email: form.email });
+      setInviteResult({ inviteSent: res.inviteSent, devInviteLink: res.devInviteLink, email: form.email });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create staff account");
     }
@@ -199,21 +199,30 @@ function CreateStaffModal({ onClose }: { onClose: () => void }) {
 
         {inviteResult ? (
           <div className="space-y-4">
-            <div className="p-3 bg-emerald-50 text-emerald-800 text-[13px] rounded-lg border border-emerald-200">
-              Staff account created! An invitation email has been dispatched to{" "}
-              <strong>{inviteResult.email}</strong>.
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-mute mb-1">
-                Set-Password Invite Token (single-use):
-              </label>
-              <input
-                readOnly
-                type="text"
-                value={inviteResult.inviteToken}
-                className="w-full font-mono text-[12px] p-2 rounded border border-line bg-muted"
-              />
-            </div>
+            {inviteResult.inviteSent ? (
+              <div className="p-3 bg-emerald-50 text-emerald-800 text-[13px] rounded-lg border border-emerald-200">
+                Staff account created. A set-password invitation was emailed to{" "}
+                <strong>{inviteResult.email}</strong> (valid for 7 days).
+              </div>
+            ) : (
+              <div className="p-3 bg-amber-50 text-amber-900 text-[13px] rounded-lg border border-amber-200">
+                Staff account created, but the invitation email could not be sent. Check the email
+                settings, then ask <strong>{inviteResult.email}</strong> to use "Forgot password".
+              </div>
+            )}
+            {inviteResult.devInviteLink && (
+              <div>
+                <label className="block text-[12px] font-medium text-mute mb-1">
+                  Development only: set-password link
+                </label>
+                <input
+                  readOnly
+                  type="text"
+                  value={inviteResult.devInviteLink}
+                  className="w-full font-mono text-[12px] p-2 rounded border border-line bg-muted"
+                />
+              </div>
+            )}
             <div className="flex justify-end">
               <Btn tone="primary" onClick={onClose}>
                 Done

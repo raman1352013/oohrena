@@ -40,3 +40,6 @@ uploads/
 
 # Contains live credentials from the previous vendor — keep out of git
 docs/OOHRENA_Project_Handover_Documentation*.pdf
+
+# Vercel build output
+.vercel

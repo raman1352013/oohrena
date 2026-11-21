@@ -9,6 +9,14 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+/**
+ * Deployed API origin (e.g. https://oohrena-api.onrender.com), read at BUILD time.
+ * When set, the web host forwards /api/* to it, so the browser talks to one origin and the
+ * HttpOnly session cookie is first-party (vercel.app and onrender.com are different sites;
+ * a SameSite=Lax cookie would not be sent cross-site). On Vercel this becomes a CDN rewrite.
+ */
+const apiOrigin = process.env["API_PROXY_ORIGIN"]?.replace(/\/$/, "");
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
@@ -17,10 +25,11 @@ export default defineConfig({
   },
   nitro: {
     routeRules: {
+      ...(apiOrigin ? { "/api/**": { proxy: `${apiOrigin}/api/**` } } : {}),
       "/**": {
         headers: {
           "Content-Security-Policy":
-            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' http://localhost:4000 https://* ws: wss:; frame-ancestors 'none';",
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://* ws: wss:; frame-ancestors 'none';",
           "X-Frame-Options": "DENY",
           "X-Content-Type-Options": "nosniff",
           "Referrer-Policy": "strict-origin-when-cross-origin",

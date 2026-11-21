@@ -96,17 +96,18 @@ export function adminUserRoutes(cfg: Config) {
       return { user: toSessionUser(user!.toObject()), inviteToken };
     });
 
-    await notify(
-      "user.invited",
-      [{ userId: out.user.userId, email: input.email }],
-      {
-        role: input.role,
-        fullName: input.fullName,
-        inviteLink: `/reset-password?token=${out.inviteToken}`,
-      },
-    );
+    const inviteLink = `${cfg.webUrl}/reset-password?token=${out.inviteToken}`;
+    const sent = await notify("user.invited", [{ userId: out.user.userId, email: input.email }], {
+      role: input.role,
+      fullName: input.fullName,
+      inviteLink,
+    });
+    const inviteSent = sent.some((n) => n.status === "sent");
 
-    res.status(201).json({ data: out });
+    // The set-password link is a credential for the new user, so it goes only to their mailbox.
+    // Local development has no mail server, so there (only) it is also returned for the admin to copy.
+    const devOnly = cfg.NODE_ENV === "development" || cfg.NODE_ENV === "test";
+    res.status(201).json({ data: { user: out.user, inviteSent, ...(devOnly ? { devInviteLink: inviteLink } : {}) } });
   });
 
   /** Suspend a user account. Requires recent re-authentication. */

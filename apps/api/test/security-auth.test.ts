@@ -146,7 +146,8 @@ describe("Module 10 — Security, Roles, 2FA & Privacy (Section B)", () => {
       });
     expect(createRes.status).toBe(201);
     expect(createRes.body.data.user.role).toBe("finance");
-    expect(createRes.body.data.inviteToken).toBeTruthy();
+    expect(createRes.body.data.devInviteLink).toContain("/reset-password?token=");
+    expect(createRes.body.data).not.toHaveProperty("inviteToken");
 
     const createdUserId = createRes.body.data.user.userId;
 
@@ -154,7 +155,7 @@ describe("Module 10 — Security, Roles, 2FA & Privacy (Section B)", () => {
     const resetRes = await request(app)
       .post("/api/v1/auth/reset-password")
       .send({
-        token: createRes.body.data.inviteToken,
+        token: new URL(createRes.body.data.devInviteLink).searchParams.get("token"),
         password: GOOD_PW,
       });
     expect(resetRes.status).toBe(200);
@@ -271,7 +272,7 @@ describe("Module 10 — Security, Roles, 2FA & Privacy (Section B)", () => {
     // Set password
     await request(app)
       .post("/api/v1/auth/reset-password")
-      .send({ token: gpCreate.body.data.inviteToken, password: GOOD_PW });
+      .send({ token: new URL(gpCreate.body.data.devInviteLink).searchParams.get("token"), password: GOOD_PW });
 
     // Partner logs in
     const gpLogin = await request(app)

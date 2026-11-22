@@ -24,6 +24,14 @@ npm run dev:web                  # http://localhost:8080 (proxies /api to :4000)
 No MongoDB yet? `npm run dev:api:memory` runs the API on an in-memory replica set, seeded with the
 test accounts below (password = `SEED_PASSWORD` in `apps/api/.env`). Data resets on every restart.
 
+For a demo, fill the running API with a full chain (4 live listings → inquiry → quote → booking →
+work order → invoice → verified payment, plus one new inquiry in the admin inbox) through the real
+endpoints: `npm run seed:demo -w @oohrena/api` (uses `API_URL`, default `http://localhost:4000`).
+
+With a real database (Atlas, staging): `npm run seed:staging -w @oohrena/api` seeds the test accounts and
+the same demo chain into `MONGODB_URI`, through an in-process API. It refuses `NODE_ENV=production` and
+skips the chain if it has already been seeded.
+
 | Role | Email |
 |------|-------|
 | Admin | admin@test.oohrena.local |

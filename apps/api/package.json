@@ -10,6 +10,7 @@
     "start:prod": "node dist/server.js",
     "seed": "tsx scripts/seed.ts",
     "seed:staging": "tsx scripts/seed-staging.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "dev:memory": "tsx scripts/dev-memory.ts",
     "create-staff": "tsx scripts/create-staff.ts",
     "typecheck": "tsc --noEmit",

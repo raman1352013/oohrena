@@ -86,7 +86,7 @@ Doc §Module 9. Reuse `apps/api/src/lib/pdf.ts` (`renderPdf`) and the CSV patter
 
 - [x] **E.1 Dockerfiles** for `apps/api` (multi-stage, non-root user, `NODE_ENV=production`, healthcheck on `/api/v1/system/health`) and `apps/web` (containerised or Cloudflare Workers via Nitro deploy).
 - [x] **E.2 CI** (GitHub Actions): on PR and push — `npm ci`, security audit (`npm audit --omit=dev`), typecheck, tests across workspaces, API production build, web production build, and lint.
-- [x] **E.3 Staging environment** separate from production (own DB, own secrets, same config), seeded with test accounts and a dataset that exercises all 14 acceptance tests (`npm run seed:staging -w @oohrena/api`; refuses to run against production).
+- [x] **E.3 Staging environment** separate from production (own DB, own secrets, same config), seeded with test accounts and a dataset that exercises all 14 acceptance tests (`npm run seed:staging -w @oohrena/api`; refuses to run against production). The demo chain is created through the real API (`scripts/demo-flow.ts`, shared with `seed:demo`), so records always match the models; re-runs skip it.
 - [x] **E.4 Backups & restore (T-14).** Scripted `mongodump` & `mongorestore` runner (`apps/api/scripts/backup-restore.ts`) recording system events on backup and restore.
 - [x] **E.5 Monitoring**: health check on `/api/v1/system/health`, error logging to `system_events`, structured Pino logging with request IDs.
 - [x] **E.6 Apply the DB role** `apps/api/scripts/mongo-app-role.js` (audit_logs insert/find only) — updated to include all 38 application collections.

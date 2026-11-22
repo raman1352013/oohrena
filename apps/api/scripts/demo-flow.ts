@@ -3,6 +3,8 @@
  * maths, IDs, transitions and audit as real use. Shared by seed-demo.ts (against a running API) and
  * seed-staging.ts (against an in-process API on the target database). Needs the seeded test accounts.
  */
+import { deflateSync } from "node:zlib";
+
 type Json = Record<string, any>;
 
 async function call(API: string, token: string | null, method: string, path: string, body?: Json | FormData): Promise<Json> {
@@ -28,8 +30,75 @@ async function login(API: string, PW: string, email: string) {
 }
 
 const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
-// 1x1 PNG; a unique suffix keeps the duplicate-photo check happy.
-const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+// ---- Placeholder site photo: an illustrated hoarding at dusk, drawn as a PNG (no image library). ----
+type RGB = [number, number, number];
+const CRC = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+const crc32 = (b: Buffer) => {
+  let c = 0xffffffff;
+  for (const x of b) c = CRC[(c ^ x) & 0xff]! ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+};
+const chunk = (type: string, data: Buffer) => {
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length);
+  const td = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(td));
+  return Buffer.concat([len, td, crc]);
+};
+const mix = (a: RGB, b: RGB, t: number): RGB => [0, 1, 2].map((i) => Math.round(a[i]! + (b[i]! - a[i]!) * t)) as RGB;
+
+function sitePhoto(sky: RGB, face: RGB, accent: RGB): Buffer {
+  const W = 960, H = 540;
+  const raw = Buffer.alloc((W * 3 + 1) * H);
+  const horizon = 400;
+  const bx0 = 200, bx1 = 760, by0 = 90, by1 = 300; // billboard face
+  for (let y = 0; y < H; y++) {
+    const row = y * (W * 3 + 1);
+    for (let x = 0; x < W; x++) {
+      let p: RGB;
+      if (y >= horizon) p = mix([52, 56, 64], [28, 30, 36], (y - horizon) / (H - horizon)); // road
+      else p = mix(sky, [250, 214, 165], y / horizon); // sky → warm horizon
+      const inFrame = x >= bx0 - 10 && x < bx1 + 10 && y >= by0 - 10 && y < by1 + 10;
+      const inFace = x >= bx0 && x < bx1 && y >= by0 && y < by1;
+      const post = y >= by1 + 10 && y < horizon + 20 && ((x >= 330 && x < 350) || (x >= 610 && x < 630));
+      if (post) p = [70, 74, 82];
+      if (inFrame) p = [236, 238, 242];
+      if (inFace) {
+        p = mix(face, mix(face, [0, 0, 0], 0.35), (y - by0) / (by1 - by0));
+        if ((x - bx0 + (y - by0)) % 140 < 40) p = mix(p, accent, 0.55); // diagonal ad stripes
+        if (y > by1 - 46 && y < by1 - 24 && x > bx0 + 30 && x < bx0 + 300) p = [255, 255, 255]; // "headline" bar
+      }
+      if (y >= 470 && y < 478 && x % 90 < 50) p = [230, 200, 90]; // lane markings
+      raw[row + 1 + x * 3] = p[0];
+      raw[row + 2 + x * 3] = p[1];
+      raw[row + 3 + x * 3] = p[2];
+    }
+  }
+  // One random pixel keeps every upload unique for the duplicate-photo check.
+  raw[raw.length - 3] = Math.floor(Math.random() * 256);
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(W, 0);
+  ihdr.writeUInt32BE(H, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // truecolour RGB
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", deflateSync(raw, { level: 9 })),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+const PALETTES: [RGB, RGB, RGB][] = [
+  [[44, 62, 110], [234, 88, 12], [253, 186, 116]], // Gwalior — brand orange
+  [[30, 41, 82], [14, 116, 144], [125, 211, 252]], // Mumbai — teal
+  [[59, 47, 99], [124, 58, 237], [196, 181, 253]], // Gurugram — violet
+  [[37, 71, 74], [22, 163, 74], [134, 239, 172]], // Bengaluru — green
+];
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
 const file = (buf: Buffer, type: string) => new Blob([new Uint8Array(buf)], { type });
 
@@ -58,7 +127,8 @@ export async function runDemoFlow(apiBase: string, PW: string, log: (msg: string
     });
     const id = created.inventoryId as string;
     const fd = new FormData();
-    fd.append("photos", file(Buffer.concat([PNG, Buffer.from(`#demo-${Date.now()}-${i}`)]), "image/png"), "site.png");
+    const [sky, face, accent] = PALETTES[i % PALETTES.length]!;
+    fd.append("photos", file(sitePhoto(sky, face, accent), "image/png"), "site.png");
     await call(API, vendor, "POST", `/vendors/me/inventory/${id}/photos`, fd);
     await call(API, vendor, "POST", `/vendors/me/inventory/${id}/submit`);
     await call(API, admin, "POST", `/admin/inventory/${id}/decision`, { decision: "approve", indicativePrice: l.price });

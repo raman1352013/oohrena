@@ -251,7 +251,7 @@ export async function buildVendorPerformanceReport(targetVendorId?: string) {
   const [reqs, slots, proofs, wos, invs] = await Promise.all([
     AvailabilityRequest.find({ vendorId: { $in: vIds }, status: { $in: ["confirmed", "declined"] }, respondedAt: { $exists: true } }).lean(),
     ProofSchedule.find({ vendorId: { $in: vIds } }).lean(),
-    Proof.find({ vendorId: { $in: vIds }, status: { $in: ["verified", "rejected"] } }).lean(),
+    Proof.find({ vendorId: { $in: vIds }, status: { $in: ["uploaded", "verified", "rejected"] } }).lean(),
     WorkOrder.find({ vendorId: { $in: vIds } }).lean(),
     Inventory.find({ vendorId: { $in: vIds } }).select("vendorId status").lean(),
   ]);
@@ -265,17 +265,21 @@ export async function buildVendorPerformanceReport(targetVendorId?: string) {
       ? Math.round(vReqs.reduce((sum, r) => sum + (r.respondedAt!.getTime() - r.requestedAt.getTime()), 0) / (vReqs.length * 60_000))
       : null;
 
-    // 2. Proof timeliness: proofs uploaded on or before dueDate
-    const vSlots = slots.filter((s) => s.vendorId === v._id);
+    // 2. Proof timeliness: proofs uploaded on or before the due day. Only slots that are already
+    // due (or already have a proof) count, so a new work order doesn't read as 0% on time.
+    const today = new Date(toDay(todayIST()));
+    const vSlots = slots.filter(
+      (s) => s.vendorId === v._id && s.status !== "cancelled" && (s.dueDate <= today || s.status !== "due"),
+    );
     const timelyCount = vSlots.filter((s) => {
       if (s.status !== "verified" && s.status !== "uploaded") return false;
       const p = proofs.find((x) => x._id === (s.receivedProofId || s.latestProofId));
-      return p ? p.uploadedAt <= s.dueDate : false;
+      return p ? p.uploadedAt.getTime() < s.dueDate.getTime() + 86_400_000 : false;
     }).length;
     const proofTimelinessPct = vSlots.length ? Math.round((timelyCount / vSlots.length) * 100) : 100;
 
     // 3. Proof rejection rate
-    const vProofs = proofs.filter((p) => p.vendorId === v._id);
+    const vProofs = proofs.filter((p) => p.vendorId === v._id && p.status !== "uploaded"); // reviewed only
     const rejectedCount = vProofs.filter((p) => p.status === "rejected").length;
     const proofRejectionRatePct = vProofs.length ? Math.round((rejectedCount / vProofs.length) * 100) : 0;
 

@@ -38,13 +38,13 @@ export function QuoteBreakdown({ q, showCost }: { q: QuoteView; showCost?: boole
                 "Media",
                 "Dates",
                 "Rate × qty × units",
-                "Media",
+                "Media cost",
                 "Production",
                 "Installation",
                 "Line total",
                 ...(showCost ? ["Vendor cost"] : []),
-              ].map((h) => (
-                <th key={h} className="font-normal py-2 pr-3">
+              ].map((h, idx) => (
+                <th key={`${idx}-${h}`} className="font-normal py-2 pr-3">
                   {h}
                 </th>
               ))}

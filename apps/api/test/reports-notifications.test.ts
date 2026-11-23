@@ -168,6 +168,11 @@ describe("Module 9 — Reporting, Notifications & Audit Trail", () => {
     expect(vRes.status).toBe(200);
     expect(vRes.body.data[0].vendorId).toBe(vendor.vendorId);
 
+    // A work order whose proof slots are all in the future must not count as late.
+    await bookedWorkOrder(app, adminToken, vendor);
+    const future = await request(app).get(`/api/v1/reports/vendor-performance?vendorId=${vendor.vendorId}`).set(A);
+    expect(future.body.data[0].proofTimelinessPct).toBe(100);
+
     // CSV format
     const csvRes = await request(app).get(`/api/v1/reports/vendor-performance?format=csv`).set(A);
     expect(csvRes.status).toBe(200);

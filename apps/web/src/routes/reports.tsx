@@ -37,14 +37,34 @@ export const Route = createFileRoute("/reports")({
 type AdminTab = "funnel" | "revenue" | "exceptions" | "vendor-performance" | "audit";
 
 function ReportsScreen() {
-  const { user } = useCurrentUser();
-  const role = user?.role ?? "client";
+  const session = useCurrentUser();
+  const role = session.data?.role;
 
+  // AuthGate only renders this page for signed-in users; wait for the role before choosing a view.
+  if (!role) {
+    return (
+      <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 text-mute text-[13px]">
+        Loading reports…
+      </main>
+    );
+  }
   if (role === "client") {
     return <ClientReportsView />;
   }
   if (role === "vendor") {
     return <VendorReportsView />;
+  }
+  if (role === "growth_partner") {
+    return (
+      <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6">
+        <KCard title="Reports">
+          <Empty
+            title="Your referral report lives in the partner portal"
+            hint="Referred inquiries, converted campaigns and commission are tracked on My workspace."
+          />
+        </KCard>
+      </main>
+    );
   }
   return <AdminReportsView />;
 }

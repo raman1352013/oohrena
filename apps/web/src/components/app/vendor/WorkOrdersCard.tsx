@@ -142,19 +142,34 @@ function WorkOrderBlock({ w }: { w: WorkOrderView }) {
       {ex.data && !["cancelled"].includes(status) && (
         <div className="space-y-2">
           <div className="font-semibold">Proof schedule</div>
-          <div className="divide-y divide-line border border-line rounded-lg">
-            {ex.data.schedule.map((s) => (
-              <SlotRow
-                key={s.scheduleId}
-                s={s}
-                woId={w.workOrderId}
-                closed={status === "completed"}
-                rejectReason={
-                  ex.data!.proofs.find((p) => p.proofId === s.latestProofId)?.rejectReason ?? null
-                }
-              />
+          {/* One block per site, so a multi-site work order doesn't show look-alike rows. */}
+          {w.items
+            .map((item) => ({
+              item,
+              slots: ex.data!.schedule.filter((s) => s.inventoryId === item.inventoryId),
+            }))
+            .filter((g) => g.slots.length > 0)
+            .map(({ item, slots }) => (
+              <div key={item.inventoryId} className="space-y-1">
+                <div className="text-[12px] text-mute">
+                  <span className="font-mono">{item.inventoryId}</span> · {item.title}, {item.city}
+                </div>
+                <div className="divide-y divide-line border border-line rounded-lg">
+                  {slots.map((s) => (
+                    <SlotRow
+                      key={s.scheduleId}
+                      s={s}
+                      woId={w.workOrderId}
+                      closed={status === "completed"}
+                      rejectReason={
+                        ex.data!.proofs.find((p) => p.proofId === s.latestProofId)?.rejectReason ??
+                        null
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
-          </div>
           {ex.data.proofs.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-1">
               {ex.data.proofs.map((p) => (

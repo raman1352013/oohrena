@@ -5,6 +5,11 @@ import { audit } from "./lib/audit.js";
 import { Client, Consent, GrowthPartner, User, Vendor } from "./models/foundation.js";
 import { hashPassword } from "./services/session.js";
 import { consentDocs } from "./routes/auth.js";
+import { saveUpload } from "./lib/storage.js";
+import { VendorDocument } from "./models/vendor-kyc.js";
+
+/** Minimal valid PDF, so an approved test vendor has KYC documents on file like a real one. */
+const SAMPLE_PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
 
 type Seed = { email: string; fullName: string; mobile: string; role: Role; kyc?: "approved" | "pending"; pan?: string };
 
@@ -41,6 +46,15 @@ export async function seedTestAccounts(cfg: Config, password: string, log: (m: s
         _id: orgId, userId, legalName: `${a.fullName} Media`, pan: a.pan, city: "Gwalior",
         kycStatus: a.kyc, approvedBy: approved ? "seed" : null, approvedAt: approved ? new Date() : null,
       });
+      if (approved) {
+        for (const type of ["pan", "gst"] as const) {
+          const f = await saveUpload(cfg, SAMPLE_PDF, {
+            kind: "kyc_document", allowed: ["application/pdf"], maxBytes: 1024 * 1024, encryptAtRest: true,
+            ownerUserId: userId, vendorId: orgId, originalName: `${type}-sample.pdf`,
+          });
+          await VendorDocument.create({ vendorId: orgId, type, fileId: f._id, status: "verified", verifiedBy: "seed", verifiedAt: new Date(), uploadedBy: userId });
+        }
+      }
     } else if (a.role === "growth_partner") {
       orgId = await nextId("GP");
       await GrowthPartner.create({ _id: orgId, userId, name: a.fullName, city: "Gwalior" });

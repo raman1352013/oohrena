@@ -24,9 +24,10 @@ npm run dev:web                  # http://localhost:8080 (proxies /api to :4000)
 No MongoDB yet? `npm run dev:api:memory` runs the API on an in-memory replica set, seeded with the
 test accounts below (password = `SEED_PASSWORD` in `apps/api/.env`). Data resets on every restart.
 
-For a demo, fill the running API with a full chain (4 live listings → inquiry → quote → booking →
-work order → invoice → verified payment, plus one new inquiry in the admin inbox) through the real
-endpoints: `npm run seed:demo -w @oohrena/api` (uses `API_URL`, default `http://localhost:4000`).
+For a demo, fill the running API through the real endpoints with 9 live listings (all media types), a full
+chain (inquiry → quote → booking → work order → proof → invoice → verified payment), a quote waiting for
+client2, leads in New / Under review, a partner referral and vendor2 KYC documents (details:
+`docs/DEMO_GUIDE_HINGLISH.md`): `npm run seed:demo -w @oohrena/api` (uses `API_URL`, default `http://localhost:4000`).
 
 With a real database (Atlas, staging): `npm run seed:staging -w @oohrena/api` seeds the test accounts and
 the same demo chain into `MONGODB_URI`, through an in-process API. It refuses `NODE_ENV=production` and

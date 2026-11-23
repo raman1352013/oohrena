@@ -15,8 +15,10 @@ For a manual tester. Run each step in order; tick ✅ / ❌ and write what you s
 Use a **separate browser profile / incognito window per role** so you can stay signed in as two
 people at once. Test on desktop **and** on a phone (or Chrome DevTools → 375 px wide).
 
-Demo data you should see at the start: 4 live hoardings (Gwalior, Mumbai, Gurugram, Bengaluru),
-inquiry `LD-2026-000001` (booked) and `LD-2026-000002` (New in the admin inbox).
+Demo data you should see at the start (see `docs/DEMO_GUIDE_HINGLISH.md` §3): 9 live listings in 9 cities
+(hoardings, LED screen, unipole, bus, mall screens, LED van); `LD-2026-000001` booked with one verified and one
+pending proof and a verified advance; `LD-2026-000002` New; `LD-2026-000003` (client2) quote waiting for the client;
+`LD-2026-000004` under review; a growth-partner referral; vendor2 KYC documents waiting for review.
 
 ---
 
@@ -25,7 +27,7 @@ inquiry `LD-2026-000001` (booked) and `LD-2026-000002` (New in the admin inbox).
 | # | Step | Expected |
 |---|------|----------|
 | 1.1 | Open `/` | Landing page (what OOHRENA is, how it works, who it is for); "Browse verified media" opens `/marketplace` |
-| 1.1b | Open `/marketplace` | 4 listings, photos, "Verified" badge, price per month |
+| 1.1b | Open `/marketplace` | 9 listings, photos, "Verified" badge, price per month |
 | 1.2 | Search "Mumbai", filter city, max price, category chips, List ↔ Map | Results change; map shows pins |
 | 1.3 | Pick start/end dates | Cards show availability for those dates |
 | 1.4 | Open a listing → "View details" | Photo, size, indicative price, availability calendar with legend |
@@ -80,7 +82,7 @@ inquiry `LD-2026-000001` (booked) and `LD-2026-000002` (New in the admin inbox).
 
 | # | Step | Expected |
 |---|------|----------|
-| 5.1 | vendor@ → Vendor hub | KYC approved, 4 listings live, work orders listed |
+| 5.1 | vendor@ → Vendor hub | KYC approved (PAN + GST on file), 9 listings live, work orders listed |
 | 5.2 | Work order → Acknowledge | Toast "Work order acknowledged" |
 | 5.3 | Proof schedule (grouped per site) → Upload proof on "Installation (before)" with a JPG/PNG | "Awaiting verification" |
 | 5.4 | Upload a .pdf renamed to .jpg | Rejected (file type is checked by content) |

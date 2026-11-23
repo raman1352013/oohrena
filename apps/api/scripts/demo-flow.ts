@@ -98,15 +98,27 @@ const PALETTES: [RGB, RGB, RGB][] = [
   [[30, 41, 82], [14, 116, 144], [125, 211, 252]], // Mumbai — teal
   [[59, 47, 99], [124, 58, 237], [196, 181, 253]], // Gurugram — violet
   [[37, 71, 74], [22, 163, 74], [134, 239, 172]], // Bengaluru — green
+  [[20, 30, 60], [37, 99, 235], [147, 197, 253]], // Delhi LED — blue
+  [[70, 40, 30], [220, 38, 38], [252, 165, 165]], // Indore — red
+  [[40, 50, 40], [202, 138, 4], [253, 224, 71]], // Pune bus — amber
+  [[50, 30, 60], [219, 39, 119], [249, 168, 212]], // Noida mall — pink
+  [[25, 45, 55], [8, 145, 178], [103, 232, 249]], // Lucknow van — cyan
 ];
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
 const file = (buf: Buffer, type: string) => new Blob([new Uint8Array(buf)], { type });
 
-const LISTINGS = [
-  { title: "Phoolbagh Chowk Front-lit Hoarding", city: "Gwalior", locality: "Phoolbagh", landmark: "Near Phoolbagh Chowk", address: "Phoolbagh Road", pin: "474001", lat: 26.2124, lng: 78.1772, rate: 45000, w: 40, h: 20, price: 52000 },
-  { title: "Western Express Highway Gantry", city: "Mumbai", locality: "Bandra East", landmark: "Kalanagar Junction", address: "WEH, Bandra East", pin: "400051", lat: 19.0596, lng: 72.8515, rate: 250000, w: 60, h: 20, price: 285000 },
-  { title: "Cyber Hub Entry Hoarding", city: "Gurugram", locality: "DLF Cyber City", landmark: "Cyber Hub Gate 2", address: "DLF Phase 2", pin: "122002", lat: 28.4951, lng: 77.0886, rate: 180000, w: 40, h: 20, price: 210000 },
-  { title: "MG Road Metro Station Hoarding", city: "Bengaluru", locality: "MG Road", landmark: "MG Road Metro Exit A", address: "Mahatma Gandhi Road", pin: "560001", lat: 12.9756, lng: 77.6068, rate: 150000, w: 30, h: 15, price: 172000 },
+type Listing = { title: string; city: string; locality: string; landmark: string; address: string; pin: string; lat: number; lng: number; rate: number; price: number; category?: string; unit?: string; attrs?: Record<string, string | number | boolean> };
+const LISTINGS: Listing[] = [
+  { title: "Phoolbagh Chowk Front-lit Hoarding", city: "Gwalior", locality: "Phoolbagh", landmark: "Near Phoolbagh Chowk", address: "Phoolbagh Road", pin: "474001", lat: 26.2124, lng: 78.1772, rate: 45000, price: 52000, attrs: { widthFt: 40, heightFt: 20, illuminated: true } },
+  { title: "Western Express Highway Gantry", city: "Mumbai", locality: "Bandra East", landmark: "Kalanagar Junction", address: "WEH, Bandra East", pin: "400051", lat: 19.0596, lng: 72.8515, rate: 250000, price: 285000, attrs: { widthFt: 60, heightFt: 20, illuminated: true } },
+  { title: "Cyber Hub Entry Hoarding", city: "Gurugram", locality: "DLF Cyber City", landmark: "Cyber Hub Gate 2", address: "DLF Phase 2", pin: "122002", lat: 28.4951, lng: 77.0886, rate: 180000, price: 210000, attrs: { widthFt: 40, heightFt: 20 } },
+  { title: "MG Road Metro Station Hoarding", city: "Bengaluru", locality: "MG Road", landmark: "MG Road Metro Exit A", address: "Mahatma Gandhi Road", pin: "560001", lat: 12.9756, lng: 77.6068, rate: 150000, price: 172000, attrs: { widthFt: 30, heightFt: 15 } },
+  // More media types, so the marketplace shows the 360° range.
+  { title: "Connaught Place Outer Circle LED Screen", city: "New Delhi", locality: "Connaught Place", landmark: "Block N, Outer Circle", address: "Outer Circle, Connaught Place", pin: "110001", lat: 28.6328, lng: 77.2197, rate: 120000, price: 140000, category: "led_screen", attrs: { widthFt: 20, heightFt: 10, slotLengthSec: 10, loopLengthSec: 120, operatingHours: "7 AM – 11 PM" } },
+  { title: "Vijay Nagar Square Unipole", city: "Indore", locality: "Vijay Nagar", landmark: "Vijay Nagar Square", address: "AB Road, Vijay Nagar", pin: "452010", lat: 22.7533, lng: 75.8937, rate: 60000, price: 70000, category: "unipole", attrs: { widthFt: 30, heightFt: 15, illuminated: true } },
+  { title: "Pune City Bus Back-Panel Branding (25 buses)", city: "Pune", locality: "Shivajinagar", landmark: "Shivajinagar Bus Depot", address: "Shivajinagar Depot", pin: "411005", lat: 18.5308, lng: 73.8475, rate: 9000, price: 10500, category: "transit", unit: "per_vehicle_month", attrs: { fleetSize: 25, panelSize: "8 ft x 3 ft", routes: "Shivajinagar – Hinjewadi, Swargate – Kharadi" } },
+  { title: "Noida Mall Atrium Digital Standees", city: "Noida", locality: "Sector 18", landmark: "Main atrium, ground floor", address: "Sector 18, Noida", pin: "201301", lat: 28.5677, lng: 77.3211, rate: 35000, price: 42000, category: "indoor_retail", attrs: { venueType: "Shopping mall", screenCount: 6, panelSize: "55-inch portrait" } },
+  { title: "Lucknow Mobile LED Van", city: "Lucknow", locality: "Hazratganj", landmark: "Hazratganj Crossing", address: "Hazratganj", pin: "226001", lat: 26.8467, lng: 80.9462, rate: 15000, price: 18000, category: "mobile_led_van", unit: "per_day", attrs: { fleetSize: 1, screenSize: "12 ft x 8 ft", routes: "Hazratganj, Gomti Nagar, Aminabad" } },
 ];
 
 export async function runDemoFlow(apiBase: string, PW: string, log: (msg: string) => void = console.log) {
@@ -122,8 +134,8 @@ export async function runDemoFlow(apiBase: string, PW: string, log: (msg: string
   const inventory: string[] = [];
   for (const [i, l] of LISTINGS.entries()) {
     const created = await call(API, vendor, "POST", "/vendors/me/inventory", {
-      category: "hoarding", title: l.title, city: l.city, locality: l.locality, landmark: l.landmark, address: l.address, pin: l.pin,
-      lat: l.lat, lng: l.lng, rate: l.rate, pricingUnit: "per_month", quantity: 1, attributes: { widthFt: l.w, heightFt: l.h },
+      category: l.category ?? "hoarding", title: l.title, city: l.city, locality: l.locality, landmark: l.landmark, address: l.address, pin: l.pin,
+      lat: l.lat, lng: l.lng, rate: l.rate, pricingUnit: l.unit ?? "per_month", quantity: 1, attributes: l.attrs ?? {},
     });
     const id = created.inventoryId as string;
     const fd = new FormData();
@@ -174,6 +186,68 @@ export async function runDemoFlow(apiBase: string, PW: string, log: (msg: string
   // A fresh inquiry so the admin inbox has something to act on during the demo.
   const lead2 = (await call(API, client, "POST", "/leads", { inventoryIds: [inventory[2], inventory[3]], from: day(30), to: day(59), requirement: "Brand awareness in Gurugram + Bengaluru tech corridors" })).leadId as string;
   log(`  lead ${lead2} left as New in the admin inbox`);
+
+  // ---- Extra data so every screen has something real to show ----
+  // Execution: vendor acknowledges WO-1 and uploads installation proof for both sites;
+  // admin verifies the Gwalior one (client gallery shows it), Mumbai stays in the admin queue.
+  const woId = wos[0]!.workOrderId as string;
+  await call(API, vendor, "POST", `/work-orders/${woId}/acknowledge`);
+  const exec = await call(API, vendor, "GET", `/work-orders/${woId}/execution`);
+  const proofIds: string[] = [];
+  for (const [i, invId] of [inventory[0]!, inventory[1]!].entries()) {
+    const slot = (exec.schedule as Json[]).find((s) => s.inventoryId === invId && s.type === "before");
+    const pf2 = new FormData();
+    pf2.append("inventoryId", invId);
+    if (slot) pf2.append("scheduleId", slot.scheduleId);
+    pf2.append("capturedAt", new Date().toISOString());
+    pf2.append("lat", String(LISTINGS[i]!.lat + 0.0003));
+    pf2.append("lng", String(LISTINGS[i]!.lng + 0.0002));
+    pf2.append("accuracyM", "12");
+    const [sky, face, accent] = PALETTES[i]!;
+    pf2.append("file", file(sitePhoto(sky, face, accent), "image/png"), "installed.png");
+    proofIds.push((await call(API, vendor, "POST", `/work-orders/${woId}/proofs`, pf2)).proofId as string);
+  }
+  await call(API, admin, "POST", `/admin/proofs/${proofIds[0]}/decision`, { decision: "verify" });
+  log(`  ${woId} acknowledged; installation proof ${proofIds[0]} verified, ${proofIds[1]} waiting in the admin queue`);
+
+  // Client A billing profile (company details card) and Vendor A payout bank account (shown masked).
+  await call(API, client, "PUT", "/clients/me", {
+    gstin: "27AABCT1234C1Z5",
+    billingAddress: { line1: "4th Floor, Trade Centre", line2: "Bandra Kurla Complex", city: "Mumbai", state: "Maharashtra", pin: "400051" },
+    contacts: [{ name: "Priya Sharma", email: "marketing@test.oohrena.local", mobile: "+919800000011", designation: "Marketing Manager" }],
+  });
+  await call(API, vendor, "PUT", "/vendors/me/bank", { accountName: "Test Vendor A Media", accountNo: "123456789012", ifsc: "HDFC0001234", bankName: "HDFC Bank" });
+  log("  client A billing profile and vendor A bank account filled");
+
+  // Vendor B (KYC pending) uploads documents, so the admin KYC review has files to check.
+  const vendorB = await login(API, PW, "vendor2@test.oohrena.local");
+  for (const type of ["pan", "gst", "address_proof"]) {
+    const df = new FormData();
+    df.append("type", type);
+    df.append("file", file(PDF, "application/pdf"), `${type}.pdf`);
+    await call(API, vendorB, "POST", "/vendors/me/documents", df);
+  }
+  log("  vendor B uploaded PAN, GST and address proof (KYC waiting for admin)");
+
+  // Client B: LED screen inquiry → reviewed, assigned, quote released and waiting for the client's decision.
+  const clientB = await login(API, PW, "client2@test.oohrena.local");
+  const f3 = day(21), t3 = day(50);
+  const lead3 = (await call(API, clientB, "POST", "/leads", { inventoryIds: [inventory[4]], from: f3, to: t3, budget: 150000, requirement: "New store launch — 10-second spot, Connaught Place" })).leadId as string;
+  await call(API, admin, "POST", `/admin/leads/${lead3}/status`, { status: "under_review" });
+  await call(API, admin, "POST", `/admin/leads/${lead3}/assign`, { vendorId });
+  const q3 = (await call(API, admin, "POST", "/admin/quotes", { leadId: lead3, items: [{ inventoryId: inventory[4], from: f3, to: t3, production: 5000, installation: 0 }] })).quoteId as string;
+  await call(API, admin, "POST", `/admin/quotes/${q3}/approve`);
+  log(`  client B lead ${lead3} → quote ${q3} released, waiting for the client`);
+
+  // Client A: a second inquiry the admin has started reviewing.
+  const lead4 = (await call(API, client, "POST", "/leads", { inventoryIds: [inventory[6], inventory[7]], from: day(35), to: day(64), budget: 400000, requirement: "Pune buses + Noida mall screens for a festive sale" })).leadId as string;
+  await call(API, admin, "POST", `/admin/leads/${lead4}/status`, { status: "under_review" });
+  log(`  lead ${lead4} under review`);
+
+  // Growth partner refers a new advertiser.
+  const partner = await login(API, PW, "partner@test.oohrena.local");
+  await call(API, partner, "POST", "/partner/leads", { clientName: "Sharma Sweets Pvt Ltd", clientEmail: "owner@sharmasweets.test", clientMobile: "+919800000022", requirement: "Diwali hoardings near 3 outlets", city: "Indore", budget: 120000 });
+  log("  growth partner referral created");
 
   log("\nDemo data ready. Sign in at the web app with the seeded accounts.");
 }

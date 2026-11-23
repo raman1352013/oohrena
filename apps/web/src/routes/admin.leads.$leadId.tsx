@@ -5,11 +5,13 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import {
   DEFAULT_SERVICE_FEE_PCT,
   PRICING_UNIT_LABEL,
+  WO_STATUS_LABEL,
   cancellationFor,
   computeQuoteTotals,
   defaultBillableUnits,
   todayIST,
   type PricingUnit,
+  type WorkOrderStatus,
 } from "@oohrena/shared";
 import { ApiError } from "@/lib/api";
 import { fmtDate, inr } from "@/lib/format";
@@ -727,7 +729,7 @@ function BookingSection({ l }: { l: LeadDetail }) {
               >
                 <span className="font-mono text-[12px]">{w.workOrderId}</span>
                 <span className="text-mute">{w.vendorId}</span>
-                <Pill>{w.status}</Pill>
+                <Pill>{WO_STATUS_LABEL[w.status as WorkOrderStatus] ?? w.status}</Pill>
                 <span className="text-[12px] text-mute">
                   {w.acknowledgedAt
                     ? `Acknowledged ${fmtDate(w.acknowledgedAt)}`

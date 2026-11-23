@@ -89,7 +89,7 @@ function WorkOrderBlock({ w }: { w: WorkOrderView }) {
           }
           className="ml-auto"
         >
-          {WO_STATUS_LABEL[status]}
+          {status === "scheduled" && w.acknowledgedAt ? "Acknowledged" : WO_STATUS_LABEL[status]}
         </Pill>
         {status === "scheduled" && !w.acknowledgedAt && (
           <Btn

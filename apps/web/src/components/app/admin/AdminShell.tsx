@@ -6,6 +6,7 @@ import {
   CircleAlert,
   Images,
   Inbox,
+  Megaphone,
   Plus,
   Server,
   Store,
@@ -20,6 +21,7 @@ import { NewLeadDialog } from "./NewLeadDialog";
 export const ADMIN_TABS = [
   "inbox",
   "bookings",
+  "campaigns",
   "proofs",
   "issues",
   "vendors",
@@ -47,6 +49,7 @@ export function AdminShell({ tab, children }: { tab: AdminTab; children: ReactNo
       icon: CalendarCheck,
       n: d && (d.bookings.confirmed ?? 0) + (d.bookings.live ?? 0),
     },
+    { tab: "campaigns", label: "Campaigns", icon: Megaphone },
     { tab: "proofs", label: "Proofs", icon: Images, n: d?.proofsToVerify },
     { tab: "issues", label: "Issues", icon: CircleAlert, n: d?.openIssues },
     {

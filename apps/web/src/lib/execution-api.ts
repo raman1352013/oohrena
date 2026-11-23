@@ -218,3 +218,23 @@ export const useVendorOverdue = () =>
     queryKey: vendorOverdueKey,
     queryFn: () => api<Slot[]>("/vendors/me/proofs/overdue"),
   });
+
+export type CampaignBoardRow = {
+  campaignId: string;
+  bookingId: string;
+  leadId: string | null;
+  client: string | null;
+  start: string;
+  end: string;
+  status: "scheduled" | "live" | "completed" | "cancelled";
+  workOrders: { workOrderId: string; vendor: string; status: WorkOrderStatus }[];
+  proofs: { verified: number; toReview: number; overdue: number };
+  openIssues: number;
+};
+
+/** Module 3 campaign monitoring board (admin). */
+export const useCampaignBoard = (status: "active" | "all") =>
+  useQuery({
+    queryKey: ["admin", "campaigns", status],
+    queryFn: () => api<CampaignBoardRow[]>(`/admin/campaigns?status=${status}`),
+  });

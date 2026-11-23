@@ -180,3 +180,26 @@ describe("Completion", () => {
     expect((await upload(x.woId, x.inv)).status).toBe(409);
   });
 });
+
+describe("Campaign monitoring board (Module 3)", () => {
+  it("lists active campaigns with work orders, proof counts and open issues; admin only", async () => {
+    const x = await bookedWorkOrder(app, admin.token, vendor);
+    const board = await request(app).get("/api/v1/admin/campaigns").set(A());
+    expect(board.status).toBe(200);
+    const row = board.body.data.find((c: { bookingId: string }) => c.bookingId === x.bookingId);
+    expect(row).toBeTruthy();
+    expect(row.campaignId).toMatch(/^CMP-/);
+    expect(row.workOrders).toEqual([expect.objectContaining({ workOrderId: x.woId, status: "scheduled" })]);
+    expect(row.proofs).toEqual({ verified: 0, toReview: 0, overdue: 0 });
+    expect(row.openIssues).toBe(0);
+
+    expect((await upload(x.woId, x.inv)).status).toBe(201);
+    const after = (await request(app).get("/api/v1/admin/campaigns").set(A())).body.data.find(
+      (c: { bookingId: string }) => c.bookingId === x.bookingId,
+    );
+    expect(after.proofs.toReview).toBe(1);
+
+    expect((await request(app).get("/api/v1/admin/campaigns").set(V())).status).toBe(403);
+    expect((await request(app).get("/api/v1/admin/campaigns").set(bearer(x.client.token))).status).toBe(403);
+  });
+});

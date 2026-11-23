@@ -9,6 +9,7 @@ import { IssueTracker, ProofQueue } from "@/components/app/admin/ExecutionQueues
 import { ListingReviewQueue, VendorKycQueue } from "@/components/app/admin/ReviewQueues";
 import { UserManagement } from "@/components/app/admin/UserManagement";
 import { SystemOverview } from "@/components/app/admin/SystemOverview";
+import { CampaignBoard } from "@/components/app/admin/CampaignBoard";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/admin/")({
 const TITLES = {
   inbox: "Inbox",
   bookings: "Bookings",
+  campaigns: "Campaigns",
   proofs: "Proofs",
   issues: "Issues",
   vendors: "Vendors",
@@ -101,6 +103,7 @@ function AdminTower() {
       {tab === "inbox" && <Stats items={kpis} />}
       {tab === "inbox" && <Inbox />}
       {tab === "bookings" && <Bookings />}
+      {tab === "campaigns" && <CampaignBoard />}
       {tab === "vendors" && (
         <>
           <VendorKycQueue />

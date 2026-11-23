@@ -8,6 +8,7 @@ import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
 import { Booking, WorkOrder } from "../models/booking.js";
 import { Campaign, ExecutionUpdate, Issue, Proof, ProofSchedule } from "../models/execution.js";
+import { Client, Vendor } from "../models/foundation.js";
 import { changeWorkOrderStatus, decideProof, loadWorkOrderFor, overdueSlots, proofView, raiseIssue, updateIssue, uploadProof } from "../services/execution.js";
 
 const proofUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PROOF_BYTES, files: 1, fields: 20 } });
@@ -97,6 +98,60 @@ export function executionRoutes(cfg: Config) {
 
   r.patch("/admin/issues/:id", requirePermission("issues.manage"), validateBody(issueUpdateInput), async (req, res) => {
     res.json({ data: issueView((await updateIssue(req, String(req.params.id), req.body as z.infer<typeof issueUpdateInput>)) as never) });
+  });
+
+  /**
+   * Module 3 campaign monitoring board: every active campaign with its work orders, proof counts
+   * (verified / waiting for review / overdue) and open issues. `status=all` includes finished ones.
+   */
+  r.get("/admin/campaigns", requirePermission("campaigns.monitor"), async (req, res) => {
+    const q = parseQuery(z.object({ status: z.enum(["active", "all"]).default("active") }), req);
+    const campaigns = await Campaign.find(q.status === "active" ? { status: { $in: ["scheduled", "live"] } } : {})
+      .sort({ start: 1 })
+      .limit(300)
+      .lean();
+    const ids = campaigns.map((c) => c._id);
+    const bookingIds = campaigns.map((c) => c.bookingId);
+    const [bookings, wos, proofs, overdue, issues, clients] = await Promise.all([
+      Booking.find({ _id: { $in: bookingIds } }).select("_id leadId").lean(),
+      WorkOrder.find({ bookingId: { $in: bookingIds } }).select("_id bookingId vendorId status").lean(),
+      Proof.aggregate<{ _id: { c: string; s: string }; n: number }>([
+        { $match: { campaignId: { $in: ids } } },
+        { $group: { _id: { c: "$campaignId", s: "$status" }, n: { $sum: 1 } } },
+      ]),
+      overdueSlots({ campaignId: { $in: ids } }),
+      Issue.aggregate<{ _id: string; n: number }>([
+        { $match: { campaignId: { $in: ids }, status: { $ne: "resolved" } } },
+        { $group: { _id: "$campaignId", n: { $sum: 1 } } },
+      ]),
+      Client.find({ _id: { $in: campaigns.map((c) => c.clientId).filter(Boolean) } } as never)
+        .select("_id companyName")
+        .lean<{ _id: string; companyName: string }[]>(),
+    ]);
+    const vendors = await Vendor.find({ _id: { $in: [...new Set(wos.map((w) => w.vendorId))] } }).select("_id legalName").lean();
+    const vendorName = new Map(vendors.map((v) => [v._id, v.legalName as string]));
+    const clientName = new Map(clients.map((c) => [c._id, c.companyName]));
+    const proofCount = (c: string, s: string) => proofs.find((p) => p._id.c === c && p._id.s === s)?.n ?? 0;
+    res.json({
+      data: campaigns.map((c) => ({
+        campaignId: c._id,
+        bookingId: c.bookingId,
+        leadId: bookings.find((b) => b._id === c.bookingId)?.leadId ?? null,
+        client: c.clientId ? (clientName.get(c.clientId) ?? c.clientId) : null,
+        start: fromDay(c.start.getTime()),
+        end: fromDay(c.end.getTime()),
+        status: c.status,
+        workOrders: wos
+          .filter((w) => w.bookingId === c.bookingId)
+          .map((w) => ({ workOrderId: w._id, vendor: vendorName.get(w.vendorId) ?? w.vendorId, status: w.status })),
+        proofs: {
+          verified: proofCount(c._id, "verified"),
+          toReview: proofCount(c._id, "uploaded"),
+          overdue: overdue.filter((s) => s.campaignId === c._id).length,
+        },
+        openIssues: issues.find((i) => i._id === c._id)?.n ?? 0,
+      })),
+    });
   });
 
   /** Client/vendor view of the campaigns they're part of (for raising issues). */

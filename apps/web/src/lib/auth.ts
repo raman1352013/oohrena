@@ -31,6 +31,7 @@ export const ROUTE_ROLES: { prefix: string; roles: readonly Role[] }[] = [
   { prefix: "/partner", roles: ["growth_partner"] },
   { prefix: "/reports", roles: ["admin", "finance", "client", "vendor", "growth_partner"] },
   { prefix: "/print", roles: ["admin", "finance", "client"] },
+  { prefix: "/account", roles: ["admin", "finance", "client", "vendor", "growth_partner"] },
 ];
 /** Only same-app paths are accepted as a post-login destination. */
 export const safeRedirect = (v: unknown) =>
@@ -148,5 +149,52 @@ export function useLogout() {
     onError: (e) => {
       if (e instanceof ApiError && e.status === 401) clearSession(qc);
     },
+  });
+}
+
+/* ---------- Two-factor authentication (Module 10) ---------- */
+
+export type TwoFactorSetupData = { uri: string; qrDataUrl: string; recoveryCodes: string[] };
+
+/** First sign-in of a role that must use 2FA: enrol with the login challenge, then a session starts. */
+export function useEnroll2FA() {
+  const qc = useQueryClient();
+  return {
+    start: useMutation({
+      mutationFn: (challengeToken: string) =>
+        api<TwoFactorSetupData>("/auth/2fa/enroll/start", { body: { challengeToken } }),
+    }),
+    verify: useMutation({
+      mutationFn: (input: { challengeToken: string; code: string }) =>
+        api<{ user: SessionUser }>("/auth/2fa/enroll/verify", { body: input }),
+      onSuccess: (r) => qc.setQueryData(SESSION_KEY, r.user),
+    }),
+  };
+}
+
+/** Signed-in user turns 2FA on or off from the Account page. */
+export function useTwoFactor() {
+  const qc = useQueryClient();
+  const refresh = () => void qc.invalidateQueries({ queryKey: SESSION_KEY });
+  return {
+    setup: useMutation({
+      mutationFn: () => api<TwoFactorSetupData>("/auth/2fa/setup", { body: {} }),
+    }),
+    verify: useMutation({
+      mutationFn: (token: string) => api<{ ok: boolean }>("/auth/2fa/verify", { body: { token } }),
+      onSuccess: refresh,
+    }),
+    disable: useMutation({
+      mutationFn: (input: { password: string; code: string }) =>
+        api<{ ok: boolean }>("/auth/2fa/disable", { body: input }),
+      onSuccess: refresh,
+    }),
+  };
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      api<{ message: string }>("/auth/change-password", { body: input }),
   });
 }

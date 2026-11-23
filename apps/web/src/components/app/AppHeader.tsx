@@ -107,9 +107,8 @@ export function AppHeader() {
                 <DropdownMenuItem onClick={() => nav({ to: ROLE_HOME[user.role] })}>
                   My workspace
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => nav({ to: "/reports" })}>
-                  Reports & activity
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav({ to: "/reports" })}>Reports</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => nav({ to: "/account" })}>Account</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} disabled={logout.isPending}>
                   Sign out

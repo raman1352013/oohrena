@@ -2,7 +2,16 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { loginInput } from "@oohrena/shared";
 import { ApiError } from "@/lib/api";
-import { ROLE_HOME, rolesFor, safeRedirect, useLogin, useLogin2FA, useSession } from "@/lib/auth";
+import {
+  ROLE_HOME,
+  rolesFor,
+  safeRedirect,
+  useEnroll2FA,
+  useLogin,
+  useLogin2FA,
+  useSession,
+} from "@/lib/auth";
+import { TwoFactorSetup } from "@/components/app/TwoFactorSetup";
 import { AuthShell, Field, FormError } from "@/components/app/AuthShell";
 import { Btn } from "@/components/app/kit";
 
@@ -28,6 +37,9 @@ function LoginPage() {
   const login2FA = useLogin2FA();
   const [form, setForm] = useState({ email: "", password: "" });
   const [challenge, setChallenge] = useState<{ token: string; email: string } | null>(null);
+  /** Privileged role that must turn on 2FA before its first session. */
+  const [enrolToken, setEnrolToken] = useState<string | null>(null);
+  const enrol = useEnroll2FA();
   const [totpCode, setTotpCode] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
@@ -61,6 +73,7 @@ function LoginPage() {
         if (r.status === "2FA_REQUIRED" && r.challengeToken) {
           setChallenge({ token: r.challengeToken, email: r.email || form.email });
         }
+        if (r.status === "2FA_SETUP_REQUIRED" && r.challengeToken) setEnrolToken(r.challengeToken);
       },
       onError: (err) => {
         if (err instanceof ApiError && err.code === "ACCOUNT_LOCKED") {
@@ -79,7 +92,7 @@ function LoginPage() {
     e.preventDefault();
     setFormError(undefined);
     if (!totpCode.trim()) {
-      setErrors({ code: "Enter your 2FA verification or recovery code" });
+      setErrors({ code: "Enter the code from your app or a recovery code" });
       return;
     }
     setErrors({});
@@ -91,10 +104,34 @@ function LoginPage() {
     );
   }
 
+  if (enrolToken) {
+    return (
+      <AuthShell
+        title="Set up two-factor"
+        sub="Your role needs an authenticator app."
+        footer={
+          <button
+            type="button"
+            onClick={() => setEnrolToken(null)}
+            className="text-saffron-deep font-semibold hover:underline"
+          >
+            Back
+          </button>
+        }
+      >
+        <TwoFactorSetup
+          start={() => enrol.start.mutateAsync(enrolToken)}
+          verify={(code) => enrol.verify.mutateAsync({ challengeToken: enrolToken, code })}
+          busy={enrol.verify.isPending}
+        />
+      </AuthShell>
+    );
+  }
+
   if (challenge) {
     return (
       <AuthShell
-        title="Enter your 2FA code"
+        title="Two-factor code"
         footer={
           <button
             type="button"
@@ -104,7 +141,7 @@ function LoginPage() {
             }}
             className="text-saffron-deep font-semibold hover:underline"
           >
-            Back to password sign in
+            Back
           </button>
         }
       >
@@ -112,16 +149,15 @@ function LoginPage() {
         <form onSubmit={submit2FA} noValidate className="space-y-4">
           <Field
             id="totp"
-            label="Verification Code / Recovery Code"
+            label="Code or recovery code"
             type="text"
-            placeholder="6-digit code or XXXX-XXXX"
             autoComplete="one-time-code"
             value={totpCode}
             error={errors["code"]}
             onChange={(e) => setTotpCode(e.target.value)}
           />
           <Btn type="submit" className="w-full" disabled={login2FA.isPending}>
-            {login2FA.isPending ? "Verifying…" : "Verify & Sign in"}
+            {login2FA.isPending ? "Checking…" : "Sign in"}
           </Btn>
         </form>
       </AuthShell>

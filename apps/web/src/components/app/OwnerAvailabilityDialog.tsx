@@ -153,7 +153,7 @@ export function OwnerAvailabilityDialog({
                   ))}
                 </div>
               ) : (
-                <p className="text-mute">Nothing held or blocked in this period.</p>
+                <p className="text-mute">Nothing held or blocked</p>
               )}
             </div>
 

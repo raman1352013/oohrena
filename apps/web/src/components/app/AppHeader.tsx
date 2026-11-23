@@ -73,7 +73,7 @@ export function AppHeader() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="LD-2026-000001"
+            placeholder="Lead ID"
             aria-label="Open a Lead ID"
             className="bg-transparent outline-none flex-1 text-[13px] text-navy-foreground placeholder:text-navy-foreground/50"
           />

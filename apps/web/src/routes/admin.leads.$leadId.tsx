@@ -181,9 +181,7 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
             );
           })
         ) : (
-          <Empty
-            title="No specific media chosen"
-          />
+          <Empty title="No specific media chosen" />
         )}
       </KCard>
 
@@ -254,9 +252,7 @@ function AssignCard({ l }: { l: LeadDetail }) {
             );
           })
         ) : (
-          <p className="text-mute">
-            No vendor assigned
-          </p>
+          <p className="text-mute">No vendor assigned</p>
         )}
         {open &&
           suggestions.map((v) => (
@@ -275,7 +271,8 @@ function AssignCard({ l }: { l: LeadDetail }) {
             <input
               value={vid}
               onChange={(e) => setVid(e.target.value.toUpperCase())}
-              placeholder="Other vendor ID (VND-…)"
+              placeholder="Vendor ID"
+              aria-label="Vendor ID"
               className="flex-1 h-8 rounded-md border border-line px-2 text-[12px]"
             />
             <Btn
@@ -372,11 +369,7 @@ function QuoteSection({ l, latest }: { l: LeadDetail; latest: QuoteView | undefi
             <Btn onClick={() => setEditing(true)}>Build quotation</Btn>
           </div>
         ) : (
-          <p className="text-[13px] text-mute">
-            {l.status === "new"
-              ? "Start the review to build a quotation."
-              : "Add media to this inquiry before quoting."}
-          </p>
+          <Empty title={l.status === "new" ? "No quotation" : "No media to quote"} />
         )
       ) : (
         <div className="space-y-4">
@@ -661,7 +654,7 @@ function QuoteEditor({
         </div>
         <div className="space-y-1.5">
           <label htmlFor="terms" className="font-medium">
-            Terms shown to the client (optional)
+            Terms for the client
           </label>
           <Textarea id="terms" rows={2} value={terms} onChange={(e) => setTerms(e.target.value)} />
         </div>
@@ -728,7 +721,7 @@ function BookingSection({ l }: { l: LeadDetail }) {
               </div>
             ))
           ) : (
-            <p className="text-mute mb-2">No work orders issued yet.</p>
+            <Empty title="No work orders" />
           )}
           {b.status === "confirmed" && vendorsWithoutWO.length > 0 && (
             <div className="space-y-2">
@@ -736,7 +729,8 @@ function BookingSection({ l }: { l: LeadDetail }) {
                 rows={3}
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Campaign instructions: creative, mounting date/time, proof required (day, night, weekly)…"
+                placeholder="Instructions"
+                aria-label="Instructions"
               />
               <Btn
                 variant="dark"

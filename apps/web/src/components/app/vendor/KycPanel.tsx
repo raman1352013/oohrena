@@ -10,7 +10,7 @@ import {
 } from "@oohrena/shared";
 import { ApiError, assetUrl } from "@/lib/api";
 import { useResubmitKyc, useSaveBank, useUploadKycDoc, type VendorMe } from "@/lib/inventory-api";
-import { Btn, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { KycPill } from "@/components/app/status";
 import { fmtDate, selectCls } from "@/lib/format";
@@ -45,7 +45,7 @@ export function KycPanel({ me }: { me: VendorMe }) {
   }
 
   return (
-    <KCard title="KYC verification" right={<KycPill status={me.kycStatus} />}>
+    <KCard title="KYC" right={<KycPill status={me.kycStatus} />}>
       <div className="space-y-4">
         {me.kycStatus === "pending" && (
           <p className="text-mute">
@@ -110,7 +110,7 @@ export function KycPanel({ me }: { me: VendorMe }) {
               </div>
             ))
           ) : (
-            <div className="px-3 py-6 text-center text-mute">No documents uploaded yet</div>
+            <Empty title="No documents" />
           )}
         </div>
 
@@ -254,7 +254,7 @@ export function BankPanel({ me }: { me: VendorMe }) {
           />
           <Field
             id="bankName"
-            label="Bank name (optional)"
+            label="Bank name"
             value={f.bankName}
             onChange={(e) => setF({ ...f, bankName: e.target.value })}
           />

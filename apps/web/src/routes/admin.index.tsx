@@ -5,7 +5,7 @@ import { fmtDate, inr } from "@/lib/format";
 import { useAdminBookings, useDashboard, useInbox } from "@/lib/deals-api";
 import { useAdminInventory, useAdminVendors } from "@/lib/inventory-api";
 import { cn } from "@/lib/utils";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill, type StatItem, Stats, Tabs } from "@/components/app/kit";
 import { IssueTracker, ProofQueue } from "@/components/app/admin/ExecutionQueues";
 import { ListingReviewQueue, VendorKycQueue } from "@/components/app/admin/ReviewQueues";
 import { NewLeadDialog } from "@/components/app/admin/NewLeadDialog";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/admin/")({
       { title: "Central Control Tower — OOHRENA" },
       {
         name: "description",
-        content: "Central inquiry inbox, vendor assignment, quotations, bookings and approvals.",
+        content: "Inquiries, vendor assignment, quotations, bookings and approvals.",
       },
     ],
   }),
@@ -55,39 +55,42 @@ function AdminTower() {
   const kyc = useAdminVendors("pending");
   const listings = useAdminInventory("pending");
   const d = dash.data;
-  const kpis: { k: string; v: number | string; sub?: string | undefined }[] = [
+  const kpis: StatItem[] = [
     // Pending KYC/listing approvals are counted on their own tab.
     {
-      k: "New inquiries",
-      v: d?.leads.new ?? (d ? 0 : "—"),
-      sub: d?.exceptions.staleLeads ? `${d.exceptions.staleLeads} older than 24h` : undefined,
-    },
-    { k: "In progress", v: d ? (d.leads.under_review ?? 0) + (d.leads.assigned ?? 0) : "—" },
-    {
-      k: "Quotes with clients",
-      v: d?.quotesAwaitingClient ?? "—",
-      sub: d?.exceptions.expiredQuotes ? `${d.exceptions.expiredQuotes} expired` : undefined,
+      label: "New inquiries",
+      value: d?.leads.new ?? (d ? 0 : "—"),
+      alert: d?.exceptions.staleLeads ? `${d.exceptions.staleLeads} older than 24h` : undefined,
     },
     {
-      k: "Active bookings",
-      v: d ? (d.bookings.confirmed ?? 0) + (d.bookings.live ?? 0) : "—",
-      sub: d?.approvedQuotesWithoutBooking
+      label: "In progress",
+      value: d ? (d.leads.under_review ?? 0) + (d.leads.assigned ?? 0) : "—",
+    },
+    {
+      label: "Quotes with clients",
+      value: d?.quotesAwaitingClient ?? "—",
+      alert: d?.exceptions.expiredQuotes ? `${d.exceptions.expiredQuotes} expired` : undefined,
+    },
+    {
+      label: "Active bookings",
+      value: d ? (d.bookings.confirmed ?? 0) + (d.bookings.live ?? 0) : "—",
+      alert: d?.approvedQuotesWithoutBooking
         ? `${d.approvedQuotesWithoutBooking} approved, not booked`
         : undefined,
     },
     {
-      k: "Active holds",
-      v: d?.activeHolds ?? "—",
-      sub: d?.pendingVendorConfirmations
+      label: "Active holds",
+      value: d?.activeHolds ?? "—",
+      alert: d?.pendingVendorConfirmations
         ? `${d.pendingVendorConfirmations} awaiting vendor`
         : d?.exceptions.holdsExpiringSoon
           ? `${d.exceptions.holdsExpiringSoon} expire within 12h`
           : undefined,
     },
     {
-      k: "Proofs to verify",
-      v: d?.proofsToVerify ?? "—",
-      sub: d?.exceptions.overdueProofs
+      label: "Proofs to verify",
+      value: d?.proofsToVerify ?? "—",
+      alert: d?.exceptions.overdueProofs
         ? `${d.exceptions.overdueProofs} overdue`
         : d?.openIssues
           ? `${d.openIssues} open issues`
@@ -95,59 +98,27 @@ function AdminTower() {
     },
   ];
   const tabs: { id: Tab; label: string; n?: number | undefined }[] = [
-    { id: "inbox", label: "Inquiry inbox", n: d ? (d.leads.new ?? 0) : undefined },
+    { id: "inbox", label: "Inbox", n: d ? (d.leads.new ?? 0) : undefined },
     {
       id: "bookings",
       label: "Bookings",
       n: d ? (d.bookings.confirmed ?? 0) + (d.bookings.live ?? 0) : undefined,
     },
-    { id: "proofs", label: "Proof verification", n: d?.proofsToVerify },
+    { id: "proofs", label: "Proofs", n: d?.proofsToVerify },
     { id: "issues", label: "Issues", n: d?.openIssues },
     {
       id: "vendors",
-      label: "Vendor KYC & Listings",
+      label: "Vendors",
       n: (kyc.data?.total ?? 0) + (listings.data?.total ?? 0),
     },
-    { id: "users", label: "User Management" },
-    { id: "system", label: "System Health & Deployments" },
+    { id: "users", label: "Users" },
+    { id: "system", label: "System" },
   ];
 
   return (
     <main className="max-w-[1280px] mx-auto p-4 md:p-6 space-y-5">
-      <div className="bg-card border border-line rounded-xl grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-line overflow-hidden">
-        {kpis.map((x) => (
-          <div key={x.k} className="p-4 border-b lg:border-b-0 border-line">
-            <div className="text-[12px] text-mute">{x.k}</div>
-            <div className="text-2xl font-bold mt-2">{x.v}</div>
-            {x.sub && <div className="text-[11px] text-saffron-deep mt-1">{x.sub}</div>}
-          </div>
-        ))}
-      </div>
-
-      <nav className="flex gap-6 border-b border-line text-[13px] overflow-x-auto">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "pt-1 pb-2.5 border-b-2 whitespace-nowrap flex items-center gap-1.5",
-              tab === t.id ? "border-navy text-ink font-semibold" : "border-transparent text-mute",
-            )}
-          >
-            {t.label}
-            {t.n !== undefined && (
-              <span
-                className={cn(
-                  "px-1.5 rounded text-[11px]",
-                  tab === t.id && "bg-navy text-navy-foreground",
-                )}
-              >
-                {t.n}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
+      <Stats items={kpis} />
+      <Tabs tabs={tabs} value={tab} onChange={setTab} />
 
       {tab === "inbox" && <Inbox />}
       {tab === "bookings" && <Bookings />}
@@ -162,7 +133,7 @@ function AdminTower() {
       {tab === "users" && <UserManagement />}
       {tab === "system" && <SystemOverview />}
       <Link to="/reports">
-        <Btn variant="secondary">Reports & activity</Btn>
+        <Btn variant="secondary">Reports</Btn>
       </Link>
     </main>
   );
@@ -174,7 +145,7 @@ function Inbox() {
   const inbox = useInbox(status);
   return (
     <KCard
-      title="Central inquiry inbox"
+      title="Inquiries"
       bodyClass=""
       right={
         <>
@@ -195,19 +166,17 @@ function Inbox() {
             ))}
           </div>
           <Btn className="h-8 px-3 text-[12px]" onClick={() => setAdding(true)}>
-            Log phone / WhatsApp lead
+            Log inquiry
           </Btn>
         </>
       }
     >
       {inbox.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading inquiries…</div>
+        <Loading />
       ) : inbox.isError ? (
         <div className="p-8 text-center text-destructive text-[13px]">{inbox.error.message}</div>
       ) : !inbox.data.items.length ? (
-        <Empty
-          title={status === "new" ? "No new inquiries" : "Nothing in this view"}
-        />
+        <Empty title={status === "new" ? "No new inquiries" : "Nothing in this view"} />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-[13px] min-w-[880px]">
@@ -289,11 +258,9 @@ function Bookings() {
   return (
     <KCard title="Bookings" bodyClass="divide-y divide-line">
       {b.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !b.data?.length ? (
-        <Empty
-          title="No bookings yet"
-        />
+        <Empty title="No bookings" />
       ) : (
         b.data.map((x) => (
           <div

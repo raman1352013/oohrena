@@ -279,9 +279,7 @@ export function ListingEditor({
           </p>
         )}
         {status === "pending" && (
-          <p className="text-[13px] text-mute">
-            In review. Editing is locked.
-          </p>
+          <p className="text-[13px] text-mute">In review. Editing is locked.</p>
         )}
         {status === "approved" && (
           <p className="text-[12px] text-mute">
@@ -341,7 +339,7 @@ export function ListingEditor({
             />
             <Field
               id="landmark"
-              label="Nearest landmark (optional)"
+              label="Nearest landmark"
               value={f.landmark}
               error={errors["landmark"]}
               onChange={set("landmark")}
@@ -436,7 +434,7 @@ export function ListingEditor({
                 <Field
                   key={a.key}
                   id={`attr-${a.key}`}
-                  label={`${a.label}${"unit" in a && a.unit ? ` (${a.unit})` : ""}${a.required ? "" : " (optional)"}`}
+                  label={`${a.label}${"unit" in a && a.unit ? ` (${a.unit})` : ""}`}
                   inputMode={a.type === "number" ? "decimal" : "text"}
                   value={String(f.attributes[a.key] ?? "")}
                   error={
@@ -454,14 +452,13 @@ export function ListingEditor({
 
             <div className="sm:col-span-2 space-y-1.5">
               <Label htmlFor="description" className="text-[13px]">
-                Description (optional)
+                Description
               </Label>
               <Textarea
                 id="description"
                 rows={3}
                 value={f.description}
                 onChange={set("description")}
-                placeholder="Visibility, traffic direction, lighting hours…"
               />
             </div>
           </fieldset>

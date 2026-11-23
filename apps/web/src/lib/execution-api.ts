@@ -124,7 +124,7 @@ export function useRaiseIssue() {
       ...b
     }: {
       campaignId: string;
-      workOrderId?: string;
+      workOrderId?: string | undefined;
       category: string;
       description: string;
     }) => api<IssueView>(`/campaigns/${campaignId}/issues`, { body: b }),

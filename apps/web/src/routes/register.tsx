@@ -194,7 +194,6 @@ function RegisterPage() {
           label="Mobile"
           type="tel"
           autoComplete="tel"
-          placeholder="+91 98XXXXXXXX"
           value={f.mobile}
           error={errors["mobile"]}
           onChange={(e) => setF({ ...f, mobile: e.target.value.replace(/[\s-]/g, "") })}
@@ -221,7 +220,7 @@ function RegisterPage() {
         )}
         <Field
           id="gstin"
-          label="GSTIN (optional)"
+          label="GSTIN"
           autoCapitalize="characters"
           value={f.gstin}
           error={errors["gstin"]}

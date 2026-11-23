@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 import { QuoteBreakdown, QuotePill } from "@/components/app/QuoteBreakdown";
 import { cn } from "@/lib/utils";
 import { ProofGallery } from "./ProofGallery";
@@ -37,13 +37,11 @@ export function MyQuotations() {
     ),
   );
   return (
-    <KCard title="My quotations" bodyClass="divide-y divide-line">
+    <KCard title="Quotes" bodyClass="divide-y divide-line">
       {quotes.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !latest.length ? (
-        <Empty
-          title="No quotations yet"
-        />
+        <Empty title="No quotes" />
       ) : (
         latest.map((q) => (
           <div key={q.quoteId} className="px-5 py-3 flex flex-wrap items-center gap-3 text-[13px]">
@@ -192,9 +190,7 @@ function QuoteDialog({
                 </DialogFooter>
               ))}
             {q.data.status === "expired" && (
-              <p className="text-[13px] text-destructive">
-                Expired on {q.data.validUntil}
-              </p>
+              <p className="text-[13px] text-destructive">Expired on {q.data.validUntil}</p>
             )}
           </div>
         )}
@@ -211,13 +207,11 @@ export function MyBookings() {
   const [reason, setReason] = useState("");
   const fee = target ? cancellationFor(target.total, target.start, todayIST()) : undefined;
   return (
-    <KCard title="My bookings" bodyClass="divide-y divide-line">
+    <KCard title="Bookings" bodyClass="divide-y divide-line">
       {b.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !b.data?.length ? (
-        <Empty
-          title="No bookings yet"
-        />
+        <Empty title="No bookings" />
       ) : (
         b.data.map((x) => (
           <div

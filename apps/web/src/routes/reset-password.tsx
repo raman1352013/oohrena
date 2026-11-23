@@ -33,7 +33,7 @@ function ResetPasswordPage() {
     return (
       <AuthShell
         title="Link incomplete"
-        sub="This password link is missing its code. Open the link from your email again, or request a new one."
+        sub="This link is incomplete. Open it from your email again."
         footer={signIn}
       >
         <Link to="/forgot-password">
@@ -44,9 +44,7 @@ function ResetPasswordPage() {
   }
 
   if (reset.isSuccess) {
-    return (
-      <AuthShell title="Password updated" sub={reset.data.message} footer={signIn} />
-    );
+    return <AuthShell title="Password updated" sub={reset.data.message} footer={signIn} />;
   }
 
   function submit(e: React.FormEvent) {
@@ -63,10 +61,7 @@ function ResetPasswordPage() {
   }
 
   return (
-    <AuthShell
-      title="Set a new password"
-      footer={signIn}
-    >
+    <AuthShell title="Set a new password" footer={signIn}>
       <FormError
         message={
           reset.error

@@ -65,7 +65,10 @@ export function useCreateStaffUser() {
       mobile: string;
       role: "admin" | "finance" | "growth_partner";
     }) =>
-      api<{ user: AdminUserItem; inviteSent: boolean; devInviteLink?: string }>("/admin/users", { method: "POST", body }),
+      api<{ user: AdminUserItem; inviteSent: boolean; devInviteLink?: string }>("/admin/users", {
+        method: "POST",
+        body,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
     },

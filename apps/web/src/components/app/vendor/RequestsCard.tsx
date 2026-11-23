@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { useRespond, useVendorRequests } from "@/lib/marketplace-api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 import { left } from "@/lib/format";
 
 /** Holds waiting for this vendor's confirmation (listings in on-request mode). */
@@ -16,11 +16,9 @@ export function RequestsCard() {
       right={pending.length ? <Pill tone="saffron">{pending.length} waiting</Pill> : undefined}
     >
       {reqs.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !pending.length && !recent.length ? (
-        <Empty
-          title="No hold requests"
-        />
+        <Empty title="No hold requests" />
       ) : (
         <>
           {pending.map((r) => (

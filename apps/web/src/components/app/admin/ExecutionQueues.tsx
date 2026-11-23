@@ -9,7 +9,7 @@ import {
   useProofQueue,
   type IssueView,
 } from "@/lib/execution-api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 import { ProofTile } from "@/components/app/ProofMedia";
 import { cn } from "@/lib/utils";
 
@@ -48,11 +48,9 @@ export function ProofQueue() {
         right={q.data?.length ? <Pill tone="saffron">{q.data.length} waiting</Pill> : undefined}
       >
         {q.isPending ? (
-          <div className="p-8 text-center text-mute text-[13px]">Loading…</div>
+          <Loading />
         ) : !q.data?.length ? (
-          <Empty
-            title="Nothing to verify"
-          />
+          <Empty title="Nothing to verify" />
         ) : (
           q.data.map((p) => (
             <div key={p.proofId} className="p-5 flex flex-wrap gap-5 text-[13px]">
@@ -112,9 +110,7 @@ export function ProofQueue() {
         right={overdue.data?.length ? <Pill tone="danger">{overdue.data.length}</Pill> : undefined}
       >
         {!overdue.data?.length ? (
-          <Empty
-            title="No overdue proof"
-          />
+          <Empty title="No overdue proof" />
         ) : (
           overdue.data.map((s) => (
             <div key={s.scheduleId} className="px-5 py-2.5 flex flex-wrap gap-3 text-[13px]">
@@ -164,11 +160,9 @@ export function IssueTracker() {
       }
     >
       {list.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !list.data?.length ? (
-        <Empty
-          title="No issues here"
-        />
+        <Empty title="No issues here" />
       ) : (
         list.data.map((i) => <IssueRow key={i.issueId} i={i} />)
       )}
@@ -223,7 +217,8 @@ function IssueRow({ i }: { i: IssueView }) {
         <div className="grid sm:grid-cols-[1fr_150px_150px_auto] gap-2 items-start">
           <input
             className={cell}
-            placeholder="Owner (who is fixing it)"
+            placeholder="Owner"
+            aria-label="Owner"
             value={f.owner}
             onChange={(e) => setF({ ...f, owner: e.target.value })}
           />
@@ -255,7 +250,9 @@ function IssueRow({ i }: { i: IssueView }) {
           {f.status === "resolved" && (
             <input
               className={cn(cell, "sm:col-span-4")}
-              placeholder="Resolution notes (required to resolve)"
+              placeholder="Resolution note"
+              aria-label="Resolution note"
+              required
               value={f.resolutionNote}
               onChange={(e) => setF({ ...f, resolutionNote: e.target.value })}
             />

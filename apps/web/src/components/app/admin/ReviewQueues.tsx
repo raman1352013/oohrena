@@ -20,7 +20,7 @@ import {
   useSetDataType,
   type AdminListing,
 } from "@/lib/inventory-api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 import { KycPill, ListingPill } from "@/components/app/status";
 import { fmtDate } from "@/lib/format";
 import {
@@ -105,7 +105,7 @@ function DecisionDialog({
           )}
           <div className="space-y-1.5">
             <label htmlFor="reason" className="font-medium">
-              {needsReason ? "Reason (required)" : "Note (optional)"}
+              {needsReason ? "Reason" : "Note"}
             </label>
             <Textarea
               id="reason"
@@ -172,7 +172,7 @@ export function VendorKycQueue() {
       }
     >
       {list.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading vendors…</div>
+        <Loading />
       ) : list.isError ? (
         <div className="p-8 text-center text-destructive text-[13px]">{list.error.message}</div>
       ) : !list.data.items.length ? (
@@ -396,7 +396,7 @@ export function ListingReviewQueue() {
       }
     >
       {list.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading listings…</div>
+        <Loading />
       ) : list.isError ? (
         <div className="p-8 text-center text-destructive text-[13px]">{list.error.message}</div>
       ) : !list.data.items.length ? (

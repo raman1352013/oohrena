@@ -99,7 +99,7 @@ export type RevenueReportView = {
   gstInput: number;
   netGst: number;
   received: number;
-  refunded: number;
+  refunds: number;
   byMonth: Array<{
     month: string;
     bookingValue: number;
@@ -223,13 +223,13 @@ export function useExceptionsReport() {
 
 export function useAuditLogs(
   params: {
-    userId?: string;
-    entity?: string;
-    action?: string;
-    from?: string;
-    to?: string;
-    page?: number;
-    pageSize?: number;
+    userId?: string | undefined;
+    entity?: string | undefined;
+    action?: string | undefined;
+    from?: string | undefined;
+    to?: string | undefined;
+    page?: number | undefined;
+    pageSize?: number | undefined;
   } = {},
 ) {
   const q = new URLSearchParams();

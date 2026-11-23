@@ -6,7 +6,7 @@ import { BankPanel, KycPanel } from "@/components/app/vendor/KycPanel";
 import { CsvImportCard, InventoryPanel } from "@/components/app/vendor/InventoryPanel";
 import { RequestsCard } from "@/components/app/vendor/RequestsCard";
 import { WorkOrdersCard } from "@/components/app/vendor/WorkOrdersCard";
-import { Btn } from "@/components/app/kit";
+import { Btn, Loading } from "@/components/app/kit";
 import { VendorPayables } from "@/components/app/FinanceCards";
 
 export const Route = createFileRoute("/vendor")({
@@ -32,12 +32,7 @@ export const Route = createFileRoute("/vendor")({
 function VendorHub() {
   const me = useVendorMe();
   const { data: user } = useSession();
-  if (me.isPending)
-    return (
-      <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-16 text-center text-mute text-[13px]">
-        Loading your vendor account…
-      </div>
-    );
+  if (me.isPending) return <Loading />;
   if (me.isError)
     return (
       <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-16 text-center text-[13px]">

@@ -1,7 +1,7 @@
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ROLE_HOME, ROLE_LABEL, isPublicPath, rolesFor, useSession } from "@/lib/auth";
-import { Btn } from "@/components/app/kit";
+import { Btn, Loading } from "@/components/app/kit";
 
 /**
  * Shows a workspace only to the roles allowed on it. Signed-out visitors go to /login and
@@ -15,13 +15,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   // (a new route someone forgot to register) still needs a signed-in user.
   if (isPublicPath(path)) return <>{children}</>;
   const roles = rolesFor(path);
-  if (session.isPending) return <GateMessage title="Checking your session…" />;
+  if (session.isPending) return <Loading />;
   if (session.isError) {
     return (
-      <GateMessage
-        title="Can't reach the OOHRENA server"
-        body="We couldn't confirm your sign-in. Check your connection and try again."
-      >
+      <GateMessage title="Can't reach the server">
         <Btn onClick={() => void session.refetch()}>Try again</Btn>
       </GateMessage>
     );
@@ -31,11 +28,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (roles && !roles.includes(user.role)) {
     return (
       <GateMessage
-        title="This workspace isn't available to your account"
+        title="Not available to your account"
         body={`Signed in as ${ROLE_LABEL[user.role]}`}
       >
         <Link to={ROLE_HOME[user.role]}>
-          <Btn>Go to my workspace</Btn>
+          <Btn>My workspace</Btn>
         </Link>
       </GateMessage>
     );

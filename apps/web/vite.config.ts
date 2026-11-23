@@ -24,6 +24,7 @@ export default defineConfig({
     server: { entry: "server" },
   },
   nitro: {
+    // @ts-expect-error routeRules is passed through to nitro; the wrapper's type omits it.
     routeRules: {
       ...(apiOrigin ? { "/api/**": { proxy: `${apiOrigin}/api/**` } } : {}),
       "/**": {

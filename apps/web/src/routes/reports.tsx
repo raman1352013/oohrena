@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Download, AlertTriangle, Filter, Search } from "lucide-react";
+import { Download } from "lucide-react";
 import { inr } from "@/lib/format";
 import { useCurrentUser } from "@/lib/auth";
 import { useMyBookings } from "@/lib/deals-api";
@@ -13,41 +13,63 @@ import {
   useVendorPerformance,
 } from "@/lib/reports-api";
 import { assetUrl } from "@/lib/api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill, Stats, Tabs } from "@/components/app/kit";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({
-    meta: [
-      { title: "Reports & Analytics — OOHRENA" },
-      {
-        name: "description",
-        content:
-          "Certified campaign reports, vendor performance, funnel conversion and revenue analytics.",
-      },
-      { property: "og:title", content: "Reports & Analytics — OOHRENA" },
-      { property: "og:description", content: "Traceable reporting backed by append-only records." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
+    meta: [{ title: "Reports — OOHRENA" }],
   }),
   component: ReportsScreen,
 });
 
-type AdminTab = "funnel" | "revenue" | "exceptions" | "vendor-performance" | "audit";
+type AdminTab = "funnel" | "revenue" | "exceptions" | "vendors" | "audit";
+
+const ADMIN_TABS = [
+  { id: "funnel", label: "Funnel" },
+  { id: "revenue", label: "Revenue" },
+  { id: "exceptions", label: "Exceptions" },
+  { id: "vendors", label: "Vendors" },
+  { id: "audit", label: "Audit log" },
+] as const;
+
+const pageCls = "max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5";
+
+/** PDF + CSV links for one report. */
+function Downloads({ pdf, csv }: { pdf: string; csv: string }) {
+  return (
+    <div className="flex gap-2">
+      {(
+        [
+          ["PDF", pdf],
+          ["CSV", csv],
+        ] as const
+      ).map(([label, href]) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="h-9 px-3 rounded-lg border border-line bg-card text-ink hover:bg-canvas text-[13px] font-semibold inline-flex items-center gap-1.5"
+        >
+          <Download size={13} /> {label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+const reportLinks = (report: string) => ({
+  pdf: reportDownloadUrl(report, "pdf"),
+  csv: reportDownloadUrl(report, "csv"),
+});
 
 function ReportsScreen() {
   const session = useCurrentUser();
   const role = session.data?.role;
 
   // AuthGate only renders this page for signed-in users; wait for the role before choosing a view.
-  if (!role) {
-    return (
-      <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 text-mute text-[13px]">
-        Loading reports…
-      </main>
-    );
-  }
+  if (!role) return <Loading />;
   if (role === "client") {
     return <ClientReportsView />;
   }
@@ -56,11 +78,10 @@ function ReportsScreen() {
   }
   if (role === "growth_partner") {
     return (
-      <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6">
-        <KCard title="Reports">
-          <Empty
-            title="Your referral report lives in the partner portal"
-          />
+      <main className={pageCls}>
+        <h1 className="text-[22px] font-semibold">Reports</h1>
+        <KCard>
+          <Empty title="No reports for partners" />
         </KCard>
       </main>
     );
@@ -76,22 +97,18 @@ function ClientReportsView() {
   const bookings = useMyBookings();
 
   return (
-    <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
-      <h1 className="text-2xl font-semibold">Reports</h1>
+    <main className={pageCls}>
+      <h1 className="text-[22px] font-semibold">Reports</h1>
 
       <KCard title="Campaigns" bodyClass="divide-y divide-line">
         {bookings.isPending ? (
-          <div className="p-8 text-center text-mute text-[13px]">
-            Loading your campaign records…
-          </div>
+          <Loading />
         ) : bookings.isError ? (
-          <div className="p-8 text-center text-destructive text-[13px]">
+          <div role="alert" className="p-8 text-center text-destructive text-[13px]">
             {bookings.error.message}
           </div>
         ) : !bookings.data?.length ? (
-          <Empty
-            title="No bookings found"
-          />
+          <Empty title="No campaigns" />
         ) : (
           bookings.data.map((b) => (
             <div
@@ -123,31 +140,20 @@ function ClientReportsView() {
                 {b.campaignId ? (
                   <>
                     <a
-                      href={assetUrl(`/api/v1/reports/client-campaign/${b.campaignId}?format=pdf`)}
+                      href={`/print/dossier/${b.campaignId}`}
                       target="_blank"
                       rel="noreferrer"
+                      className="h-9 px-3 text-[13px] font-semibold text-mute hover:text-ink inline-flex items-center"
                     >
-                      <Btn variant="primary" className="h-8 px-3 text-[12px] gap-1.5">
-                        <Download size={13} /> Dossier (PDF)
-                      </Btn>
+                      Open
                     </a>
-                    <a
-                      href={assetUrl(`/api/v1/reports/client-campaign/${b.campaignId}?format=csv`)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Btn variant="secondary" className="h-8 px-3 text-[12px] gap-1.5">
-                        <Download size={13} /> CSV
-                      </Btn>
-                    </a>
-                    <a href={`/print/dossier/${b.campaignId}`} target="_blank" rel="noreferrer">
-                      <Btn variant="ghost" className="h-8 px-3 text-[12px]">
-                        View Online
-                      </Btn>
-                    </a>
+                    <Downloads
+                      pdf={assetUrl(`/api/v1/reports/client-campaign/${b.campaignId}?format=pdf`)}
+                      csv={assetUrl(`/api/v1/reports/client-campaign/${b.campaignId}?format=csv`)}
+                    />
                   </>
                 ) : (
-                  <span className="text-mute text-[12px]">Execution scheduled</span>
+                  <Pill>Not started</Pill>
                 )}
               </div>
             </div>
@@ -167,58 +173,37 @@ function VendorReportsView() {
   const row = perf.data?.[0];
 
   return (
-    <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Performance</h1>
-        <div className="flex gap-2">
-          <a href={reportDownloadUrl("vendor-performance", "pdf")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-9 gap-1.5">
-              <Download size={14} /> PDF Report
-            </Btn>
-          </a>
-          <a href={reportDownloadUrl("vendor-performance", "csv")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-9 gap-1.5">
-              <Download size={14} /> CSV
-            </Btn>
-          </a>
-        </div>
+    <main className={pageCls}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[22px] font-semibold">Performance</h1>
+        <Downloads {...reportLinks("vendor-performance")} />
       </div>
 
       {perf.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">
-          Calculating your performance metrics…
-        </div>
+        <Loading />
       ) : !row ? (
-        <Empty
-          title="No performance data recorded"
-        />
+        <KCard>
+          <Empty title="No performance data" />
+        </KCard>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-5 border border-line rounded-lg bg-card space-y-1">
-            <div className="text-[12px] text-mute">Proof Timeliness</div>
-            <div className="text-2xl font-bold">{row.proofTimelinessPct}%</div>
-            <div className="text-[11px] text-mute">Uploaded on or before due date</div>
-          </div>
-          <div className="p-5 border border-line rounded-lg bg-card space-y-1">
-            <div className="text-[12px] text-mute">Rejection Rate</div>
-            <div className="text-2xl font-bold text-destructive">{row.proofRejectionRatePct}%</div>
-            <div className="text-[11px] text-mute">Rejected by admin quality control</div>
-          </div>
-          <div className="p-5 border border-line rounded-lg bg-card space-y-1">
-            <div className="text-[12px] text-mute">Avg Hold Response</div>
-            <div className="text-2xl font-bold">
-              {row.holdResponseTimeMin !== null ? `${row.holdResponseTimeMin} min` : "N/A"}
-            </div>
-            <div className="text-[11px] text-mute">Hold confirmation response time</div>
-          </div>
-          <div className="p-5 border border-line rounded-lg bg-card space-y-1">
-            <div className="text-[12px] text-mute">WO Completion Rate</div>
-            <div className="text-2xl font-bold text-verified">{row.woCompletionRatePct}%</div>
-            <div className="text-[11px] text-mute">
-              {row.workOrdersCompleted} of {row.workOrdersTotal} completed
-            </div>
-          </div>
-        </div>
+        <Stats
+          items={[
+            { label: "Proofs on time", value: `${row.proofTimelinessPct}%` },
+            {
+              label: "Proofs rejected",
+              value: `${row.proofRejectionRatePct}%`,
+              tone: row.proofRejectionRatePct > 10 ? "danger" : undefined,
+            },
+            {
+              label: "Hold response",
+              value: row.holdResponseTimeMin !== null ? `${row.holdResponseTimeMin} min` : "—",
+            },
+            {
+              label: "Work orders done",
+              value: `${row.workOrdersCompleted} / ${row.workOrdersTotal}`,
+            },
+          ]}
+        />
       )}
     </main>
   );
@@ -232,40 +217,14 @@ function AdminReportsView() {
   const [tab, setTab] = useState<AdminTab>("funnel");
 
   return (
-    <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold">Reports</h1>
-      </div>
-
-      {/* Tabs bar */}
-      <div className="flex flex-wrap gap-2 border-b border-line pb-2">
-        {(
-          [
-            ["funnel", "Inquiry Funnel"],
-            ["revenue", "Revenue & Margins"],
-            ["exceptions", "Exceptions & Bottlenecks"],
-            ["vendor-performance", "Vendor Performance"],
-            ["audit", "Audit Search & Export"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`px-3 py-1.5 text-[13px] rounded-md font-medium transition-colors ${
-              tab === id
-                ? "bg-navy text-navy-foreground font-semibold"
-                : "text-mute hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <main className={pageCls}>
+      <h1 className="text-[22px] font-semibold">Reports</h1>
+      <Tabs tabs={ADMIN_TABS} value={tab} onChange={setTab} />
 
       {tab === "funnel" && <FunnelReportTab />}
       {tab === "revenue" && <RevenueReportTab />}
       {tab === "exceptions" && <ExceptionsReportTab />}
-      {tab === "vendor-performance" && <VendorPerformanceTab />}
+      {tab === "vendors" && <VendorPerformanceTab />}
       {tab === "audit" && <AuditSearchTab />}
     </main>
   );
@@ -278,81 +237,55 @@ function FunnelReportTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Campaign Funnel Analysis</h2>
-        <div className="flex gap-2">
-          <a href={reportDownloadUrl("funnel", "pdf")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> PDF
-            </Btn>
-          </a>
-          <a href={reportDownloadUrl("funnel", "csv")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> CSV
-            </Btn>
-          </a>
-        </div>
+      <div className="flex justify-end">
+        <Downloads {...reportLinks("funnel")} />
       </div>
 
       {funnel.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Aggregating inquiry funnel…</div>
+        <Loading />
       ) : !d ? (
         <Empty title="No funnel data" />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Total Inquiries</div>
-              <div className="text-2xl font-bold mt-1">{d.totalLeads}</div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Quoted Inquiries</div>
-              <div className="text-2xl font-bold mt-1">{d.quotedLeads}</div>
-              <div className="text-[11px] text-mute mt-0.5">
-                {d.conversion.leadToQuotePct}% conversion
-              </div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Won Bookings</div>
-              <div className="text-2xl font-bold mt-1 text-verified">{d.wonLeads}</div>
-              <div className="text-[11px] text-mute mt-0.5">
-                {d.conversion.quoteToWonPct}% of quoted
-              </div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Completed</div>
-              <div className="text-2xl font-bold mt-1">{d.completedLeads}</div>
-              <div className="text-[11px] text-mute mt-0.5">
-                {d.conversion.overallWonPct}% win rate
-              </div>
-            </div>
-          </div>
+          <Stats
+            items={[
+              { label: "Inquiries", value: d.totalLeads },
+              { label: "Quoted", value: d.quotedLeads },
+              { label: "Won", value: d.wonLeads, tone: "verified" },
+              { label: "Completed", value: d.completedLeads },
+              { label: "Win rate", value: `${d.conversion.overallWonPct}%` },
+            ]}
+          />
 
-          <KCard title="Breakdown by Inquiry Source" bodyClass="divide-y divide-line">
-            <table className="w-full text-left text-[13px]">
-              <thead>
-                <tr className="border-b border-line text-mute text-[12px]">
-                  <th className="py-2.5 px-4">Source</th>
-                  <th>Total Leads</th>
-                  <th>Quoted</th>
-                  <th>Won</th>
-                  <th>Completed</th>
-                  <th>Win Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.bySource.map((s) => (
-                  <tr key={s.source} className="border-b border-line">
-                    <td className="py-2.5 px-4 font-semibold">{s.source}</td>
-                    <td>{s.leads}</td>
-                    <td>{s.quoted}</td>
-                    <td className="text-verified font-medium">{s.won}</td>
-                    <td>{s.completed}</td>
-                    <td className="font-bold">{s.conversionPct}%</td>
+          <KCard title="By source" bodyClass="overflow-x-auto">
+            {!d.bySource.length ? (
+              <Empty title="No inquiries" />
+            ) : (
+              <table className="w-full text-left text-[13px]">
+                <thead>
+                  <tr className="border-b border-line text-mute text-[12px]">
+                    <th className="py-2.5 px-4">Source</th>
+                    <th>Inquiries</th>
+                    <th>Quoted</th>
+                    <th>Won</th>
+                    <th>Completed</th>
+                    <th>Win rate</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {d.bySource.map((s) => (
+                    <tr key={s.source} className="border-b border-line">
+                      <td className="py-2.5 px-4 font-semibold">{s.source}</td>
+                      <td>{s.leads}</td>
+                      <td>{s.quoted}</td>
+                      <td className="text-verified font-medium">{s.won}</td>
+                      <td>{s.completed}</td>
+                      <td className="font-bold">{s.conversionPct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </KCard>
         </>
       )}
@@ -367,101 +300,80 @@ function RevenueReportTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Revenue, Margins & Cash Receipts</h2>
-        <div className="flex gap-2">
-          <a href={reportDownloadUrl("revenue", "pdf")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> PDF
-            </Btn>
-          </a>
-          <a href={reportDownloadUrl("revenue", "csv")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> CSV
-            </Btn>
-          </a>
-        </div>
+      <div className="flex justify-end">
+        <Downloads {...reportLinks("revenue")} />
       </div>
 
       {rev.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Calculating revenue breakdown…</div>
+        <Loading />
       ) : !d ? (
         <Empty title="No revenue recorded" />
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Booking Value</div>
-              <div className="text-xl font-bold mt-1">{inr(d.bookingValue)}</div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Commission + Service Fee</div>
-              <div className="text-xl font-bold mt-1 text-verified">
-                {inr(d.commission + d.serviceFee)}
-              </div>
-              <div className="text-[11px] text-mute mt-0.5">
-                Fee: {inr(d.serviceFee)} · Comm: {inr(d.commission)}
-              </div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Verified Cash Received</div>
-              <div className="text-xl font-bold mt-1">{inr(d.received)}</div>
-              <div className="text-[11px] text-mute mt-0.5">Refunded: {inr(d.refunds)}</div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Net GST Position</div>
-              <div className="text-xl font-bold mt-1">{inr(d.netGst)}</div>
-              <div className="text-[11px] text-mute mt-0.5">
-                Output: {inr(d.gstOutput)} · Input: {inr(d.gstInput)}
-              </div>
-            </div>
-          </div>
+          <Stats
+            items={[
+              { label: "Booking value", value: inr(d.bookingValue) },
+              { label: "Service fee", value: inr(d.serviceFee) },
+              { label: "Commission", value: inr(d.commission) },
+              { label: "Received (verified)", value: inr(d.received) },
+              { label: "Refunded", value: inr(d.refunds) },
+              { label: "Net GST", value: inr(d.netGst) },
+            ]}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <KCard title="Monthly Revenue">
-              <table className="w-full text-left text-[13px]">
-                <thead>
-                  <tr className="border-b border-line text-mute text-[12px]">
-                    <th className="py-2 px-3">Month</th>
-                    <th>Value</th>
-                    <th>Margin</th>
-                    <th>GST</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.byMonth.map((m) => (
-                    <tr key={m.month} className="border-b border-line">
-                      <td className="py-2 px-3 font-mono">{m.month}</td>
-                      <td>{inr(m.bookingValue)}</td>
-                      <td className="text-verified font-medium">
-                        {inr(m.commission + m.serviceFee)}
-                      </td>
-                      <td>{inr(m.gst)}</td>
+            <KCard title="By month" bodyClass="overflow-x-auto">
+              {!d.byMonth.length ? (
+                <Empty title="No bookings" />
+              ) : (
+                <table className="w-full text-left text-[13px]">
+                  <thead>
+                    <tr className="border-b border-line text-mute text-[12px]">
+                      <th className="py-2 px-3">Month</th>
+                      <th>Value</th>
+                      <th>Margin</th>
+                      <th>GST</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {d.byMonth.map((m) => (
+                      <tr key={m.month} className="border-b border-line">
+                        <td className="py-2 px-3 font-mono">{m.month}</td>
+                        <td>{inr(m.bookingValue)}</td>
+                        <td className="text-verified font-medium">
+                          {inr(m.commission + m.serviceFee)}
+                        </td>
+                        <td>{inr(m.gst)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </KCard>
 
-            <KCard title="Top Cities by Booking Value">
-              <table className="w-full text-left text-[13px]">
-                <thead>
-                  <tr className="border-b border-line text-mute text-[12px]">
-                    <th className="py-2 px-3">City</th>
-                    <th>Sites Booked</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {d.byCity.slice(0, 8).map((c) => (
-                    <tr key={c.city} className="border-b border-line">
-                      <td className="py-2 px-3 font-semibold">{c.city}</td>
-                      <td>{c.count}</td>
-                      <td>{inr(c.bookingValue)}</td>
+            <KCard title="By city" bodyClass="overflow-x-auto">
+              {!d.byCity.length ? (
+                <Empty title="No bookings" />
+              ) : (
+                <table className="w-full text-left text-[13px]">
+                  <thead>
+                    <tr className="border-b border-line text-mute text-[12px]">
+                      <th className="py-2 px-3">City</th>
+                      <th>Sites</th>
+                      <th>Value</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {d.byCity.slice(0, 8).map((c) => (
+                      <tr key={c.city} className="border-b border-line">
+                        <td className="py-2 px-3 font-semibold">{c.city}</td>
+                        <td>{c.count}</td>
+                        <td>{inr(c.bookingValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </KCard>
           </div>
         </>
@@ -477,59 +389,45 @@ function ExceptionsReportTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Operational Exceptions & Bottlenecks</h2>
-        <div className="flex gap-2">
-          <a href={reportDownloadUrl("exceptions", "pdf")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> PDF
-            </Btn>
-          </a>
-          <a href={reportDownloadUrl("exceptions", "csv")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> CSV
-            </Btn>
-          </a>
-        </div>
+      <div className="flex justify-end">
+        <Downloads {...reportLinks("exceptions")} />
       </div>
 
       {ex.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Scanning platform exceptions…</div>
+        <Loading />
       ) : !d ? (
         <Empty title="No exceptions data" />
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Stale Leads (&gt;24h)</div>
-              <div className="text-xl font-bold text-destructive mt-1">{d.counts.staleLeads}</div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Overdue Proofs</div>
-              <div className="text-xl font-bold text-destructive mt-1">
-                {d.counts.overdueProofs}
-              </div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Unpaid Invoices</div>
-              <div className="text-xl font-bold text-destructive mt-1">
-                {d.counts.unpaidInvoices}
-              </div>
-            </div>
-            <div className="p-4 border border-line rounded-lg bg-card">
-              <div className="text-[12px] text-mute">Holds Expiring Soon</div>
-              <div className="text-xl font-bold mt-1">{d.counts.holdsExpiring}</div>
-            </div>
-          </div>
+          <Stats
+            items={[
+              {
+                label: "Inquiries older than 24h",
+                value: d.counts.staleLeads,
+                tone: d.counts.staleLeads ? "danger" : undefined,
+              },
+              {
+                label: "Overdue proofs",
+                value: d.counts.overdueProofs,
+                tone: d.counts.overdueProofs ? "danger" : undefined,
+              },
+              {
+                label: "Overdue invoices",
+                value: d.counts.unpaidInvoices,
+                tone: d.counts.unpaidInvoices ? "danger" : undefined,
+              },
+              { label: "Holds expiring", value: d.counts.holdsExpiring },
+            ]}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <KCard title={`Overdue Proof Slots (${d.overdueProofs.length})`}>
+            <KCard title="Overdue proofs" bodyClass="">
               {!d.overdueProofs.length ? (
                 <Empty title="No overdue proofs" />
               ) : (
                 <div className="divide-y divide-line text-[13px]">
                   {d.overdueProofs.slice(0, 10).map((p) => (
-                    <div key={p.scheduleId} className="p-3 flex justify-between">
+                    <div key={p.scheduleId} className="px-5 py-3 flex justify-between gap-3">
                       <div>
                         <span className="font-mono">{p.workOrderId}</span> · {p.inventoryId}
                       </div>
@@ -542,15 +440,15 @@ function ExceptionsReportTab() {
               )}
             </KCard>
 
-            <KCard title={`Unpaid & Overdue Invoices (${d.unpaidInvoices.length})`}>
+            <KCard title="Overdue invoices" bodyClass="">
               {!d.unpaidInvoices.length ? (
                 <Empty title="No overdue invoices" />
               ) : (
                 <div className="divide-y divide-line text-[13px]">
                   {d.unpaidInvoices.slice(0, 10).map((i) => (
-                    <div key={i.invoiceId} className="p-3 flex justify-between">
+                    <div key={i.invoiceId} className="px-5 py-3 flex justify-between gap-3">
                       <div>
-                        <span className="font-mono">{i.invoiceId}</span> · Booking {i.bookingId}
+                        <span className="font-mono">{i.invoiceId}</span> · {i.bookingId}
                       </div>
                       <div>
                         <span className="font-semibold">{inr(i.total)}</span>
@@ -577,27 +475,15 @@ function VendorPerformanceTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Media Partner Scorecards</h2>
-        <div className="flex gap-2">
-          <a href={reportDownloadUrl("vendor-performance", "pdf")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> PDF
-            </Btn>
-          </a>
-          <a href={reportDownloadUrl("vendor-performance", "csv")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> CSV
-            </Btn>
-          </a>
-        </div>
+      <div className="flex justify-end">
+        <Downloads {...reportLinks("vendor-performance")} />
       </div>
 
-      <KCard>
+      <KCard bodyClass="">
         {perf.isPending ? (
-          <div className="p-8 text-center text-mute text-[13px]">Loading scorecard table…</div>
+          <Loading />
         ) : !rows.length ? (
-          <Empty title="No vendors found" />
+          <Empty title="No vendors" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[13px]">
@@ -605,12 +491,12 @@ function VendorPerformanceTab() {
                 <tr className="border-b border-line text-mute text-[12px]">
                   <th className="py-2.5 px-4">Vendor</th>
                   <th>City</th>
-                  <th>Hold Resp.</th>
-                  <th>Proof Timeliness</th>
-                  <th>Rejection %</th>
+                  <th>Hold response</th>
+                  <th>Proofs on time</th>
+                  <th>Proofs rejected</th>
                   <th>Issues</th>
-                  <th>WO Completion</th>
-                  <th>Listings</th>
+                  <th>Work orders done</th>
+                  <th>Listings approved / rejected</th>
                 </tr>
               </thead>
               <tbody>
@@ -629,11 +515,11 @@ function VendorPerformanceTab() {
                       {r.proofRejectionRatePct}%
                     </td>
                     <td>{r.issuesCount}</td>
-                    <td className="font-semibold">
-                      {r.woCompletionRatePct}% ({r.workOrdersCompleted}/{r.workOrdersTotal})
+                    <td>
+                      {r.workOrdersCompleted} / {r.workOrdersTotal}
                     </td>
-                    <td className="text-mute text-[12px]">
-                      {r.listingsApproved} approved / {r.listingsRejected} rejected
+                    <td>
+                      {r.listingsApproved} / {r.listingsRejected}
                     </td>
                   </tr>
                 ))}
@@ -672,60 +558,42 @@ function AuditSearchTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-between items-center gap-2">
-        <h2 className="text-lg font-semibold">Audit Trail Inspection</h2>
-        <div className="flex gap-2">
-          <a href={exportUrl("pdf")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> PDF Export
-            </Btn>
-          </a>
-          <a href={exportUrl("csv")} target="_blank" rel="noreferrer">
-            <Btn variant="secondary" className="h-8 text-[12px] gap-1">
-              <Download size={13} /> CSV Export
-            </Btn>
-          </a>
+      <div className="flex flex-wrap items-center gap-2">
+        {(
+          [
+            ["Action", action, setAction],
+            ["Entity", entity, setEntity],
+            ["User ID", userId, setUserId],
+          ] as const
+        ).map(([label, value, set]) => (
+          <Input
+            key={label}
+            aria-label={label}
+            placeholder={label}
+            value={value}
+            onChange={(e) => {
+              set(e.target.value);
+              setPage(1);
+            }}
+            className="h-9 w-full sm:w-44 bg-card"
+          />
+        ))}
+        <div className="sm:ml-auto">
+          <Downloads pdf={exportUrl("pdf")} csv={exportUrl("csv")} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-muted p-3 rounded-lg">
-        <Input
-          placeholder="Filter by action (e.g. lead.create)"
-          value={action}
-          onChange={(e) => {
-            setAction(e.target.value);
-            setPage(1);
-          }}
-        />
-        <Input
-          placeholder="Filter by entity (e.g. quote, booking)"
-          value={entity}
-          onChange={(e) => {
-            setEntity(e.target.value);
-            setPage(1);
-          }}
-        />
-        <Input
-          placeholder="Filter by User ID"
-          value={userId}
-          onChange={(e) => {
-            setUserId(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
-
-      <KCard>
+      <KCard bodyClass="">
         {logs.isPending ? (
-          <div className="p-8 text-center text-mute text-[13px]">Searching audit logs…</div>
+          <Loading />
         ) : !logs.data?.items.length ? (
-          <Empty title="No matching audit records" />
+          <Empty title="No audit records" />
         ) : (
           <div className="divide-y divide-line text-[13px]">
             {logs.data.items.map((i) => (
               <div
                 key={i.logId}
-                className="p-3.5 flex flex-wrap items-center justify-between gap-2"
+                className="px-5 py-3 flex flex-wrap items-center justify-between gap-2"
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
@@ -736,8 +604,9 @@ function AuditSearchTab() {
                     {i.role && <Pill>{i.role}</Pill>}
                   </div>
                   <div className="text-mute text-[12px]">
-                    By {i.userId ?? "system"} {i.ip ? `from ${i.ip}` : ""}
-                    {i.reason ? ` · Reason: “${i.reason}”` : ""}
+                    {i.userId ?? "system"}
+                    {i.ip && ` · ${i.ip}`}
+                    {i.reason && ` · “${i.reason}”`}
                   </div>
                 </div>
                 <div className="font-mono text-mute text-[12px]">

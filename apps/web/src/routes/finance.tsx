@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Btn, Empty, KCard, Pill, Row } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill, Row, Stats, Tabs } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { cn } from "@/lib/utils";
 
@@ -65,35 +65,17 @@ function FinancePage() {
   return (
     <main className="max-w-[1280px] mx-auto p-4 md:p-6 space-y-5">
       <h1 className="text-[22px] font-semibold">Payments</h1>
-      <div className="bg-card border border-line rounded-xl grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-line overflow-hidden">
-        {kpis.map(([k, v]) => (
-          <div key={k} className="p-4 border-b lg:border-b-0 border-line">
-            <div className="text-[12px] text-mute">{k}</div>
-            <div className="text-2xl font-bold mt-2">{v ?? "—"}</div>
-          </div>
-        ))}
-      </div>
-      <nav className="flex gap-6 border-b border-line text-[13px] overflow-x-auto">
-        {(
-          [
-            ["queue", "Verification queue"],
-            ["bookings", "Bookings"],
-            ["payables", "Vendor payables"],
-            ["all", "All payments"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={cn(
-              "pt-1 pb-2.5 border-b-2 whitespace-nowrap",
-              tab === id ? "border-navy text-ink font-semibold" : "border-transparent text-mute",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
+      <Stats items={kpis.map(([label, value]) => ({ label, value: value ?? "—" }))} />
+      <Tabs
+        tabs={[
+          { id: "queue", label: "To verify" },
+          { id: "bookings", label: "Bookings" },
+          { id: "payables", label: "Vendor payables" },
+          { id: "all", label: "All payments" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
       {tab === "queue" && <PaymentList status="unverified" />}
       {tab === "bookings" && <Bookings />}
       {tab === "payables" && <Payables />}
@@ -130,11 +112,9 @@ function PaymentList({ status }: { status?: PaymentStatus }) {
       bodyClass="divide-y divide-line"
     >
       {list.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !list.data?.length ? (
-        <Empty
-          title={status ? "Nothing to verify" : "No payments yet"}
-        />
+        <Empty title={status ? "Nothing to verify" : "No payments yet"} />
       ) : (
         list.data.map((p) => {
           const own = p.recordedBy === me?.userId;
@@ -183,9 +163,7 @@ function PaymentList({ status }: { status?: PaymentStatus }) {
               <Pill tone={PAY_TONE[p.status]}>{p.status}</Pill>
               {p.status === "unverified" &&
                 (own ? (
-                  <span className="text-[11px] text-mute w-40">
-                    Needs another Finance user
-                  </span>
+                  <span className="text-[11px] text-mute w-40">Needs another Finance user</span>
                 ) : (
                   <>
                     <Btn
@@ -260,11 +238,11 @@ function Bookings() {
   const [rec, setRec] = useState<Rec>();
   const [view, setView] = useState<string>();
   return (
-    <KCard title="Bookings — money position" bodyClass="divide-y divide-line">
+    <KCard title="Bookings" bodyClass="divide-y divide-line">
       {list.isPending ? (
-        <div className="p-8 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !list.data?.length ? (
-        <Empty title="No bookings yet" />
+        <Empty title="No bookings" />
       ) : (
         list.data.map((b) => (
           <div key={b.bookingId} className="px-5 py-3 space-y-2 text-[13px]">
@@ -500,7 +478,7 @@ function RecordDialog({ rec, onClose }: { rec: Rec | undefined; onClose: () => v
           <Field
             id="pn"
             className="sm:col-span-2"
-            label="Note (optional)"
+            label="Note"
             value={f.note}
             onChange={(e) => setF({ ...f, note: e.target.value })}
           />
@@ -636,9 +614,7 @@ function Payables() {
   return (
     <KCard title="Vendor payables" bodyClass="divide-y divide-line">
       {!list.data?.length ? (
-        <Empty
-          title="No payables"
-        />
+        <Empty title="No payables" />
       ) : (
         list.data.map((p) => (
           <div

@@ -109,12 +109,7 @@ export function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () =>
             error={errors["contact.name"]}
             onChange={set("name")}
           />
-          <Field
-            id="ccomp"
-            label="Company (optional)"
-            value={f.company}
-            onChange={set("company")}
-          />
+          <Field id="ccomp" label="Company" value={f.company} onChange={set("company")} />
           <Field
             id="cmob"
             label="Mobile"
@@ -125,7 +120,7 @@ export function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () =>
           />
           <Field
             id="cmail"
-            label="Email (optional)"
+            label="Email"
             type="email"
             value={f.email}
             error={errors["contact.email"]}
@@ -134,9 +129,8 @@ export function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () =>
           <Field id="ccity" label="City" value={f.city} onChange={set("city")} />
           <Field
             id="cinv"
-            label="Inventory IDs (optional)"
+            label="Inventory IDs"
             className="sm:col-span-2"
-            placeholder="INV-HRD-000001, INV-LED-000002"
             value={f.inventoryIds}
             onChange={set("inventoryIds")}
           />
@@ -158,7 +152,7 @@ export function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () =>
           />
           <Field
             id="cbud"
-            label="Budget ₹ (optional)"
+            label="Budget (₹)"
             inputMode="numeric"
             value={f.budget}
             onChange={set("budget")}

@@ -54,9 +54,7 @@ export function ProofGallery({
                 ))}
               </div>
             ) : (
-              <Empty
-                title="No verified proof yet"
-              />
+              <Empty title="No verified proof" />
             )}
             {g.data.campaignId && (
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-line">

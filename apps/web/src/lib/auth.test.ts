@@ -28,7 +28,14 @@ describe("public pages (everything else needs sign-in)", () => {
   });
 
   it("treats workspaces and unknown pages as private", () => {
-    for (const p of ["/admin", "/client", "/reports", "/print/quote/QT-1", "/settings", "/marketplacex"])
+    for (const p of [
+      "/admin",
+      "/client",
+      "/reports",
+      "/print/quote/QT-1",
+      "/settings",
+      "/marketplacex",
+    ])
       expect(isPublicPath(p)).toBe(false);
   });
 });

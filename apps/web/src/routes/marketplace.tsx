@@ -298,11 +298,7 @@ function Marketplace() {
               ))}
             </div>
           ) : !items.length ? (
-            <Empty
-              title={
-                savedOnly ? "Shortlist is empty" : "No media found"
-              }
-            />
+            <Empty title={savedOnly ? "Shortlist is empty" : "No media found"} />
           ) : view === "map" ? (
             <Suspense fallback={<div className="h-[560px] rounded-xl bg-muted animate-pulse" />}>
               <MapView
@@ -331,9 +327,7 @@ function Marketplace() {
             </div>
           )}
           {search.data?.truncated && (
-            <p className="text-[12px] text-mute mt-4">
-              Showing the first 500.
-            </p>
+            <p className="text-[12px] text-mute mt-4">Showing the first 500.</p>
           )}
         </div>
       </div>
@@ -723,7 +717,7 @@ function InquiryForm({
       )}
       <Field
         id="lb"
-        label="Budget ₹ (optional)"
+        label="Budget (₹)"
         inputMode="numeric"
         value={f.budget}
         error={errors["budget"]}
@@ -737,7 +731,6 @@ function InquiryForm({
           id="lr"
           rows={3}
           value={f.requirement}
-          placeholder="Campaign goal, creative ready or not, printing/installation needs…"
           onChange={(e) => setF({ ...f, requirement: e.target.value })}
         />
         {errors["requirement"] && (
@@ -779,7 +772,7 @@ function CompareDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Compare shortlisted media</DialogTitle>
+          <DialogTitle>Compare</DialogTitle>
         </DialogHeader>
         {cmp.isPending ? (
           <div className="h-40 bg-muted rounded-lg animate-pulse" />

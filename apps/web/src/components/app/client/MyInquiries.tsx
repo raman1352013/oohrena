@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/auth";
 import { fmtDate, inr } from "@/lib/format";
 import { useMyLeads } from "@/lib/marketplace-api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 
 const LABEL: Record<LeadStatus, string> = {
   new: "Received",
@@ -47,7 +47,7 @@ export function MyInquiries() {
   const leads = useMyLeads();
   return (
     <KCard
-      title="My inquiries"
+      title="Inquiries"
       bodyClass="divide-y divide-line"
       right={
         <Link to="/marketplace">
@@ -56,13 +56,11 @@ export function MyInquiries() {
       }
     >
       {leads.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : leads.isError ? (
         <div className="p-6 text-center text-destructive text-[13px]">{leads.error.message}</div>
       ) : !leads.data.length ? (
-        <Empty
-          title="No inquiries yet"
-        />
+        <Empty title="No inquiries" />
       ) : (
         leads.data.map((l) => (
           <div key={l.leadId} className="px-5 py-3 flex flex-wrap items-center gap-3 text-[13px]">

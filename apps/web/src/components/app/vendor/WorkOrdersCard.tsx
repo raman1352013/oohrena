@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
 import {
   ISSUE_CATEGORIES,
+  issueCreateInput,
   MAX_PROOF_BYTES,
   PROOF_TYPE_LABEL,
   WO_STATUS_LABEL,
@@ -19,7 +20,7 @@ import {
   useVendorOverdue,
   type Slot,
 } from "@/lib/execution-api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 import { ProofTile } from "@/components/app/ProofMedia";
 import { Textarea } from "@/components/ui/textarea";
 import { selectCls } from "@/lib/format";
@@ -51,11 +52,9 @@ export function WorkOrdersCard() {
       }
     >
       {wos.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !wos.data?.length ? (
-        <Empty
-          title="No work orders yet"
-        />
+        <Empty title="No work orders" />
       ) : (
         wos.data.map((w) => <WorkOrderBlock key={w.workOrderId} w={w} />)
       )}
@@ -131,11 +130,7 @@ function WorkOrderBlock({ w }: { w: WorkOrderView }) {
         </div>
       ))}
       <p className="rounded-lg bg-muted px-3 py-2 whitespace-pre-line">{w.instructions}</p>
-      {status === "issue_raised" && (
-        <p className="text-destructive text-[12px]">
-          Issue open
-        </p>
-      )}
+      {status === "issue_raised" && <p className="text-destructive text-[12px]">Issue open</p>}
 
       {ex.data && !["cancelled"].includes(status) && (
         <div className="space-y-2">
@@ -192,7 +187,7 @@ function WorkOrderBlock({ w }: { w: WorkOrderView }) {
             className="text-[12px] text-destructive font-semibold hover:underline"
             onClick={() => setIssueOpen(true)}
           >
-            Raise an issue (damage, access, creative…)
+            Raise issue
           </button>
         ))}
       <p className="text-[11px] text-mute">
@@ -328,7 +323,8 @@ export function IssueForm({
         <Textarea
           rows={2}
           value={description}
-          placeholder="What happened? (at least 10 characters)"
+          placeholder="What happened?"
+          aria-label="What happened?"
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
@@ -336,15 +332,16 @@ export function IssueForm({
         <Btn
           variant="dark"
           className="h-8 px-3 text-[12px]"
-          disabled={description.trim().length < 10 || raise.isPending}
-          onClick={() =>
+          disabled={!description.trim() || raise.isPending}
+          onClick={() => {
+            const p = issueCreateInput.safeParse({
+              ...(workOrderId ? { workOrderId } : {}),
+              category,
+              description,
+            });
+            if (!p.success) return void toast.error(p.error.issues[0]?.message);
             raise.mutate(
-              {
-                campaignId,
-                ...(workOrderId ? { workOrderId } : {}),
-                category,
-                description: description.trim(),
-              },
+              { campaignId, ...p.data },
               {
                 onSuccess: (i) => {
                   toast.success(`Issue ${i.issueId} raised`);
@@ -352,8 +349,8 @@ export function IssueForm({
                 },
                 onError: (e) => toast.error(e.message),
               },
-            )
-          }
+            );
+          }}
         >
           Raise issue
         </Btn>

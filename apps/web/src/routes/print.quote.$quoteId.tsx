@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuoteDetail } from "@/lib/deals-api";
-import { inr, ist } from "@/lib/format";
-import { Btn, Empty, PinLogo } from "@/components/app/kit";
+import { fmtDate, inr } from "@/lib/format";
+import { Btn, Empty, Loading, PinLogo } from "@/components/app/kit";
 
 export const Route = createFileRoute("/print/quote/$quoteId")({
   head: ({ params }) => ({
@@ -22,11 +22,7 @@ function PrintQuote() {
   const { data: q, isLoading, error } = useQuoteDetail(quoteId);
 
   if (isLoading) {
-    return (
-      <div className="max-w-3xl mx-auto my-12 text-center text-mute text-[14px]">
-        Loading quotation...
-      </div>
-    );
+    return <Loading />;
   }
   if (error || !q) {
     return <Empty title="Quotation not found" />;
@@ -39,11 +35,11 @@ function PrintQuote() {
   return (
     <div className="max-w-3xl mx-auto bg-card my-6 p-10 border border-line rounded-xl print:border-0 print:my-0 shadow-sm">
       <div className="no-print flex justify-end gap-3 mb-6">
-        <Btn size="sm" tone="secondary" onClick={downloadPdf}>
-          Download Official PDF
+        <Btn size="sm" variant="secondary" onClick={downloadPdf}>
+          Download PDF
         </Btn>
         <Btn size="sm" onClick={() => window.print()}>
-          Print Page
+          Print
         </Btn>
       </div>
 
@@ -51,12 +47,11 @@ function PrintQuote() {
         <PinLogo size={36} />
         <div>
           <div className="font-bold text-xl text-ink">OOHRENA</div>
-          <div className="text-[12px] text-mute">Outdoor x Digital x Trackable</div>
         </div>
         <div className="ml-auto text-right text-[12px]">
           <div className="font-mono font-semibold text-ink">{q.quoteId}</div>
           <div className="text-mute">Lead Ref: {q.leadId}</div>
-          {q.createdAt && <div className="text-mute">Created: {ist(q.createdAt)}</div>}
+          {q.createdAt && <div className="text-mute">Created: {fmtDate(q.createdAt)}</div>}
           <div className="text-mute">
             Valid Until: <span className="font-medium text-ink">{q.validUntil}</span>
           </div>

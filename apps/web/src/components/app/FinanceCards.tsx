@@ -1,6 +1,6 @@
 import { inr } from "@/lib/format";
 import { useBookingPaymentStatus, useMyPayables, useMyPayments } from "@/lib/finance-api";
-import { Empty, KCard, Pill } from "@/components/app/kit";
+import { Empty, KCard, Loading, Pill } from "@/components/app/kit";
 
 /** Client: own invoices and payments (verified = received). */
 export function ClientPayments() {
@@ -8,11 +8,9 @@ export function ClientPayments() {
   return (
     <KCard title="Invoices & payments" bodyClass="divide-y divide-line">
       {d.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !d.data?.invoices.length && !d.data?.payments.length ? (
-        <Empty
-          title="No invoices yet"
-        />
+        <Empty title="No invoices" />
       ) : (
         <>
           {d.data!.invoices.map((i) => (
@@ -65,11 +63,9 @@ export function VendorPayables() {
   return (
     <KCard title="Payables & payouts" bodyClass="divide-y divide-line">
       {d.isPending ? (
-        <div className="p-6 text-center text-mute text-[13px]">Loading…</div>
+        <Loading />
       ) : !d.data?.payables.length ? (
-        <Empty
-          title="No payables yet"
-        />
+        <Empty title="No payables" />
       ) : (
         <>
           {d.data.payables.map((p) => (

@@ -11,7 +11,7 @@ import {
   useSubmitListing,
   type Listing,
 } from "@/lib/inventory-api";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 import { ListingPill } from "@/components/app/status";
 import { fmtDate } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,7 +36,7 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
   return (
     <>
       <KCard
-        title="My media inventory"
+        title="Listings"
         bodyClass=""
         right={
           <>
@@ -51,12 +51,10 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
         }
       >
         {!canList && (
-          <p className="px-5 pt-4 text-[12px] text-hold">
-            Listings go live after KYC approval.
-          </p>
+          <p className="px-5 pt-4 text-[12px] text-hold">Listings go live after KYC approval.</p>
         )}
         {inv.isPending ? (
-          <div className="p-8 text-center text-mute text-[13px]">Loading your listings…</div>
+          <Loading />
         ) : inv.isError ? (
           <div className="p-8 text-center text-[13px]">
             <div className="text-destructive">{inv.error.message}</div>
@@ -65,9 +63,7 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
             </Btn>
           </div>
         ) : !items.length ? (
-          <Empty
-            title="No listings yet"
-          />
+          <Empty title="No listings" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px] min-w-[760px]">
@@ -208,7 +204,7 @@ function HistoryDialog({ id, onClose }: { id: string | undefined; onClose: () =>
         {h.isPending ? (
           <p className="text-mute text-[13px]">Loading…</p>
         ) : !h.data?.length ? (
-          <Empty title="No changes recorded yet" />
+          <Empty title="No changes" />
         ) : (
           <table className="w-full text-[12px]">
             <thead>

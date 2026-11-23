@@ -117,7 +117,8 @@ export function useLogin2FA() {
 export function useRegisterClient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: RegisterClientInput) => api<AuthResult>("/auth/register", { body: input }),
+    mutationFn: (input: RegisterClientInput) =>
+      api<{ user: SessionUser }>("/auth/register", { body: input }),
     onSuccess: (r) => qc.setQueryData(SESSION_KEY, r.user),
   });
 }
@@ -126,7 +127,7 @@ export function useRegisterVendor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: RegisterVendorInput) =>
-      api<AuthResult & { vendorId: string }>("/vendors/register", { body: input }),
+      api<{ user: SessionUser; vendorId: string }>("/vendors/register", { body: input }),
     onSuccess: (r) => qc.setQueryData(SESSION_KEY, r.user),
   });
 }
@@ -149,10 +150,3 @@ export function useLogout() {
     },
   });
 }
-
-/**
- * Bridge while modules 2–9 still render the browser demo store: the screens read `role`
- * from that store, so keep it in step with the real signed-in role. Removed module by module
- * as each screen moves onto the API.
- */
-export function useSyncDemoRole(_user?: SessionUser | null | undefined) {}

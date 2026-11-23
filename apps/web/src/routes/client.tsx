@@ -29,11 +29,11 @@ function ClientPortal() {
   return (
     <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
       <ClientHeading />
-      <ClientProfileCard />
       <MyInquiries />
       <MyQuotations />
       <MyBookings />
       <ClientPayments />
+      <ClientProfileCard />
     </div>
   );
 }

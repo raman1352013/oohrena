@@ -87,7 +87,9 @@ npm run build -w @oohrena/web
 - **Keep text that is state or a rule with consequences** (status pills, "Subject to vendor confirmation",
   "Changing location, rate or size sends it back to review"). Cut text that explains how the product works.
 - If a screen only makes sense with helper text, change the layout instead of adding words.
-- Kit (`components/app/kit.tsx`) is the only set of primitives: `KCard`, `Pill`, `Btn`, `Empty`, `Row`, `PinLogo`.
+- Kit (`components/app/kit.tsx`) is the only set of primitives: `KCard`, `Pill`, `Btn` (`variant`, `size="sm"`), `Empty`, `Loading`, `Row`, `Stats`, `Tabs`, `Notice`, `PinLogo`; forms use `Field` / `FormError` from `AuthShell.tsx` and `Dialog` from `components/ui`.
+- **Loading is always `<Loading />`**, never a sentence ("Loading your listings…"). **Numbers are `<Stats>`** with short labels and no captions; `alert` is only for an exception that needs action ("3 overdue").
+- **No status that nothing measures.** Never show "Operational", "Connected" or "Verified" unless the API returned it.
 
 ## 6. Known pitfalls (learned the hard way — read before debugging)
 
@@ -99,8 +101,7 @@ npm run build -w @oohrena/web
 - **`src/routeTree.gen.ts` is regenerated** by `npm run build -w @oohrena/web` (or `dev`). New route files show type errors until you build once.
 - **Dates** are plain calendar days `YYYY-MM-DD` stored as UTC midnight; "today" is `todayIST()`. Ranges are inclusive.
 - **Cookies + CSRF**: the browser uses the HttpOnly `oohrena_sid` cookie; state-changing requests must come from an origin listed in `CORS_ORIGINS`. Scripts/tests use `Authorization: Bearer` (send `X-Auth-Mode: token` on login).
-- Remaining demo code: `apps/web/src/lib/store.ts` (localStorage demo store) is still used only by `reports.tsx`, `partner.tsx`, the two `print.*` routes, `RequestQuoteDialog.tsx` and the admin export in `AppHeader.tsx`. Replace those with API data and then delete the store (tasks in REMAINING_WORK.md).
-- `apps/web/AGENTS.md` contains a Lovable block. The web app was moved out of the Lovable repo root into the monorepo, so Lovable sync no longer applies; keep the project rules in that file current or merge them here.
+- **`npm run typecheck` covers the web app** (`tsc --noEmit` in `apps/web`). Before this existed, web type errors hid real bugs (props a component ignores, rows rendering blank). Keep it at zero.
 
 ## 7. Definition of done for every change
 

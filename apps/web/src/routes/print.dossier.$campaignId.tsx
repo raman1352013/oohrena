@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import { inr } from "@/lib/format";
 import { assetUrl } from "@/lib/api";
 import { useCampaignReport } from "@/lib/reports-api";
-import { Btn, Empty, PinLogo, Pill } from "@/components/app/kit";
+import { Btn, Empty, Loading, PinLogo, Pill } from "@/components/app/kit";
 
 export const Route = createFileRoute("/print/dossier/$campaignId")({
   head: ({ params }) => ({
@@ -27,12 +27,10 @@ function Dossier() {
   const rep = useCampaignReport(campaignId);
 
   if (rep.isPending) {
-    return <div className="p-12 text-center text-mute text-[13px]">Loading campaign dossier…</div>;
+    return <Loading />;
   }
   if (rep.isError || !rep.data) {
-    return (
-      <Empty title="Campaign not found" />
-    );
+    return <Empty title="Campaign not found" />;
   }
 
   const d = rep.data;
@@ -69,7 +67,6 @@ function Dossier() {
         <PinLogo size={36} />
         <div>
           <div className="font-bold text-xl">OOHRENA</div>
-          <div className="text-[12px] text-mute">Outdoor x Digital x Trackable</div>
         </div>
       </div>
 
@@ -134,9 +131,7 @@ function Dossier() {
             ))}
           </div>
         ) : (
-          <Empty
-            title="No verified proof uploaded"
-          />
+          <Empty title="No verified proof uploaded" />
         )}
       </div>
 

@@ -1,8 +1,12 @@
 import { useState } from "react";
 import type { Role } from "@oohrena/shared";
 import { ROLE_LABELS } from "@oohrena/shared";
-import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
-import { fmtDate } from "@/lib/format";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Btn, Empty, KCard, Loading, Notice, Pill } from "@/components/app/kit";
+import { Field, FormError } from "@/components/app/AuthShell";
+import { fmtDate, selectCls } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   useAdminUsers,
   useAssignUserRole,
@@ -14,119 +18,100 @@ import {
   type AdminUserItem,
 } from "@/lib/admin-users-api";
 
+const ROLES = Object.keys(ROLE_LABELS) as Role[];
+const STAFF_ROLES = ["admin", "finance", "growth_partner"] as const;
+type StaffRole = (typeof STAFF_ROLES)[number];
+
+const roleTone = (r: Role) =>
+  r === "admin"
+    ? "danger"
+    : r === "finance"
+      ? "verified"
+      : r === "growth_partner"
+        ? "hold"
+        : "neutral";
+const statusTone = (s: AdminUserItem["status"]) =>
+  s === "active" ? "verified" : s === "suspended" ? "danger" : "hold";
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
 export function UserManagement() {
-  const [roleFilter, setRoleFilter] = useState<Role | undefined>(undefined);
+  const [role, setRole] = useState<Role | undefined>();
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-
-  const { data, isLoading } = useAdminUsers({ role: roleFilter, q: search || undefined, page });
-  const suspendUser = useSuspendUser();
-  const reactivateUser = useReactivateUser();
-
-  const [createOpen, setCreateOpen] = useState(false);
-  const [sessionsUser, setSessionsUser] = useState<AdminUserItem | null>(null);
-  const [roleUser, setRoleUser] = useState<AdminUserItem | null>(null);
+  const { data, isLoading } = useAdminUsers({ role, q: search || undefined });
+  const suspend = useSuspendUser();
+  const reactivate = useReactivateUser();
+  const [creating, setCreating] = useState(false);
+  const [sessionsFor, setSessionsFor] = useState<AdminUserItem | null>(null);
+  const [roleFor, setRoleFor] = useState<AdminUserItem | null>(null);
 
   return (
     <div className="space-y-4">
-      {/* Search and Filter Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-card p-3 rounded-xl border border-line">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email or ID..."
-            className="h-9 px-3 rounded-lg border border-line bg-card text-[13px] w-64"
-          />
-          <select
-            value={roleFilter ?? ""}
-            onChange={(e) => setRoleFilter(e.target.value ? (e.target.value as Role) : undefined)}
-            className="h-9 px-3 rounded-lg border border-line bg-card text-[13px]"
-          >
-            <option value="">All Roles</option>
-            <option value="admin">Central Admin</option>
-            <option value="finance">Finance / Audit</option>
-            <option value="growth_partner">Growth Partner</option>
-            <option value="vendor">Vendor / Media Owner</option>
-            <option value="client">Client / Advertiser</option>
-          </select>
-        </div>
-        <Btn tone="primary" onClick={() => setCreateOpen(true)}>
-          + Add Staff Account
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          aria-label="Search users"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search"
+          className={cn(selectCls, "sm:w-64")}
+        />
+        <select
+          aria-label="Role"
+          value={role ?? ""}
+          onChange={(e) => setRole(e.target.value ? (e.target.value as Role) : undefined)}
+          className={cn(selectCls, "sm:w-48")}
+        >
+          <option value="">All roles</option>
+          {ROLES.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABELS[r]}
+            </option>
+          ))}
+        </select>
+        <Btn className="sm:ml-auto" onClick={() => setCreating(true)}>
+          Add staff
         </Btn>
       </div>
 
-      {/* Users Table */}
-      <KCard title={`Registered Accounts (${data?.total ?? 0})`} bodyClass="divide-y divide-line">
+      <KCard title={`Users · ${data?.total ?? 0}`} bodyClass="divide-y divide-line">
         {isLoading ? (
-          <div className="p-8 text-center text-mute text-[13px]">Loading user accounts...</div>
-        ) : data?.items && data.items.length > 0 ? (
+          <Loading />
+        ) : !data?.items.length ? (
+          <Empty title="No users" />
+        ) : (
           data.items.map((u) => (
             <div
               key={u.userId}
               className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-[13px]"
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[12px] font-medium">{u.userId}</span>
-                  <Pill
-                    tone={
-                      u.role === "admin"
-                        ? "danger"
-                        : u.role === "finance"
-                          ? "verified"
-                          : u.role === "growth_partner"
-                            ? "hold"
-                            : "neutral"
-                    }
-                  >
-                    {ROLE_LABELS[u.role] ?? u.role}
-                  </Pill>
-                  <Pill
-                    tone={
-                      u.status === "active"
-                        ? "verified"
-                        : u.status === "suspended"
-                          ? "danger"
-                          : "hold"
-                    }
-                  >
-                    {u.status}
-                  </Pill>
-                  {u.twoFactorEnabled && (
-                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      2FA
-                    </span>
-                  )}
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">{u.fullName}</span>
+                  <Pill tone={roleTone(u.role)}>{ROLE_LABELS[u.role]}</Pill>
+                  <Pill tone={statusTone(u.status)}>{u.status}</Pill>
+                  {u.twoFactorEnabled && <Pill tone="verified">2FA</Pill>}
                 </div>
-                <div className="font-semibold mt-1">{u.fullName}</div>
-                <div className="text-[12px] text-mute">
-                  {u.email} {u.orgId ? `· ${u.orgId}` : ""}
+                <div className="text-[12px] text-mute mt-1 truncate">
+                  <span className="font-mono">{u.userId}</span> · {u.email}
+                  {u.orgId && ` · ${u.orgId}`} ·{" "}
+                  {u.lastLoginAt ? `Last sign-in ${fmtDate(u.lastLoginAt)}` : "Never signed in"}
                 </div>
               </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[12px] text-mute mr-2">
-                  {u.lastLoginAt ? `Active ${fmtDate(u.lastLoginAt)}` : "Never logged in"}
-                </span>
-                <Btn size="sm" tone="secondary" onClick={() => setSessionsUser(u)}>
+              <div className="flex flex-wrap gap-2">
+                <Btn size="sm" variant="secondary" onClick={() => setSessionsFor(u)}>
                   Sessions
                 </Btn>
-                <Btn size="sm" tone="secondary" onClick={() => setRoleUser(u)}>
-                  Change Role
+                <Btn size="sm" variant="secondary" onClick={() => setRoleFor(u)}>
+                  Role
                 </Btn>
                 {u.status === "active" ? (
                   <Btn
                     size="sm"
-                    tone="danger"
-                    disabled={suspendUser.isPending}
+                    variant="danger"
+                    disabled={suspend.isPending}
                     onClick={() => {
-                      if (
-                        confirm(`Suspend user ${u.email}? All active sessions will be revoked.`)
-                      ) {
-                        void suspendUser.mutateAsync(u.userId);
-                      }
+                      if (confirm(`Suspend ${u.email}? This signs them out everywhere.`))
+                        suspend.mutate(u.userId);
                     }}
                   >
                     Suspend
@@ -134,9 +119,9 @@ export function UserManagement() {
                 ) : (
                   <Btn
                     size="sm"
-                    tone="primary"
-                    disabled={reactivateUser.isPending}
-                    onClick={() => void reactivateUser.mutateAsync(u.userId)}
+                    variant="secondary"
+                    disabled={reactivate.isPending}
+                    onClick={() => reactivate.mutate(u.userId)}
                   >
                     Reactivate
                   </Btn>
@@ -144,283 +129,221 @@ export function UserManagement() {
               </div>
             </div>
           ))
-        ) : (
-          <Empty title="No accounts found" />
         )}
       </KCard>
 
-      {/* Create Staff Modal */}
-      {createOpen && <CreateStaffModal onClose={() => setCreateOpen(false)} />}
-
-      {/* User Sessions Modal */}
-      {sessionsUser && (
-        <UserSessionsModal user={sessionsUser} onClose={() => setSessionsUser(null)} />
-      )}
-
-      {/* Change Role Modal */}
-      {roleUser && <ChangeRoleModal user={roleUser} onClose={() => setRoleUser(null)} />}
+      <CreateStaffDialog open={creating} onClose={() => setCreating(false)} />
+      {sessionsFor && <SessionsDialog user={sessionsFor} onClose={() => setSessionsFor(null)} />}
+      {roleFor && <RoleDialog user={roleFor} onClose={() => setRoleFor(null)} />}
     </div>
   );
 }
 
-function CreateStaffModal({ onClose }: { onClose: () => void }) {
-  const createStaff = useCreateStaffUser();
-  const [form, setForm] = useState<{
-    fullName: string;
-    email: string;
-    mobile: string;
-    role: "admin" | "finance" | "growth_partner";
-  }>({
-    fullName: "",
-    email: "",
-    mobile: "",
-    role: "admin",
-  });
-  const [inviteResult, setInviteResult] = useState<{ inviteSent: boolean; devInviteLink?: string | undefined; email: string } | null>(
-    null,
-  );
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    try {
-      const res = await createStaff.mutateAsync(form);
-      setInviteResult({ inviteSent: res.inviteSent, devInviteLink: res.devInviteLink, email: form.email });
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create staff account");
-    }
+function CreateStaffDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const create = useCreateStaffUser();
+  const blank = { fullName: "", email: "", mobile: "", role: "admin" as StaffRole };
+  const [f, setF] = useState(blank);
+  const [done, setDone] = useState<{ inviteSent: boolean; link?: string | undefined } | null>(null);
+  const [error, setError] = useState<string>();
+  const close = () => {
+    setF(blank);
+    setDone(null);
+    setError(undefined);
+    onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-line rounded-xl w-full max-w-md p-6 space-y-4">
-        <h2 className="text-lg font-bold">Add Named Staff Account</h2>
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(undefined);
+    create.mutate(f, {
+      onSuccess: (r) => setDone({ inviteSent: r.inviteSent, link: r.devInviteLink }),
+      onError: (err) => setError(errMsg(err)),
+    });
+  }
 
-        {inviteResult ? (
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && close()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add staff</DialogTitle>
+        </DialogHeader>
+        {done ? (
           <div className="space-y-4">
-            {inviteResult.inviteSent ? (
-              <div className="p-3 bg-emerald-50 text-emerald-800 text-[13px] rounded-lg border border-emerald-200">
-                Staff account created. A set-password invitation was emailed to{" "}
-                <strong>{inviteResult.email}</strong> (valid for 7 days).
-              </div>
+            {done.inviteSent ? (
+              <Notice>Invitation sent to {f.email}. It expires in 7 days.</Notice>
             ) : (
-              <div className="p-3 bg-amber-50 text-amber-900 text-[13px] rounded-lg border border-amber-200">
-                Staff account created, but the invitation email could not be sent. Check the email
-                settings, then ask <strong>{inviteResult.email}</strong> to use "Forgot password".
-              </div>
+              <Notice tone="hold">
+                Account created, but the invitation email failed. Ask {f.email} to use “Forgot
+                password”.
+              </Notice>
             )}
-            {inviteResult.devInviteLink && (
-              <div>
-                <label className="block text-[12px] font-medium text-mute mb-1">
-                  Development only: set-password link
-                </label>
-                <input
-                  readOnly
-                  type="text"
-                  value={inviteResult.devInviteLink}
-                  className="w-full font-mono text-[12px] p-2 rounded border border-line bg-muted"
-                />
-              </div>
+            {done.link && (
+              <Field
+                id="invite-link"
+                label="Set-password link (development)"
+                readOnly
+                value={done.link}
+              />
             )}
             <div className="flex justify-end">
-              <Btn tone="primary" onClick={onClose}>
-                Done
-              </Btn>
+              <Btn onClick={close}>Done</Btn>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {error && (
-              <div className="p-3 bg-red-50 text-red-800 text-[13px] rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
-            <div>
-              <label className="block text-[12px] font-medium text-mute mb-1">Full Name *</label>
-              <input
-                required
-                type="text"
-                value={form.fullName}
-                onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                className="w-full h-9 rounded-lg border border-line bg-card px-3 text-[13px]"
-              />
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-mute mb-1">
-                Email Address *
-              </label>
-              <input
-                required
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full h-9 rounded-lg border border-line bg-card px-3 text-[13px]"
-              />
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-mute mb-1">
-                Mobile Number *
-              </label>
-              <input
-                required
-                type="text"
-                value={form.mobile}
-                onChange={(e) => setForm({ ...form, mobile: e.target.value })}
-                placeholder="+91..."
-                className="w-full h-9 rounded-lg border border-line bg-card px-3 text-[13px]"
-              />
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-mute mb-1">Staff Role *</label>
+          <form onSubmit={submit} className="space-y-3">
+            <FormError message={error} />
+            <Field
+              id="staff-name"
+              label="Name"
+              required
+              value={f.fullName}
+              onChange={(e) => setF({ ...f, fullName: e.target.value })}
+            />
+            <Field
+              id="staff-email"
+              label="Email"
+              type="email"
+              required
+              value={f.email}
+              onChange={(e) => setF({ ...f, email: e.target.value })}
+            />
+            <Field
+              id="staff-mobile"
+              label="Mobile"
+              type="tel"
+              required
+              value={f.mobile}
+              onChange={(e) => setF({ ...f, mobile: e.target.value })}
+            />
+            <label className="block space-y-1.5 text-[13px] text-ink">
+              Role
               <select
-                value={form.role}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    role: e.target.value as "admin" | "finance" | "growth_partner",
-                  })
-                }
-                className="w-full h-9 rounded-lg border border-line bg-card px-3 text-[13px]"
+                value={f.role}
+                onChange={(e) => setF({ ...f, role: e.target.value as StaffRole })}
+                className={selectCls}
               >
-                <option value="admin">Central Admin</option>
-                <option value="finance">Finance / Audit</option>
-                <option value="growth_partner">Growth Partner</option>
+                {STAFF_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
               </select>
-            </div>
+            </label>
             <div className="flex justify-end gap-2 pt-2">
-              <Btn type="button" tone="secondary" onClick={onClose}>
+              <Btn type="button" variant="secondary" onClick={close}>
                 Cancel
               </Btn>
-              <Btn type="submit" tone="primary" disabled={createStaff.isPending}>
-                {createStaff.isPending ? "Creating..." : "Create Account"}
+              <Btn type="submit" disabled={create.isPending}>
+                {create.isPending ? "Adding…" : "Add"}
               </Btn>
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function UserSessionsModal({ user, onClose }: { user: AdminUserItem; onClose: () => void }) {
-  const { data: sessions, isLoading } = useUserSessions(user.userId);
-  const revokeSession = useRevokeSession();
+function SessionsDialog({ user, onClose }: { user: AdminUserItem; onClose: () => void }) {
+  const { data, isLoading } = useUserSessions(user.userId);
+  const revoke = useRevokeSession();
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-line rounded-xl w-full max-w-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Active Sessions for {user.fullName}</h2>
-          <Btn size="sm" tone="secondary" onClick={onClose}>
-            Close
-          </Btn>
-        </div>
-
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Sessions · {user.fullName}</DialogTitle>
+        </DialogHeader>
         <div className="max-h-80 overflow-y-auto divide-y divide-line border border-line rounded-lg">
           {isLoading ? (
-            <div className="p-4 text-center text-mute text-[13px]">Loading active sessions...</div>
-          ) : sessions && sessions.length > 0 ? (
-            sessions.map((s) => (
+            <Loading />
+          ) : !data?.length ? (
+            <Empty title="No active sessions" />
+          ) : (
+            data.map((s) => (
               <div
                 key={s.sessionId}
                 className="p-3 flex items-center justify-between gap-3 text-[12px]"
               >
-                <div>
-                  <div className="font-mono text-[11px] text-mute">{s.sessionId}</div>
-                  <div className="font-medium">{s.device || "Unknown Device"}</div>
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{s.device || "Unknown device"}</div>
                   <div className="text-mute">
-                    {s.ip || "Unknown IP"} · Last seen {fmtDate(s.lastSeenAt)}
+                    {s.ip || "Unknown IP"} · {fmtDate(s.lastSeenAt)}
                   </div>
                 </div>
                 <Btn
                   size="sm"
-                  tone="danger"
-                  disabled={revokeSession.isPending}
-                  onClick={() =>
-                    void revokeSession.mutateAsync({ userId: user.userId, sessionId: s.sessionId })
-                  }
+                  variant="danger"
+                  disabled={revoke.isPending}
+                  onClick={() => revoke.mutate({ userId: user.userId, sessionId: s.sessionId })}
                 >
                   Revoke
                 </Btn>
               </div>
             ))
-          ) : (
-            <div className="p-4 text-center text-mute text-[13px]">No active sessions found.</div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function ChangeRoleModal({ user, onClose }: { user: AdminUserItem; onClose: () => void }) {
-  const assignRole = useAssignUserRole();
+function RoleDialog({ user, onClose }: { user: AdminUserItem; onClose: () => void }) {
+  const assign = useAssignUserRole();
   const [role, setRole] = useState<Role>(user.role);
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string>();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    try {
-      await assignRole.mutateAsync({ userId: user.userId, role, reason });
-      onClose();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to change user role");
-    }
-  };
+    setError(undefined);
+    assign.mutate(
+      { userId: user.userId, role, reason },
+      { onSuccess: onClose, onError: (err) => setError(errMsg(err)) },
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-line rounded-xl w-full max-w-md p-6 space-y-4">
-        <h2 className="text-lg font-bold">Change Role for {user.fullName}</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {error && (
-            <div className="p-3 bg-red-50 text-red-800 text-[13px] rounded-lg border border-red-200">
-              {error}
-            </div>
-          )}
-          <div>
-            <label className="block text-[12px] font-medium text-mute mb-1">
-              Select New Role *
-            </label>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Role · {user.fullName}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <FormError message={error} />
+          <label className="block space-y-1.5 text-[13px] text-ink">
+            Role
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="w-full h-9 rounded-lg border border-line bg-card px-3 text-[13px]"
+              className={selectCls}
             >
-              <option value="admin">Central Admin</option>
-              <option value="finance">Finance / Audit</option>
-              <option value="growth_partner">Growth Partner</option>
-              <option value="vendor">Vendor / Media Owner</option>
-              <option value="client">Client / Advertiser</option>
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-[12px] font-medium text-mute mb-1">
-              Mandatory Justification / Reason *
-            </label>
-            <textarea
+          </label>
+          <label className="block space-y-1.5 text-[13px] text-ink">
+            Reason
+            <Textarea
               required
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="State the operational reason for changing this user's role..."
-              className="w-full rounded-lg border border-line bg-card p-2 text-[13px]"
             />
-          </div>
+          </label>
           <div className="flex justify-end gap-2 pt-2">
-            <Btn type="button" tone="secondary" onClick={onClose}>
+            <Btn type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Btn>
-            <Btn type="submit" tone="primary" disabled={assignRole.isPending || !reason.trim()}>
-              {assignRole.isPending ? "Assigning..." : "Apply Role Change"}
+            <Btn type="submit" disabled={assign.isPending || !reason.trim() || role === user.role}>
+              {assign.isPending ? "Saving…" : "Save"}
             </Btn>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

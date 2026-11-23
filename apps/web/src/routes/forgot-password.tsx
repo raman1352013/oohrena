@@ -37,16 +37,11 @@ function ForgotPasswordPage() {
   );
 
   if (send.isSuccess) {
-    return (
-      <AuthShell title="Check your email" sub={send.data.message} footer={footer} />
-    );
+    return <AuthShell title="Check your email" sub={send.data.message} footer={footer} />;
   }
 
   return (
-    <AuthShell
-      title="Forgot password"
-      footer={footer}
-    >
+    <AuthShell title="Forgot password" footer={footer}>
       <FormError message={send.error?.message} />
       <form onSubmit={submit} noValidate className="space-y-4">
         <Field

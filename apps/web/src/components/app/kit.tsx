@@ -60,22 +60,26 @@ export function Pill({
 
 export function Btn({
   variant = "primary",
+  size = "md",
   className,
   ...p
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "dark" | "ghost";
+  variant?: "primary" | "secondary" | "dark" | "ghost" | "danger";
+  size?: "md" | "sm";
 }) {
   const v = {
     primary: "bg-saffron text-primary-foreground hover:bg-saffron-deep",
     secondary: "border border-line bg-card text-ink hover:bg-canvas",
     dark: "bg-navy text-navy-foreground hover:bg-navy/90",
     ghost: "text-mute hover:text-ink",
+    danger: "border border-destructive/30 bg-card text-destructive hover:bg-destructive/5",
   }[variant];
   return (
     <button
       {...p}
       className={cn(
-        "h-11 px-5 rounded-lg text-[13px] font-semibold transition disabled:opacity-40 disabled:pointer-events-none inline-flex items-center justify-center gap-2",
+        "rounded-lg text-[13px] font-semibold transition disabled:opacity-40 disabled:pointer-events-none inline-flex items-center justify-center gap-2",
+        size === "sm" ? "h-9 px-3" : "h-11 px-5",
         v,
         className,
       )}
@@ -87,6 +91,114 @@ export function Empty({ title }: { title: string }) {
   return (
     <div className="py-10 text-center">
       <div className="font-medium text-ink text-[13px]">{title}</div>
+    </div>
+  );
+}
+
+export function Loading() {
+  return (
+    <div role="status" className="py-10 text-center text-[13px] text-mute">
+      Loading…
+    </div>
+  );
+}
+
+export type StatItem = {
+  label: string;
+  value: ReactNode;
+  tone?: "verified" | "hold" | "danger" | undefined;
+  /** Only for an exception that needs action ("3 overdue"). Never an explanation. */
+  alert?: string | undefined;
+};
+
+const COLS: Record<number, string> = {
+  2: "",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-4",
+  5: "sm:grid-cols-5",
+};
+
+/** One strip of numbers with their names. If a number needs a caption, rename it. */
+export function Stats({ items }: { items: StatItem[] }) {
+  const tone = { verified: "text-verified", hold: "text-hold", danger: "text-destructive" };
+  return (
+    <div
+      className={cn(
+        "bg-card border border-line rounded-xl grid grid-cols-2 overflow-hidden",
+        COLS[items.length] ?? "sm:grid-cols-3 lg:grid-cols-6",
+      )}
+    >
+      {items.map((x) => (
+        <div key={x.label} className="p-4 border-line border-b border-r -mb-px -mr-px">
+          <div className="text-[12px] text-mute">{x.label}</div>
+          <div className={cn("text-2xl font-semibold mt-1 tabular-nums", x.tone && tone[x.tone])}>
+            {x.value}
+          </div>
+          {x.alert && <div className="text-[11px] text-saffron-deep mt-1">{x.alert}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Tabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+}: {
+  tabs: readonly { id: T; label: string; n?: number | undefined }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <nav role="tablist" className="flex gap-6 border-b border-line text-[13px] overflow-x-auto">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          role="tab"
+          aria-selected={value === t.id}
+          onClick={() => onChange(t.id)}
+          className={cn(
+            "pt-1 pb-2.5 border-b-2 whitespace-nowrap flex items-center gap-1.5",
+            value === t.id
+              ? "border-navy text-ink font-semibold"
+              : "border-transparent text-mute hover:text-ink",
+          )}
+        >
+          {t.label}
+          {!!t.n && (
+            <span
+              className={cn(
+                "px-1.5 rounded text-[11px]",
+                value === t.id && "bg-navy text-navy-foreground",
+              )}
+            >
+              {t.n}
+            </span>
+          )}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+/** A result the user must read (saved, sent, failed to send). Errors use FormError. */
+export function Notice({
+  tone = "verified",
+  children,
+}: {
+  tone?: "verified" | "hold";
+  children: ReactNode;
+}) {
+  return (
+    <div
+      role="status"
+      className={cn(
+        "rounded-lg px-3 py-2.5 text-[13px]",
+        tone === "verified" ? "bg-verified-soft text-verified" : "bg-hold-soft text-hold",
+      )}
+    >
+      {children}
     </div>
   );
 }

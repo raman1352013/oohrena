@@ -1,288 +1,211 @@
-import { useState, useEffect } from "react";
-import { Btn, KCard } from "@/components/app/kit";
-import { useClientProfile, useUpdateClientProfile } from "@/lib/deals-api";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Btn, KCard, Loading, Row } from "@/components/app/kit";
+import { Field, FormError } from "@/components/app/AuthShell";
+import { useClientProfile, useUpdateClientProfile, type ClientProfileData } from "@/lib/deals-api";
+
+type Form = Record<
+  | "companyName"
+  | "gstin"
+  | "line1"
+  | "line2"
+  | "city"
+  | "state"
+  | "pin"
+  | "name"
+  | "email"
+  | "mobile",
+  string
+>;
+
+const toForm = (p: ClientProfileData): Form => ({
+  companyName: p.companyName ?? "",
+  gstin: p.gstin ?? "",
+  line1: p.billingAddress?.line1 ?? "",
+  line2: p.billingAddress?.line2 ?? "",
+  city: p.billingAddress?.city ?? "",
+  state: p.billingAddress?.state ?? "",
+  pin: p.billingAddress?.pin ?? "",
+  name: p.contacts[0]?.name ?? "",
+  email: p.contacts[0]?.email ?? "",
+  mobile: p.contacts[0]?.mobile ?? "",
+});
+
+/** Only send the parts that are filled in; empty strings would fail the shared schema. */
+const opt = <K extends string>(k: K, v: string) =>
+  v.trim() ? ({ [k]: v.trim() } as Record<K, string>) : {};
 
 export function ClientProfileCard() {
   const { data: profile, isLoading } = useClientProfile();
-  const updateProfile = useUpdateClientProfile();
+  const update = useUpdateClientProfile();
+  const [form, setForm] = useState<Form | null>(null);
+  const [error, setError] = useState<string>();
 
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    companyName: "",
-    gstin: "",
-    line1: "",
-    line2: "",
-    city: "",
-    state: "",
-    pin: "",
-    contactName: "",
-    contactEmail: "",
-    contactMobile: "",
-    contactDesignation: "",
-  });
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  if (isLoading || !profile)
+    return (
+      <KCard title="Company">
+        <Loading />
+      </KCard>
+    );
 
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        companyName: profile.companyName || "",
-        gstin: profile.gstin || "",
-        line1: profile.billingAddress?.line1 || "",
-        line2: profile.billingAddress?.line2 || "",
-        city: profile.billingAddress?.city || "",
-        state: profile.billingAddress?.state || "",
-        pin: profile.billingAddress?.pin || "",
-        contactName: profile.contacts?.[0]?.name || "",
-        contactEmail: profile.contacts?.[0]?.email || "",
-        contactMobile: profile.contacts?.[0]?.mobile || "",
-        contactDesignation: profile.contacts?.[0]?.designation || "",
-      });
-    }
-  }, [profile]);
+  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    form &&
+    setForm({ ...form, [k]: k === "gstin" ? e.target.value.toUpperCase() : e.target.value });
 
-  if (isLoading) {
-    return <div className="p-4 text-center text-mute text-[13px]">Loading company profile...</div>;
-  }
-
-  const handleSave = async (e: React.FormEvent) => {
+  const save = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    try {
-      await updateProfile.mutateAsync({
-        companyName: form.companyName,
-        gstin: form.gstin || null,
-        billingAddress: form.line1
-          ? {
-              line1: form.line1,
-              line2: form.line2 || undefined,
-              city: form.city,
-              state: form.state,
-              pin: form.pin,
-            }
-          : (null as never),
-        contacts: form.contactName
+    if (!form) return;
+    setError(undefined);
+    update.mutate(
+      {
+        companyName: form.companyName.trim(),
+        gstin: form.gstin.trim() || null,
+        ...(form.line1.trim() && {
+          billingAddress: {
+            line1: form.line1.trim(),
+            ...opt("line2", form.line2),
+            city: form.city.trim(),
+            state: form.state.trim(),
+            pin: form.pin.trim(),
+          },
+        }),
+        contacts: form.name.trim()
           ? [
               {
-                name: form.contactName,
-                email: form.contactEmail || undefined,
-                mobile: form.contactMobile || undefined,
-                designation: form.contactDesignation || undefined,
+                name: form.name.trim(),
+                ...opt("email", form.email),
+                ...opt("mobile", form.mobile),
+                ...opt("designation", profile.contacts[0]?.designation ?? ""),
               },
             ]
           : [],
-      });
-      setSuccessMsg("Company billing profile updated successfully.");
-      setEditing(false);
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to update profile");
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success("Saved");
+          setForm(null);
+        },
+        onError: (err) => setError(err instanceof Error ? err.message : String(err)),
+      },
+    );
   };
+
+  const a = profile.billingAddress;
+  const c = profile.contacts[0];
 
   return (
     <KCard
-      title="Company & Billing Profile"
+      title="Company"
       right={
-        !editing ? (
-          <Btn size="sm" tone="secondary" onClick={() => setEditing(true)}>
-            Edit Profile
-          </Btn>
-        ) : (
-          <Btn size="sm" tone="secondary" onClick={() => setEditing(false)}>
-            Cancel
+        !form && (
+          <Btn size="sm" variant="secondary" onClick={() => setForm(toForm(profile))}>
+            Edit
           </Btn>
         )
       }
     >
-      <div className="p-5">
-        {successMsg && (
-          <div className="mb-4 p-3 bg-emerald-50 text-emerald-800 text-[13px] rounded-lg border border-emerald-200">
-            {successMsg}
+      {form ? (
+        <form onSubmit={save} className="space-y-4">
+          <FormError message={error} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="cp-company"
+              label="Legal name"
+              required
+              value={form.companyName}
+              onChange={set("companyName")}
+            />
+            <Field
+              id="cp-gstin"
+              label="GSTIN"
+              className="font-mono"
+              value={form.gstin}
+              onChange={set("gstin")}
+            />
           </div>
-        )}
-        {errorMsg && (
-          <div className="mb-4 p-3 bg-red-50 text-red-800 text-[13px] rounded-lg border border-red-200">
-            {errorMsg}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              id="cp-line1"
+              label="Billing address"
+              className="sm:col-span-2"
+              value={form.line1}
+              onChange={set("line1")}
+            />
+            <Field
+              id="cp-line2"
+              label="Address line 2"
+              className="sm:col-span-2"
+              value={form.line2}
+              onChange={set("line2")}
+            />
+            <Field
+              id="cp-city"
+              label="City"
+              required={!!form.line1}
+              value={form.city}
+              onChange={set("city")}
+            />
+            <Field
+              id="cp-state"
+              label="State"
+              required={!!form.line1}
+              value={form.state}
+              onChange={set("state")}
+            />
+            <Field
+              id="cp-pin"
+              label="PIN"
+              inputMode="numeric"
+              required={!!form.line1}
+              value={form.pin}
+              onChange={set("pin")}
+            />
           </div>
-        )}
-
-        {editing ? (
-          <form onSubmit={handleSave} className="space-y-4 text-[13px]">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[12px] font-medium text-mute mb-1">
-                  Company Legal Name *
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={form.companyName}
-                  onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-                  className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] font-medium text-mute mb-1">
-                  GSTIN (15-digit)
-                </label>
-                <input
-                  type="text"
-                  value={form.gstin}
-                  onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })}
-                  placeholder="23AAAAA0000A1Z5"
-                  className="w-full h-9 rounded-lg border border-line bg-card px-3 font-mono"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-line">
-              <h3 className="font-semibold text-[13px] mb-2">
-                Billing Address (Feeds Tax Invoices)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="md:col-span-2">
-                  <label className="block text-[12px] font-medium text-mute mb-1">
-                    Address Line 1
-                  </label>
-                  <input
-                    type="text"
-                    value={form.line1}
-                    onChange={(e) => setForm({ ...form, line1: e.target.value })}
-                    placeholder="Street, Building, Floor"
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-mute mb-1">City</label>
-                  <input
-                    type="text"
-                    value={form.city}
-                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-mute mb-1">State</label>
-                  <input
-                    type="text"
-                    value={form.state}
-                    onChange={(e) => setForm({ ...form, state: e.target.value })}
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-mute mb-1">
-                    PIN Code (6 digits)
-                  </label>
-                  <input
-                    type="text"
-                    value={form.pin}
-                    onChange={(e) => setForm({ ...form, pin: e.target.value })}
-                    placeholder="400001"
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3 font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-line">
-              <h3 className="font-semibold text-[13px] mb-2">Primary Billing Contact</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[12px] font-medium text-mute mb-1">
-                    Contact Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.contactName}
-                    onChange={(e) => setForm({ ...form, contactName: e.target.value })}
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-mute mb-1">
-                    Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    value={form.contactEmail}
-                    onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-medium text-mute mb-1">
-                    Contact Mobile
-                  </label>
-                  <input
-                    type="text"
-                    value={form.contactMobile}
-                    onChange={(e) => setForm({ ...form, contactMobile: e.target.value })}
-                    className="w-full h-9 rounded-lg border border-line bg-card px-3"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-line">
-              <Btn type="button" tone="secondary" onClick={() => setEditing(false)}>
-                Cancel
-              </Btn>
-              <Btn type="submit" tone="primary" disabled={updateProfile.isPending}>
-                {updateProfile.isPending ? "Saving..." : "Save Profile"}
-              </Btn>
-            </div>
-          </form>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[13px]">
-            <div>
-              <div className="text-[12px] text-mute">Company Details</div>
-              <div className="font-bold text-base mt-1">{profile?.companyName}</div>
-              <div className="text-mute font-mono text-[12px] mt-0.5">
-                GSTIN: {profile?.gstin || "Not provided (unregistered)"}
-              </div>
-              <div className="text-mute font-mono text-[11px] mt-1">ID: {profile?.clientId}</div>
-            </div>
-
-            <div>
-              <div className="text-[12px] text-mute">Billing Address</div>
-              {profile?.billingAddress?.line1 ? (
-                <div className="mt-1 leading-relaxed">
-                  <div>{profile.billingAddress.line1}</div>
-                  {profile.billingAddress.line2 && <div>{profile.billingAddress.line2}</div>}
-                  <div>
-                    {profile.billingAddress.city}, {profile.billingAddress.state} -{" "}
-                    {profile.billingAddress.pin}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-mute italic mt-1">No billing address set</div>
-              )}
-            </div>
-
-            <div>
-              <div className="text-[12px] text-mute">Billing Contact</div>
-              {profile?.contacts?.[0] ? (
-                <div className="mt-1">
-                  <div className="font-semibold">{profile.contacts[0].name}</div>
-                  {profile.contacts[0].designation && (
-                    <div className="text-[12px] text-mute">{profile.contacts[0].designation}</div>
-                  )}
-                  {profile.contacts[0].email && (
-                    <div className="text-[12px]">{profile.contacts[0].email}</div>
-                  )}
-                  {profile.contacts[0].mobile && (
-                    <div className="text-[12px]">{profile.contacts[0].mobile}</div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-mute italic mt-1">No contacts listed</div>
-              )}
-            </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field id="cp-name" label="Billing contact" value={form.name} onChange={set("name")} />
+            <Field
+              id="cp-email"
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={set("email")}
+            />
+            <Field
+              id="cp-mobile"
+              label="Mobile"
+              type="tel"
+              value={form.mobile}
+              onChange={set("mobile")}
+            />
           </div>
-        )}
-      </div>
+          <div className="flex justify-end gap-2">
+            <Btn type="button" variant="secondary" onClick={() => setForm(null)}>
+              Cancel
+            </Btn>
+            <Btn type="submit" disabled={update.isPending}>
+              {update.isPending ? "Saving…" : "Save"}
+            </Btn>
+          </div>
+        </form>
+      ) : (
+        <div className="divide-y divide-line">
+          <Row k="Legal name" v={profile.companyName} />
+          <Row k="Client ID" v={<span className="font-mono">{profile.clientId}</span>} />
+          <Row k="GSTIN" v={<span className="font-mono">{profile.gstin ?? "—"}</span>} />
+          <Row
+            k="Billing address"
+            v={
+              a
+                ? [a.line1, a.line2, `${a.city}, ${a.state} ${a.pin}`].filter(Boolean).join(", ")
+                : "—"
+            }
+          />
+          <Row
+            k="Billing contact"
+            v={c ? [c.name, c.email, c.mobile].filter(Boolean).join(" · ") : "—"}
+          />
+        </div>
+      )}
     </KCard>
   );
 }

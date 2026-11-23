@@ -20,6 +20,8 @@ import {
   categoryDef,
   leadCreateInput,
   type PublicListing,
+  CATEGORY_IDS,
+  type CategoryId,
 } from "@oohrena/shared";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +46,10 @@ import { AvailabilityCalendar } from "@/components/app/AvailabilityCalendar";
 const MapView = lazy(() => import("@/components/app/MapView"));
 
 export const Route = createFileRoute("/marketplace")({
+  validateSearch: (s: Record<string, unknown>): { category?: CategoryId | undefined } =>
+    CATEGORY_IDS.includes(s["category"] as CategoryId)
+      ? { category: s["category"] as CategoryId }
+      : {},
   head: () => ({
     meta: [
       { title: "Media — OOHRENA" },
@@ -85,7 +91,7 @@ function Marketplace() {
   const isClient = user?.role === "client";
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
-  const [cat, setCat] = useState("");
+  const [cat, setCat] = useState<string>(Route.useSearch().category ?? "");
   const [budget, setBudget] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

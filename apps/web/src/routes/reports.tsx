@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Download } from "lucide-react";
 import { inr } from "@/lib/format";
 import { useCurrentUser } from "@/lib/auth";
+import { AdminShell } from "@/components/app/admin/AdminShell";
 import { useMyBookings } from "@/lib/deals-api";
 import {
   reportDownloadUrl,
@@ -86,7 +87,13 @@ function ReportsScreen() {
       </main>
     );
   }
-  return <AdminReportsView />;
+  return role === "admin" ? (
+    <AdminShell tab="inbox">
+      <AdminReportsView />
+    </AdminShell>
+  ) : (
+    <AdminReportsView />
+  );
 }
 
 /* ========================================================================== */

@@ -90,6 +90,7 @@ npm run build -w @oohrena/web
 - Kit (`components/app/kit.tsx`) is the only set of primitives: `KCard`, `Pill`, `Btn` (`variant`, `size="sm"`), `Empty`, `Loading`, `Row`, `Stats`, `Tabs`, `Notice`, `PinLogo`; forms use `Field` / `FormError` from `AuthShell.tsx` and `Dialog` from `components/ui`.
 - **Loading is always `<Loading />`**, never a sentence ("Loading your listings…"). **Numbers are `<Stats>`** with short labels and no captions; `alert` is only for an exception that needs action ("3 overdue").
 - **No status that nothing measures.** Never show "Operational", "Connected" or "Verified" unless the API returned it.
+- **Admin pages render inside `AdminShell`** (layout route `routes/admin.tsx`): sidebar on desktop, scrolling row on phones; the open section is `/admin?tab=<id>`. Add a section there, not a new tab bar.
 
 ## 6. Known pitfalls (learned the hard way — read before debugging)
 

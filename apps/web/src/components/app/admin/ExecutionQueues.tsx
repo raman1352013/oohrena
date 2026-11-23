@@ -43,7 +43,7 @@ export function ProofQueue() {
   return (
     <>
       <KCard
-        title="Proof of display — verification queue"
+        title="To verify"
         bodyClass="divide-y divide-line"
         right={q.data?.length ? <Pill tone="saffron">{q.data.length} waiting</Pill> : undefined}
       >
@@ -105,12 +105,12 @@ export function ProofQueue() {
         )}
       </KCard>
       <KCard
-        title="Overdue proof"
+        title="Overdue"
         bodyClass="divide-y divide-line"
         right={overdue.data?.length ? <Pill tone="danger">{overdue.data.length}</Pill> : undefined}
       >
         {!overdue.data?.length ? (
-          <Empty title="No overdue proof" />
+          <Empty title="No overdue proofs" />
         ) : (
           overdue.data.map((s) => (
             <div key={s.scheduleId} className="px-5 py-2.5 flex flex-wrap gap-3 text-[13px]">
@@ -135,7 +135,7 @@ export function IssueTracker() {
   const list = useIssues(status);
   return (
     <KCard
-      title="Issues & complaints"
+      title="Issues"
       bodyClass="divide-y divide-line"
       right={
         <div className="flex gap-1 text-[12px]">
@@ -162,7 +162,7 @@ export function IssueTracker() {
       {list.isPending ? (
         <Loading />
       ) : !list.data?.length ? (
-        <Empty title="No issues here" />
+        <Empty title="No issues" />
       ) : (
         list.data.map((i) => <IssueRow key={i.issueId} i={i} />)
       )}

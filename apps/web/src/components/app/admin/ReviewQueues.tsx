@@ -150,7 +150,7 @@ export function VendorKycQueue() {
 
   return (
     <KCard
-      title="Vendor KYC review"
+      title="KYC"
       bodyClass=""
       right={
         <div className="flex gap-1 text-[12px]">
@@ -374,7 +374,7 @@ export function ListingReviewQueue() {
 
   return (
     <KCard
-      title="Listing verification"
+      title="Listings"
       bodyClass=""
       right={
         <div className="flex gap-1 text-[12px]">

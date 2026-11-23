@@ -1,31 +1,31 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import type { LeadStatus } from "@oohrena/shared";
 import { fmtDate, inr } from "@/lib/format";
 import { useAdminBookings, useDashboard, useInbox } from "@/lib/deals-api";
-import { useAdminInventory, useAdminVendors } from "@/lib/inventory-api";
 import { cn } from "@/lib/utils";
-import { Btn, Empty, KCard, Loading, Pill, type StatItem, Stats, Tabs } from "@/components/app/kit";
+import { Empty, KCard, Loading, Pill, type StatItem, Stats } from "@/components/app/kit";
 import { IssueTracker, ProofQueue } from "@/components/app/admin/ExecutionQueues";
 import { ListingReviewQueue, VendorKycQueue } from "@/components/app/admin/ReviewQueues";
-import { NewLeadDialog } from "@/components/app/admin/NewLeadDialog";
 import { UserManagement } from "@/components/app/admin/UserManagement";
 import { SystemOverview } from "@/components/app/admin/SystemOverview";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({
-    meta: [
-      { title: "Central Control Tower — OOHRENA" },
-      {
-        name: "description",
-        content: "Inquiries, vendor assignment, quotations, bookings and approvals.",
-      },
-    ],
+    meta: [{ title: "Admin — OOHRENA" }],
   }),
   component: AdminTower,
 });
 
-type Tab = "inbox" | "bookings" | "proofs" | "issues" | "vendors" | "users" | "system";
+const TITLES = {
+  inbox: "Inbox",
+  bookings: "Bookings",
+  proofs: "Proofs",
+  issues: "Issues",
+  vendors: "Vendors",
+  users: "Users",
+  system: "System",
+} as const;
 const STATUS_TABS: { id: LeadStatus | undefined; label: string }[] = [
   { id: "new", label: "New" },
   { id: "under_review", label: "Under review" },
@@ -50,10 +50,8 @@ const age = (d: string) => {
 };
 
 function AdminTower() {
-  const [tab, setTab] = useState<Tab>("inbox");
+  const { tab = "inbox" } = useSearch({ from: "/admin" });
   const dash = useDashboard();
-  const kyc = useAdminVendors("pending");
-  const listings = useAdminInventory("pending");
   const d = dash.data;
   const kpis: StatItem[] = [
     // Pending KYC/listing approvals are counted on their own tab.
@@ -97,29 +95,10 @@ function AdminTower() {
           : undefined,
     },
   ];
-  const tabs: { id: Tab; label: string; n?: number | undefined }[] = [
-    { id: "inbox", label: "Inbox", n: d ? (d.leads.new ?? 0) : undefined },
-    {
-      id: "bookings",
-      label: "Bookings",
-      n: d ? (d.bookings.confirmed ?? 0) + (d.bookings.live ?? 0) : undefined,
-    },
-    { id: "proofs", label: "Proofs", n: d?.proofsToVerify },
-    { id: "issues", label: "Issues", n: d?.openIssues },
-    {
-      id: "vendors",
-      label: "Vendors",
-      n: (kyc.data?.total ?? 0) + (listings.data?.total ?? 0),
-    },
-    { id: "users", label: "Users" },
-    { id: "system", label: "System" },
-  ];
-
   return (
-    <main className="max-w-[1280px] mx-auto p-4 md:p-6 space-y-5">
-      <Stats items={kpis} />
-      <Tabs tabs={tabs} value={tab} onChange={setTab} />
-
+    <main className="max-w-[1280px] mx-auto p-4 md:p-8 space-y-5">
+      <h1 className="text-[22px] font-semibold">{TITLES[tab]}</h1>
+      {tab === "inbox" && <Stats items={kpis} />}
       {tab === "inbox" && <Inbox />}
       {tab === "bookings" && <Bookings />}
       {tab === "vendors" && (
@@ -132,43 +111,34 @@ function AdminTower() {
       {tab === "issues" && <IssueTracker />}
       {tab === "users" && <UserManagement />}
       {tab === "system" && <SystemOverview />}
-      <Link to="/reports">
-        <Btn variant="secondary">Reports</Btn>
-      </Link>
     </main>
   );
 }
 
 function Inbox() {
   const [status, setStatus] = useState<LeadStatus | undefined>("new");
-  const [adding, setAdding] = useState(false);
   const inbox = useInbox(status);
   return (
     <KCard
       title="Inquiries"
       bodyClass=""
       right={
-        <>
-          <div className="flex flex-wrap gap-1 text-[12px]">
-            {STATUS_TABS.map((s) => (
-              <button
-                key={s.label}
-                onClick={() => setStatus(s.id)}
-                className={cn(
-                  "px-2.5 h-7 rounded-md",
-                  status === s.id
-                    ? "bg-navy text-navy-foreground font-semibold"
-                    : "text-mute hover:text-ink",
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <Btn className="h-8 px-3 text-[12px]" onClick={() => setAdding(true)}>
-            Log inquiry
-          </Btn>
-        </>
+        <div className="flex flex-wrap gap-1 text-[12px]">
+          {STATUS_TABS.map((s) => (
+            <button
+              key={s.label}
+              onClick={() => setStatus(s.id)}
+              className={cn(
+                "px-2.5 h-7 rounded-md",
+                status === s.id
+                  ? "bg-navy text-navy-foreground font-semibold"
+                  : "text-mute hover:text-ink",
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       }
     >
       {inbox.isPending ? (
@@ -248,7 +218,6 @@ function Inbox() {
           </table>
         </div>
       )}
-      <NewLeadDialog open={adding} onClose={() => setAdding(false)} />
     </KCard>
   );
 }

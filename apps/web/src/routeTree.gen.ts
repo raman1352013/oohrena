@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ClientRouteImport } from './routes/client'
 import { Route as ConfidentialityRouteImport } from './routes/confidentiality'
 import { Route as FinanceRouteImport } from './routes/finance'
@@ -31,6 +32,11 @@ import { Route as PrintQuoteQuoteIdRouteImport } from './routes/print.quote.$quo
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientRoute = ClientRouteImport.update({
@@ -99,14 +105,14 @@ const VendorRoute = VendorRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminLeadsLeadIdRoute = AdminLeadsLeadIdRouteImport.update({
-  id: '/admin/leads/$leadId',
-  path: '/admin/leads/$leadId',
-  getParentRoute: () => rootRouteImport,
+  id: '/leads/$leadId',
+  path: '/leads/$leadId',
+  getParentRoute: () => AdminRoute,
 } as any)
 const PrintDossierCampaignIdRoute = PrintDossierCampaignIdRouteImport.update({
   id: '/print/dossier/$campaignId',
@@ -121,6 +127,7 @@ const PrintQuoteQuoteIdRoute = PrintQuoteQuoteIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRoute
   '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/client': typeof ClientRoute
   '/confidentiality': typeof ConfidentialityRoute
   '/finance': typeof FinanceRoute
@@ -184,6 +192,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/client'
     | '/confidentiality'
     | '/finance'
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/client'
     | '/confidentiality'
     | '/finance'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRoute
   ConfidentialityRoute: typeof ConfidentialityRoute
   FinanceRoute: typeof FinanceRoute
@@ -258,8 +269,6 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   VendorRoute: typeof VendorRoute
-  AdminIndexRoute: typeof AdminIndexRoute
-  AdminLeadsLeadIdRoute: typeof AdminLeadsLeadIdRoute
   PrintDossierCampaignIdRoute: typeof PrintDossierCampaignIdRoute
   PrintQuoteQuoteIdRoute: typeof PrintQuoteQuoteIdRoute
 }
@@ -271,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/client': {
@@ -366,17 +382,17 @@ declare module '@tanstack/react-router' {
     }
     '/admin/': {
       id: '/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/leads/$leadId': {
       id: '/admin/leads/$leadId'
-      path: '/admin/leads/$leadId'
+      path: '/leads/$leadId'
       fullPath: '/admin/leads/$leadId'
       preLoaderRoute: typeof AdminLeadsLeadIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/print/dossier/$campaignId': {
       id: '/print/dossier/$campaignId'
@@ -395,8 +411,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminLeadsLeadIdRoute: typeof AdminLeadsLeadIdRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminLeadsLeadIdRoute: AdminLeadsLeadIdRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRoute,
   ConfidentialityRoute: ConfidentialityRoute,
   FinanceRoute: FinanceRoute,
@@ -410,8 +439,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   VendorRoute: VendorRoute,
-  AdminIndexRoute: AdminIndexRoute,
-  AdminLeadsLeadIdRoute: AdminLeadsLeadIdRoute,
   PrintDossierCampaignIdRoute: PrintDossierCampaignIdRoute,
   PrintQuoteQuoteIdRoute: PrintQuoteQuoteIdRoute,
 }

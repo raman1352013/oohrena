@@ -22,7 +22,7 @@ import {
   type QuoteItemInput,
   type QuoteView,
 } from "@/lib/deals-api";
-import { Btn, Empty, KCard, Pill, Row } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill, Row } from "@/components/app/kit";
 import { QuoteBreakdown, QuotePill } from "@/components/app/QuoteBreakdown";
 import { Field } from "@/components/app/AuthShell";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,7 +30,7 @@ import { AdminPaymentStatus } from "@/components/app/FinanceCards";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/leads/$leadId")({
-  head: ({ params }) => ({ meta: [{ title: `${params.leadId} — Control Tower` }] }),
+  head: ({ params }) => ({ meta: [{ title: `${params.leadId} — OOHRENA` }] }),
   component: LeadPage,
 });
 
@@ -54,14 +54,13 @@ const LEAD_TONE: Record<string, "neutral" | "hold" | "saffron" | "verified" | "d
 function LeadPage() {
   const { leadId } = Route.useParams();
   const lead = useLeadDetail(leadId);
-  if (lead.isPending)
-    return <div className="p-16 text-center text-mute text-[13px]">Loading {leadId}…</div>;
+  if (lead.isPending) return <Loading />;
   if (lead.isError)
     return (
       <div className="p-16 text-center text-[13px]">
         <div className="text-destructive">{lead.error.message}</div>
         <Link to="/admin" className="text-saffron-deep">
-          Back to the inbox
+          Inbox
         </Link>
       </div>
     );
@@ -80,10 +79,10 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
   };
 
   return (
-    <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
+    <div className="max-w-[1216px] mx-auto p-4 md:p-8 space-y-5">
       <Link to="/admin" className="text-[13px] text-mute flex items-center gap-1 hover:text-ink">
         <ArrowLeft size={14} />
-        Inquiry inbox
+        Inbox
       </Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex-1 min-w-72">

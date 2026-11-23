@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import type { Role } from "@oohrena/shared";
 import { ROLE_LABELS } from "@oohrena/shared";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Btn, Empty, KCard, Loading, Notice, Pill } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { fmtDate, selectCls } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -109,9 +111,18 @@ export function UserManagement() {
                     size="sm"
                     variant="danger"
                     disabled={suspend.isPending}
-                    onClick={() => {
-                      if (confirm(`Suspend ${u.email}? This signs them out everywhere.`))
-                        suspend.mutate(u.userId);
+                    onClick={async () => {
+                      const r = await ask({
+                        title: `Suspend ${u.fullName}`,
+                        action: "Suspend",
+                        danger: true,
+                        body: "They are signed out everywhere.",
+                      });
+                      if (r)
+                        suspend.mutate(
+                          { userId: u.userId, reason: r.reason },
+                          { onError: (e) => toast.error(e.message) },
+                        );
                     }}
                   >
                     Suspend

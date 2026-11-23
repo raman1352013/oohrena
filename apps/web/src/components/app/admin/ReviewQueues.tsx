@@ -21,6 +21,7 @@ import {
   type AdminListing,
 } from "@/lib/inventory-api";
 import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { KycPill, ListingPill } from "@/components/app/status";
 import { fmtDate } from "@/lib/format";
 import {
@@ -412,15 +413,17 @@ export function ListingReviewQueue() {
               key={l.inventoryId}
               l={l}
               onDecide={(decision) => setDlg({ l, decision })}
-              onDemo={(dataType) => {
-                const reason = prompt(
-                  dataType === "DEMO"
-                    ? "Why mark this listing as DEMO (never bookable)?"
-                    : "Why mark this listing as VERIFIED?",
-                );
-                if (!reason || reason.trim().length < 3) return;
+              onDemo={async (dataType) => {
+                const r = await ask({
+                  title: dataType === "DEMO" ? "Mark as DEMO" : "Mark as VERIFIED",
+                  action: "Mark",
+                  ...(dataType === "DEMO" && {
+                    body: "DEMO listings can never be quoted or booked.",
+                  }),
+                });
+                if (!r) return;
                 setType.mutate(
-                  { id: l.inventoryId, dataType, reason: reason.trim() },
+                  { id: l.inventoryId, dataType, reason: r.reason },
                   {
                     onSuccess: () => toast.success(`${l.inventoryId} marked ${dataType}`),
                     onError: (e) => toast.error(e.message),
@@ -613,11 +616,15 @@ function ListingRow({
           </span>
           <button
             className="font-semibold text-ink hover:underline"
-            onClick={() => {
-              const note = prompt("Why is this not a duplicate?");
-              if (note && note.trim().length >= 3)
+            onClick={async () => {
+              const r = await ask({
+                title: "Not a duplicate",
+                action: "Dismiss flag",
+                label: "Note",
+              });
+              if (r)
                 resolve.mutate(
-                  { flagId: d.flagId, resolution: "dismissed", note: note.trim() },
+                  { flagId: d.flagId, resolution: "dismissed", note: r.reason },
                   { onSuccess: () => toast.success("Flag dismissed") },
                 );
             }}
@@ -626,11 +633,16 @@ function ListingRow({
           </button>
           <button
             className="font-semibold text-destructive hover:underline"
-            onClick={() => {
-              const note = prompt("Note for confirming the duplicate:");
-              if (note && note.trim().length >= 3)
+            onClick={async () => {
+              const r = await ask({
+                title: "Confirm duplicate",
+                action: "Confirm",
+                danger: true,
+                label: "Note",
+              });
+              if (r)
                 resolve.mutate(
-                  { flagId: d.flagId, resolution: "confirmed", note: note.trim() },
+                  { flagId: d.flagId, resolution: "confirmed", note: r.reason },
                   {
                     onSuccess: () =>
                       toast.success(

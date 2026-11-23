@@ -10,6 +10,7 @@ import {
   type IssueView,
 } from "@/lib/execution-api";
 import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { ProofTile } from "@/components/app/ProofMedia";
 import { cn } from "@/lib/utils";
 
@@ -18,13 +19,17 @@ export function ProofQueue() {
   const q = useProofQueue("uploaded");
   const overdue = useOverdue();
   const act = useAdminExecution();
-  const decide = (id: string, decision: "verify" | "reject") => {
+  const decide = async (id: string, decision: "verify" | "reject") => {
     let reason: string | undefined;
     if (decision === "reject") {
-      reason = (
-        prompt("Reason for rejecting this proof (the vendor sees it and must re-upload):") ?? ""
-      ).trim();
-      if (reason.length < 3) return toast.error("A reason is required to reject proof");
+      const r = await ask({
+        title: "Reject proof",
+        action: "Reject",
+        danger: true,
+        body: "The vendor sees this reason and uploads again.",
+      });
+      if (!r) return;
+      reason = r.reason;
     }
     act.decide.mutate(
       { id, decision, ...(reason ? { reason } : {}) },

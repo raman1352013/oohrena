@@ -78,8 +78,8 @@ export function useCreateStaffUser() {
 export function useSuspendUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (userId: string) =>
-      api<{ ok: boolean; status: string }>(`/admin/users/${userId}/suspend`, { method: "POST" }),
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      api<{ ok: boolean; status: string }>(`/admin/users/${userId}/suspend`, { body: { reason } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
     },

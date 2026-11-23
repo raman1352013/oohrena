@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Btn, Empty, KCard, Loading, Pill, Row, Stats, Tabs } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { cn } from "@/lib/utils";
 
@@ -89,13 +90,18 @@ function PaymentList({ status }: { status?: PaymentStatus }) {
   const act = useFinanceActions();
   const { data: me } = useSession();
   const [hist, setHist] = useState<string>();
-  const decide = (id: string, decision: "verify" | "reject") => {
-    const reason =
-      decision === "reject"
-        ? (prompt("Why is this entry wrong? (the maker sees this)") ?? "").trim()
-        : undefined;
-    if (decision === "reject" && (!reason || reason.length < 3))
-      return toast.error("A reason is required to reject");
+  const decide = async (id: string, decision: "verify" | "reject") => {
+    let reason: string | undefined;
+    if (decision === "reject") {
+      const r = await ask({
+        title: "Reject payment",
+        action: "Reject",
+        danger: true,
+        body: "Whoever recorded it sees this reason.",
+      });
+      if (!r) return;
+      reason = r.reason;
+    }
     act.decide.mutate(
       { id, decision, ...(reason ? { reason } : {}) },
       {

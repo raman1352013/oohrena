@@ -78,6 +78,9 @@ export const roleAssignInput = z.object({
   reason: trimmed(500),
 });
 
+/** POST /admin/users/:id/suspend — a reason is mandatory (MVP rule: suspend needs a reason). */
+export const userSuspendInput = z.object({ reason: z.string().trim().min(3, "Give a reason").max(500) }).strict();
+
 export const consentInput = z.object({ document: z.enum(CONSENT_DOCUMENTS), version: trimmed(20) });
 
 export const twoFactorVerifyInput = z.object({

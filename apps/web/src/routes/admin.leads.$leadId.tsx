@@ -23,6 +23,7 @@ import {
   type QuoteView,
 } from "@/lib/deals-api";
 import { Btn, Empty, KCard, Loading, Pill, Row } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { QuoteBreakdown, QuotePill } from "@/components/app/QuoteBreakdown";
 import { Field } from "@/components/app/AuthShell";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,10 +73,13 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
   const latest = l.quotes[0];
   const run = (p: Promise<unknown>, ok: string) =>
     p.then(() => toast.success(ok)).catch((e: Error) => toast.error(errMsg(e)));
-  const close = (status: "lost" | "closed") => {
-    const reason = prompt(status === "lost" ? "Why was this lead lost?" : "Why close this lead?");
-    if (reason && reason.trim().length >= 3)
-      void run(act.status.mutateAsync({ status, reason: reason.trim() }), `Lead marked ${status}`);
+  const close = async (status: "lost" | "closed") => {
+    const r = await ask({
+      title: status === "lost" ? "Mark as lost" : "Close lead",
+      action: status === "lost" ? "Mark lost" : "Close",
+      danger: true,
+    });
+    if (r) void run(act.status.mutateAsync({ status, reason: r.reason }), `Lead marked ${status}`);
   };
 
   return (
@@ -442,20 +446,25 @@ function QuoteSection({ l, latest }: { l: LeadDetail; latest: QuoteView | undefi
                 <Btn
                   variant="ghost"
                   className="h-9"
-                  onClick={() => {
-                    const to = prompt("Extend validity to (YYYY-MM-DD)?");
-                    const reason = to && prompt("Override reason (required, logged permanently):");
-                    if (to && reason)
-                      void run(
-                        act.override.mutateAsync({
-                          entity: "quote",
-                          entityId: latest.quoteId,
-                          field: "validUntil",
-                          newValue: to,
-                          reason,
-                        }),
-                        "Validity extended (override logged)",
-                      );
+                  onClick={async () => {
+                    const r = await ask({
+                      title: `Extend ${latest.quoteId}`,
+                      action: "Extend",
+                      date: { label: "Valid until", min: todayIST() },
+                      body: "Overrides are logged permanently.",
+                    });
+                    if (!r) return;
+                    const { date: to, reason } = r;
+                    void run(
+                      act.override.mutateAsync({
+                        entity: "quote",
+                        entityId: latest.quoteId,
+                        field: "validUntil",
+                        newValue: to,
+                        reason,
+                      }),
+                      "Validity extended (override logged)",
+                    );
                   }}
                 >
                   Extend validity (override)
@@ -755,14 +764,18 @@ function BookingSection({ l }: { l: LeadDetail }) {
             <Btn
               variant="secondary"
               className="h-9"
-              onClick={() => {
-                const newFrom = prompt(`New start date (YYYY-MM-DD)? Current start ${b.start}`);
-                const reason = newFrom && prompt("Reason for rescheduling?");
-                if (newFrom && reason)
-                  void run(
-                    act.reschedule.mutateAsync({ bookingId: b.bookingId, newFrom, reason }),
-                    "Rescheduled",
-                  );
+              onClick={async () => {
+                const r = await ask({
+                  title: `Reschedule ${b.bookingId}`,
+                  action: "Reschedule",
+                  date: { label: "New start", min: todayIST(), value: b.start },
+                });
+                if (!r) return;
+                const { date: newFrom, reason } = r;
+                void run(
+                  act.reschedule.mutateAsync({ bookingId: b.bookingId, newFrom, reason }),
+                  "Rescheduled",
+                );
               }}
             >
               Reschedule
@@ -770,13 +783,20 @@ function BookingSection({ l }: { l: LeadDetail }) {
             <Btn
               variant="ghost"
               className="h-9 text-destructive"
-              onClick={() => {
-                const reason = prompt(
-                  `Cancel ${b.bookingId}? Rule today: ${fee.rule}. Fee ${inr(fee.fee)}, refundable ${inr(fee.refundable)}.\n\nReason:`,
-                );
-                if (reason && reason.trim().length >= 3)
+              onClick={async () => {
+                const r = await ask({
+                  title: `Cancel ${b.bookingId}`,
+                  action: "Cancel booking",
+                  danger: true,
+                  body: (
+                    <>
+                      {fee.rule} · Fee {inr(fee.fee)} · Refundable {inr(fee.refundable)}
+                    </>
+                  ),
+                });
+                if (r)
                   void run(
-                    act.cancel.mutateAsync({ bookingId: b.bookingId, reason: reason.trim() }),
+                    act.cancel.mutateAsync({ bookingId: b.bookingId, reason: r.reason }),
                     "Booking cancelled",
                   );
               }}

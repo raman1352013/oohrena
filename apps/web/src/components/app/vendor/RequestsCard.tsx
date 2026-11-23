@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { useRespond, useVendorRequests } from "@/lib/marketplace-api";
 import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { left } from "@/lib/format";
 
 /** Holds waiting for this vendor's confirmation (listings in on-request mode). */
@@ -38,14 +39,19 @@ export function RequestsCard() {
                 variant="secondary"
                 className="h-8 px-3 text-[12px]"
                 disabled={respond.isPending}
-                onClick={() => {
-                  const note = prompt("Why can't you offer these dates?");
-                  if (note === null) return;
+                onClick={async () => {
+                  const a = await ask({
+                    title: "Decline dates",
+                    action: "Decline",
+                    danger: true,
+                    required: false,
+                  });
+                  if (!a) return;
                   respond.mutate(
                     {
                       id: r.requestId,
                       response: "decline",
-                      ...(note.trim() ? { note: note.trim() } : {}),
+                      ...(a.reason ? { note: a.reason } : {}),
                     },
                     {
                       onSuccess: () => toast("Declined — dates released"),

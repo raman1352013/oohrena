@@ -91,6 +91,7 @@ npm run build -w @oohrena/web
 - **Loading is always `<Loading />`**, never a sentence ("Loading your listings…"). **Numbers are `<Stats>`** with short labels and no captions; `alert` is only for an exception that needs action ("3 overdue").
 - **No status that nothing measures.** Never show "Operational", "Connected" or "Verified" unless the API returned it.
 - **Admin pages render inside `AdminShell`** (layout route `routes/admin.tsx`): sidebar on desktop, scrolling row on phones; the open section is `/admin?tab=<id>`. Add a section there, not a new tab bar.
+- **Never `window.prompt` / `confirm`.** Ask for a reason, a date or a yes with `await ask({ title, action, danger, body, date })` from `components/app/ask.tsx` (`<AskHost />` is mounted in the root). It returns `null` when the user backs out.
 
 ## 6. Known pitfalls (learned the hard way — read before debugging)
 

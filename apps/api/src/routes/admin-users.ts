@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { createStaffUserInput, ROLES, roleAssignInput, type CreateStaffUserInput } from "@oohrena/shared";
+import { createStaffUserInput, ROLES, roleAssignInput, userSuspendInput, type CreateStaffUserInput } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { audit } from "../lib/audit.js";
 import { AppError, conflict, forbidden, notFound } from "../lib/errors.js";
@@ -110,9 +110,10 @@ export function adminUserRoutes(cfg: Config) {
     res.status(201).json({ data: { user: out.user, inviteSent, ...(devOnly ? { devInviteLink: inviteLink } : {}) } });
   });
 
-  /** Suspend a user account. Requires recent re-authentication. */
-  r.post("/users/:id/suspend", requirePermission("users.manage"), requireRecentAuth(), async (req, res) => {
+  /** Suspend a user account with a mandatory reason. Requires recent re-authentication. */
+  r.post("/users/:id/suspend", requirePermission("users.manage"), requireRecentAuth(), validateBody(userSuspendInput), async (req, res) => {
     const id = String(req.params.id);
+    const { reason } = req.body as { reason: string };
     if (id === req.user!.userId) throw forbidden("You cannot suspend your own account");
 
     const user = await User.findById(id);
@@ -120,7 +121,7 @@ export function adminUserRoutes(cfg: Config) {
 
     await User.updateOne({ _id: id }, { $set: { status: "suspended" } });
     await revokeAllSessions(id);
-    await audit(req, { action: "admin.user_suspended", entity: "user", entityId: id, before: { status: user.status }, after: { status: "suspended" } });
+    await audit(req, { action: "admin.user_suspended", entity: "user", entityId: id, before: { status: user.status }, after: { status: "suspended" }, reason });
     res.json({ data: { ok: true, status: "suspended" } });
   });
 

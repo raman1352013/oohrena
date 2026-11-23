@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AskHost } from "@/components/app/ask";
 import { AppHeader } from "@/components/app/AppHeader";
 import { AuthGate } from "@/components/app/AuthGate";
 import { Toaster } from "@/components/ui/sonner";
@@ -140,6 +141,7 @@ function RootComponent() {
           <Outlet />
         </AuthGate>
       </div>
+      <AskHost />
       <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );

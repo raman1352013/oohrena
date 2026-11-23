@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { useAvailabilityActions, useOwnerCalendar, type Entry } from "@/lib/marketplace-api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Btn, Pill } from "@/components/app/kit";
+import { ask } from "@/components/app/ask";
 import { Field } from "@/components/app/AuthShell";
 import { AvailabilityCalendar } from "@/components/app/AvailabilityCalendar";
 
@@ -258,13 +259,12 @@ function EntryRow({
       {canEnd && (
         <button
           className="text-[12px] font-semibold text-saffron-deep hover:underline"
-          onClick={() =>
-            onEnd(
-              e.kind === "hold"
-                ? (prompt("Reason for releasing this hold?") ?? "").trim() || "Released by admin"
-                : "",
-            )
-          }
+          onClick={async () => {
+            if (e.kind !== "hold") return onEnd("");
+            const r = await ask({ title: "Release hold", action: "Release", required: false });
+            if (r) onEnd(r.reason || "Released by admin");
+            return undefined;
+          }}
         >
           {e.kind === "hold" ? "Release" : "Unblock"}
         </button>

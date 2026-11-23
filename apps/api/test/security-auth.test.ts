@@ -3,6 +3,7 @@ import request from "supertest";
 import { generateSync } from "otplib";
 import { decryptString } from "../src/lib/crypto.js";
 import { Session, User } from "../src/models/foundation.js";
+import { AuditLog } from "../src/models/audit-log.js";
 import { bearer, createStaff, GOOD_PW, mobileFor, registerClient, startTestDb, stopTestDb, testApp, uniq } from "./helpers.js";
 
 describe("Module 10 — Security, Roles, 2FA & Privacy (Section B)", () => {
@@ -175,11 +176,19 @@ describe("Module 10 — Security, Roles, 2FA & Privacy (Section B)", () => {
     expect(sessionsRes.status).toBe(200);
     expect(sessionsRes.body.data.length).toBeGreaterThanOrEqual(1);
 
-    // 5. Admin suspends the user
+    // 5. Admin suspends the user — a reason is mandatory and lands in the audit log
+    const noReason = await request(app)
+      .post(`/api/v1/admin/users/${createdUserId}/suspend`)
+      .set(bearer(admin.token))
+      .send({});
+    expect(noReason.status).toBe(400);
     const suspendRes = await request(app)
       .post(`/api/v1/admin/users/${createdUserId}/suspend`)
-      .set(bearer(admin.token));
+      .set(bearer(admin.token))
+      .send({ reason: "Left the company" });
     expect(suspendRes.status).toBe(200);
+    const log = await AuditLog.findOne({ action: "admin.user_suspended", entityId: createdUserId }).lean();
+    expect(log?.reason).toBe("Left the company");
 
     // Suspended user's session is now blocked
     const testSuspended = await request(app)

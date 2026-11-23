@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ROLES } from "@oohrena/shared";
-import { ROLE_HOME, rolesFor, safeRedirect } from "./auth";
+import { ROLE_HOME, isPublicPath, rolesFor, safeRedirect } from "./auth";
 
 describe("workspace access rules", () => {
   it("lets each role open its own home workspace", () => {
@@ -17,6 +17,19 @@ describe("workspace access rules", () => {
     expect(rolesFor("/")).toBeNull();
     expect(rolesFor("/login")).toBeNull();
     expect(rolesFor("/administrator")).toBeNull();
+  });
+});
+
+describe("public pages (everything else needs sign-in)", () => {
+  it("opens the landing page, marketplace and auth pages without a session", () => {
+    for (const p of ["/", "/marketplace", "/login", "/register", "/forgot-password", "/terms"])
+      expect(isPublicPath(p)).toBe(true);
+    expect(isPublicPath("/marketplace/")).toBe(true);
+  });
+
+  it("treats workspaces and unknown pages as private", () => {
+    for (const p of ["/admin", "/client", "/reports", "/print/quote/QT-1", "/settings", "/marketplacex"])
+      expect(isPublicPath(p)).toBe(false);
   });
 });
 

@@ -15,6 +15,7 @@ import { Route as ConfidentialityRouteImport } from './routes/confidentiality'
 import { Route as FinanceRouteImport } from './routes/finance'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -55,6 +56,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PartnerRoute = PartnerRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof FinanceRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/partner': typeof PartnerRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/finance': typeof FinanceRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/partner': typeof PartnerRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   '/finance': typeof FinanceRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/partner': typeof PartnerRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/forgot-password'
     | '/login'
+    | '/marketplace'
     | '/partner'
     | '/privacy'
     | '/register'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/forgot-password'
     | '/login'
+    | '/marketplace'
     | '/partner'
     | '/privacy'
     | '/register'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/forgot-password'
     | '/login'
+    | '/marketplace'
     | '/partner'
     | '/privacy'
     | '/register'
@@ -238,6 +250,7 @@ export interface RootRouteChildren {
   FinanceRoute: typeof FinanceRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  MarketplaceRoute: typeof MarketplaceRoute
   PartnerRoute: typeof PartnerRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
@@ -293,6 +306,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/partner': {
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinanceRoute: FinanceRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  MarketplaceRoute: MarketplaceRoute,
   PartnerRoute: PartnerRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,

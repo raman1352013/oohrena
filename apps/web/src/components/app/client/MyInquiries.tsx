@@ -49,7 +49,7 @@ export function ClientHeading() {
           {user ? <span className="text-mute font-normal"> — {user.fullName}</span> : null}
         </h1>
       </div>
-      <Link to="/" className="ml-auto">
+      <Link to="/marketplace" className="ml-auto">
         <Btn variant="secondary">Browse media</Btn>
       </Link>
     </div>
@@ -64,7 +64,7 @@ export function MyInquiries() {
       title="My inquiries"
       bodyClass="divide-y divide-line"
       right={
-        <Link to="/">
+        <Link to="/marketplace">
           <Btn className="h-8 px-3 text-[12px]">New inquiry</Btn>
         </Link>
       }

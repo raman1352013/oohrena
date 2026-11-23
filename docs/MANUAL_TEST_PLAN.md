@@ -24,13 +24,14 @@ inquiry `LD-2026-000001` (booked) and `LD-2026-000002` (New in the admin inbox).
 
 | # | Step | Expected |
 |---|------|----------|
-| 1.1 | Open `/` | Marketplace with 4 listings, photos, "Verified" badge, price per month |
+| 1.1 | Open `/` | Landing page (what OOHRENA is, how it works, who it is for); "Browse verified media" opens `/marketplace` |
+| 1.1b | Open `/marketplace` | 4 listings, photos, "Verified" badge, price per month |
 | 1.2 | Search "Mumbai", filter city, max price, category chips, List ↔ Map | Results change; map shows pins |
 | 1.3 | Pick start/end dates | Cards show availability for those dates |
 | 1.4 | Open a listing → "View details" | Photo, size, indicative price, availability calendar with legend |
 | 1.5 | Click "Request quotation" while signed out | Asked to sign in / register — no inquiry created |
 | 1.6 | `/privacy`, `/terms`, `/confidentiality` | Pages load |
-| 1.7 | Open `/admin`, `/vendor`, `/finance` signed out | Redirected to login |
+| 1.7 | Open `/admin`, `/vendor`, `/finance`, `/reports`, `/print/quote/x` or any unknown page signed out | Redirected to login |
 
 ## 2. Sign-in & account
 

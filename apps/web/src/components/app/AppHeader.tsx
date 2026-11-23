@@ -19,7 +19,7 @@ const TITLES: [string, string][] = [
   ["/vendor", "Vendor Space Hub"],
   ["/finance", "Finance Ledger"],
   ["/partner", "Growth Partner"],
-  ["/", "Media Marketplace"],
+  ["/marketplace", "Media Marketplace"],
 ];
 
 const initials = (name: string) =>
@@ -36,7 +36,7 @@ export function AppHeader() {
   const { data: user } = useSession();
   const logout = useLogout();
   const [q, setQ] = useState("");
-  const title = TITLES.find(([p]) => (p === "/" ? path === "/" : path.startsWith(p)))?.[1] ?? "";
+  const title = TITLES.find(([p]) => path.startsWith(p))?.[1] ?? "";
   const isAdmin = user?.role === "admin";
 
   /** Admin quick-find: Lead IDs open the lead workspace (bookings and quotes live on their lead page). */

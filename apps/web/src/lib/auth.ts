@@ -36,7 +36,23 @@ export const ROUTE_ROLES: { prefix: string; roles: readonly Role[] }[] = [
 export const safeRedirect = (v: unknown) =>
   typeof v === "string" && v.startsWith("/") && !v.startsWith("//") ? v : undefined;
 
-export const PUBLIC_PATHS = ["/", "/login", "/register", "/privacy", "/terms", "/confidentiality"];
+export const PUBLIC_PATHS = [
+  "/",
+  "/marketplace",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/privacy",
+  "/terms",
+  "/confidentiality",
+];
+
+/** Pages anyone may open. Every other page needs a signed-in user (deny by default). */
+export const isPublicPath = (path: string) => {
+  const p = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  return PUBLIC_PATHS.includes(p);
+};
 
 export function rolesFor(path: string) {
   return (

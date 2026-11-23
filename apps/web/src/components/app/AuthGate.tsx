@@ -1,6 +1,6 @@
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ROLE_HOME, ROLE_LABEL, rolesFor, useSession } from "@/lib/auth";
+import { ROLE_HOME, ROLE_LABEL, isPublicPath, rolesFor, useSession } from "@/lib/auth";
 import { Btn } from "@/components/app/kit";
 
 /**
@@ -11,9 +11,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const href = useRouterState({ select: (s) => s.location.href });
   const session = useSession();
+  // Deny by default: only listed public pages skip the sign-in check. A page with no role rule
+  // (a new route someone forgot to register) still needs a signed-in user.
+  if (isPublicPath(path)) return <>{children}</>;
   const roles = rolesFor(path);
-
-  if (!roles) return <>{children}</>;
   if (session.isPending) return <GateMessage title="Checking your session…" />;
   if (session.isError) {
     return (
@@ -27,7 +28,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
   const user = session.data;
   if (!user) return <Navigate to="/login" search={{ redirect: href }} replace />;
-  if (!roles.includes(user.role)) {
+  if (roles && !roles.includes(user.role)) {
     return (
       <GateMessage
         title="This workspace isn't available to your account"

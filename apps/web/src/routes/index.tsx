@@ -1,873 +1,253 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import {
   BadgeCheck,
-  CheckCircle2,
-  Heart,
-  ImageOff,
-  LayoutGrid,
-  LocateFixed,
-  Map as MapIcon,
-  MapPin,
+  Building2,
+  Camera,
+  ClipboardCheck,
+  FileText,
+  Handshake,
+  IndianRupee,
+  MapPinned,
+  Megaphone,
   Search,
-  X,
+  ShieldCheck,
+  Store,
 } from "lucide-react";
-import {
-  CATEGORY_DEFS,
-  PRICING_UNIT_LABEL,
-  SUBJECT_TO_VENDOR,
-  categoryDef,
-  leadCreateInput,
-  type PublicListing,
-} from "@oohrena/shared";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { assetUrl } from "@/lib/api";
-import { useSession } from "@/lib/auth";
-import { inr, fmtDate } from "@/lib/format";
-import {
-  useCalendar,
-  useCompare,
-  useCreateLead,
-  useSearch,
-  useShortlist,
-  useToggleShortlist,
-  type SearchItem,
-} from "@/lib/marketplace-api";
-import { cn } from "@/lib/utils";
-import { Btn, Empty, Pill, PinLogo, Row } from "@/components/app/kit";
-import { Field, FormError } from "@/components/app/AuthShell";
-import { AvailabilityCalendar } from "@/components/app/AvailabilityCalendar";
-
-const MapView = lazy(() => import("@/components/app/MapView"));
+import { CATEGORY_DEFS } from "@oohrena/shared";
+import { ROLE_HOME, useSession } from "@/lib/auth";
+import { Btn, Eyebrow, PinLogo } from "@/components/app/kit";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "OOHRENA Media Marketplace — Verified outdoor & digital media" },
+      { title: "OOHRENA — Outdoor & digital advertising you can track" },
       {
         name: "description",
         content:
-          "Search verified hoardings, LED screens, transit and retail media by city, locality, landmark, PIN or map. Check dates and request an itemised quote.",
+          "Find admin-verified hoardings, LED screens, transit and retail media. One Lead ID follows every campaign from inquiry to proof of display and payment.",
       },
-      { property: "og:title", content: "OOHRENA Media Marketplace" },
-      {
-        property: "og:description",
-        content: "Verified outdoor and digital media with honest, date-wise availability.",
-      },
+      { property: "og:title", content: "OOHRENA — Outdoor x Digital x Trackable" },
+      { property: "og:description", content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Marketplace,
+  component: Landing,
 });
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const plus = (n: number) => iso(new Date(Date.now() + n * 86_400_000));
-const priceText = (l: PublicListing) =>
-  l.indicativePrice
-    ? `${inr(l.indicativePrice)} ${PRICING_UNIT_LABEL[l.pricingUnit]}`
-    : "Price on request";
+/** The twelve-step chain from the MVP document, grouped into what a visitor needs to understand. */
+const STEPS = [
+  { icon: Search, title: "Find media", body: "Search by city, locality, landmark, PIN code or map, with date-wise availability." },
+  { icon: FileText, title: "Send a requirement", body: "Every inquiry gets its own Lead ID that follows it to the end." },
+  { icon: ClipboardCheck, title: "Admin review & quote", body: "OOHRENA checks it, assigns an approved media owner and sends an itemised quote with GST." },
+  { icon: Handshake, title: "Booking & work order", body: "You approve; the dates are booked and the media owner gets a work order." },
+  { icon: Camera, title: "Proof of display", body: "Installation and periodic photos with server time and location exactly as captured, checked by OOHRENA." },
+  { icon: IndianRupee, title: "Payments & report", body: "Every payment needs evidence and a second Finance check. Download your campaign report." },
+];
 
-function useDebounced<T>(v: T, ms = 300) {
-  const [d, setD] = useState(v);
-  useEffect(() => {
-    const t = setTimeout(() => setD(v), ms);
-    return () => clearTimeout(t);
-  }, [v, ms]);
-  return d;
-}
+const PROMISES = [
+  "Only admin-verified media can be booked — demo or unapproved listings never can.",
+  "Availability that isn't confirmed is labelled “Subject to vendor confirmation”.",
+  "Proof shows the server upload time and the location exactly as captured — never an unchecked “GPS verified” badge.",
+  "Every critical action is logged: who did it, when, and what changed.",
+];
 
-function Marketplace() {
+function Landing() {
   const { data: user } = useSession();
-  const isClient = user?.role === "client";
-  const [query, setQuery] = useState("");
-  const [city, setCity] = useState("");
-  const [cat, setCat] = useState("");
-  const [budget, setBudget] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const [point, setPoint] = useState<{ lat: number; lng: number }>();
-  const [radius, setRadius] = useState(10);
-  const [view, setView] = useState<"grid" | "map">("grid");
-  const [open, setOpen] = useState<SearchItem>();
-  const [compare, setCompare] = useState(false);
-  const [savedOnly, setSavedOnly] = useState(false);
-
-  const datesOk = !!from && !!to && to >= from;
-  const params = useDebounced({
-    q: query.trim() || undefined,
-    city: city.trim() || undefined,
-    category: cat || undefined,
-    maxPrice: budget ? Number(budget) : undefined,
-    from: datesOk ? from : undefined,
-    to: datesOk ? to : undefined,
-    onlyAvailable: datesOk && onlyAvailable,
-    lat: point?.lat,
-    lng: point?.lng,
-    radiusKm: point ? radius : undefined,
-  });
-  const search = useSearch(params);
-  const shortlist = useShortlist(isClient);
-  const toggle = useToggleShortlist();
-  const savedIds = useMemo(
-    () => new Set((shortlist.data ?? []).map((s) => s.inventoryId)),
-    [shortlist.data],
-  );
-  const items = (search.data?.items ?? []).filter((x) => !savedOnly || savedIds.has(x.inventoryId));
-  const cities = new Set((search.data?.items ?? []).map((x) => x.city));
-
-  function save(id: string) {
-    if (!isClient) return toast.message("Sign in with a client account to keep a shortlist");
-    toggle.mutate({ id, on: !savedIds.has(id) }, { onError: (e) => toast.error(e.message) });
-    return undefined;
-  }
-  function locate() {
-    if (!navigator.geolocation) return toast.error("Location isn't available on this device");
-    navigator.geolocation.getCurrentPosition(
-      (p) => setPoint({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => toast.error("Location permission denied"),
-    );
-    return undefined;
-  }
 
   return (
-    <div>
-      <section className="bg-card border-b border-line">
-        <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-10 flex flex-wrap items-center gap-8">
-          <div className="flex-1 min-w-72">
-            <div className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.2em] text-mute uppercase">
-              <PinLogo size={20} />
-              Outdoor x Digital x Trackable
+    <main>
+      {/* Hero */}
+      <section className="bg-navy text-navy-foreground">
+        <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-14 md:py-20 grid gap-10 md:grid-cols-[1.2fr_1fr] items-center">
+          <div className="space-y-5">
+            <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wider font-semibold text-navy-foreground/70">
+              <PinLogo size={18} /> Outdoor x Digital x Trackable
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">
-              OOHRENA Media Marketplace
+            <h1 className="text-3xl md:text-5xl font-semibold leading-tight">
+              Outdoor & digital advertising,
+              <span className="text-saffron"> tracked from inquiry to proof.</span>
             </h1>
-            <p className="text-saffron-deep font-semibold mt-3">
-              Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!
+            <p className="text-[15px] md:text-[17px] text-navy-foreground/75 max-w-xl">
+              Ab Advertising Sirf Dikhegi Nahi… Track Bhi Hogi! Find verified hoardings, LED screens,
+              transit and retail media, get an itemised quote, and see proof that your campaign ran.
             </p>
+            <div className="flex flex-wrap gap-3 pt-1">
+              <Link to="/marketplace">
+                <Btn className="h-12 px-6 text-[14px]">Browse verified media</Btn>
+              </Link>
+              {user ? (
+                <Link to={ROLE_HOME[user.role]}>
+                  <Btn variant="secondary" className="h-12 px-6 text-[14px]">
+                    Go to my workspace
+                  </Btn>
+                </Link>
+              ) : (
+                <Link to="/register">
+                  <Btn variant="secondary" className="h-12 px-6 text-[14px]">
+                    Create a free account
+                  </Btn>
+                </Link>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center w-full sm:w-auto min-w-0">
+
+          <div className="rounded-2xl bg-navy-foreground/5 border border-navy-foreground/10 p-5 space-y-3">
+            <div className="text-[12px] font-semibold text-navy-foreground/70">
+              One Lead ID follows the whole campaign
+            </div>
             {[
-              ["Verified results", search.data?.total ?? "—"],
-              ["Cities", cities.size],
-              ["Every listing", "Admin-checked"],
-            ].map(([k, v]) => (
-              <div key={k as string} className="min-w-0">
-                <div className="text-xl sm:text-2xl font-bold">{v}</div>
-                <div className="text-[12px] text-mute">{k}</div>
+              ["LD-2026-…", "Inquiry received"],
+              ["QT-2026-…-V1", "Itemised quote released"],
+              ["BK-2026-…", "Booking confirmed"],
+              ["WO-2026-…", "Work order to media owner"],
+              ["CMP-2026-…", "Proof verified by OOHRENA"],
+              ["PAY-2026-…", "Payment verified by Finance"],
+            ].map(([id, label]) => (
+              <div
+                key={id}
+                className="flex items-center justify-between gap-3 rounded-lg bg-navy-foreground/5 px-3 py-2"
+              >
+                <span className="font-mono text-[12px] text-saffron">{id}</span>
+                <span className="text-[13px] text-navy-foreground/85 text-right">{label}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6">
-        <div className="grid md:grid-cols-[1fr_160px_150px_150px_150px] gap-3 mb-3">
-          <label className="relative">
-            <Search size={15} className="absolute left-3 top-3 text-mute" />
-            <Input
-              aria-label="Search"
-              placeholder="Locality, landmark, PIN code or Inventory ID"
-              className="pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </label>
-          <Input
-            aria-label="City"
-            placeholder="City"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-          />
-          <Input
-            aria-label="Maximum price"
-            type="number"
-            min={0}
-            placeholder="Max price ₹"
-            value={budget}
-            onChange={(e) => setBudget(e.target.value)}
-          />
-          <Input
-            aria-label="Campaign start"
-            type="date"
-            min={plus(0)}
-            value={from}
-            onChange={(e) => {
-              setFrom(e.target.value);
-              if (!to || e.target.value > to)
-                setTo(iso(new Date(Date.parse(e.target.value) + 29 * 86_400_000)));
-            }}
-          />
-          <Input
-            aria-label="Campaign end"
-            type="date"
-            min={from || plus(0)}
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
+      {/* How it works */}
+      <section className="max-w-[1216px] mx-auto px-4 md:px-8 py-14 space-y-6">
+        <div>
+          <Eyebrow>How it works</Eyebrow>
+          <h2 className="text-2xl font-semibold mt-1">Every step has a record you can see</h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-[12px]">
-          <Btn variant={point ? "dark" : "secondary"} className="h-9 px-3" onClick={locate}>
-            <LocateFixed size={14} />
-            {point ? "Near me" : "Near me"}
-          </Btn>
-          {point && (
-            <>
-              <select
-                aria-label="Radius"
-                value={radius}
-                onChange={(e) => setRadius(Number(e.target.value))}
-                className="h-9 bg-card border border-line rounded-md px-2"
-              >
-                {[2, 5, 10, 25, 50].map((km) => (
-                  <option key={km} value={km}>
-                    {km} km
-                  </option>
-                ))}
-              </select>
-              <button
-                aria-label="Clear location"
-                onClick={() => setPoint(undefined)}
-                className="text-mute"
-              >
-                <X size={15} />
-              </button>
-            </>
-          )}
-          {datesOk && (
-            <label className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-line bg-card cursor-pointer">
-              <input
-                type="checkbox"
-                checked={onlyAvailable}
-                onChange={(e) => setOnlyAvailable(e.target.checked)}
-              />
-              Only free for my dates
-            </label>
-          )}
-          {isClient && (
-            <>
-              <Btn
-                variant={savedOnly ? "dark" : "secondary"}
-                className="h-9 px-3"
-                onClick={() => setSavedOnly(!savedOnly)}
-              >
-                <Heart size={14} />
-                Shortlist ({savedIds.size})
-              </Btn>
-              <Btn
-                variant="secondary"
-                className="h-9 px-3"
-                disabled={savedIds.size < 2}
-                onClick={() => setCompare(true)}
-              >
-                Compare
-              </Btn>
-            </>
-          )}
-          <span className="ml-auto text-mute">
-            {search.isFetching
-              ? "Searching…"
-              : `${items.length} result${items.length === 1 ? "" : "s"}`}
-            {datesOk ? ` · ${fmtDay(from)} – ${fmtDay(to)}` : " · pick dates to check availability"}
-          </span>
-          <div className="flex rounded-lg border border-line bg-card p-0.5">
-            <button
-              onClick={() => setView("grid")}
-              className={cn(
-                "h-7 px-3 rounded-md flex items-center gap-1",
-                view === "grid" && "bg-navy text-navy-foreground",
-              )}
-            >
-              <LayoutGrid size={13} />
-              List
-            </button>
-            <button
-              onClick={() => setView("map")}
-              className={cn(
-                "h-7 px-3 rounded-md flex items-center gap-1",
-                view === "map" && "bg-navy text-navy-foreground",
-              )}
-            >
-              <MapIcon size={13} />
-              Map
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-6 border-b border-line text-[13px] overflow-x-auto">
-          {[{ id: "", name: "All media" }, ...CATEGORY_DEFS].map((c) => (
-            <button
-              key={c.id || "all"}
-              onClick={() => setCat(c.id)}
-              className={cn(
-                "pt-2 pb-2.5 border-b-2 whitespace-nowrap",
-                cat === c.id ? "border-navy font-semibold" : "border-transparent text-mute",
-              )}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-5">
-          {search.isError ? (
-            <div className="py-16 text-center text-[13px]">
-              <div className="text-destructive">{search.error.message}</div>
-              <Btn variant="secondary" className="mt-3" onClick={() => void search.refetch()}>
-                Try again
-              </Btn>
-            </div>
-          ) : search.isPending ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {Array.from({ length: 6 }, (_, i) => (
-                <div key={i} className="h-80 rounded-xl bg-muted animate-pulse" />
-              ))}
-            </div>
-          ) : !items.length ? (
-            <Empty
-              title={
-                savedOnly ? "Your shortlist is empty" : "No verified media matches these filters"
-              }
-              hint={
-                savedOnly
-                  ? "Tap the heart on any listing to save it."
-                  : "Try a nearby locality, a wider radius, other dates or another category."
-              }
-            />
-          ) : view === "map" ? (
-            <Suspense fallback={<div className="h-[560px] rounded-xl bg-muted animate-pulse" />}>
-              <MapView
-                points={items.map((x) => ({
-                  id: x.inventoryId,
-                  lat: x.lat,
-                  lng: x.lng,
-                  title: x.title,
-                  subtitle: `${x.locality}, ${x.city}`,
-                  price: priceText(x),
-                }))}
-                onOpen={(id) => setOpen(items.find((x) => x.inventoryId === id))}
-              />
-            </Suspense>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {items.map((x) => (
-                <ListingCard
-                  key={x.inventoryId}
-                  x={x}
-                  saved={savedIds.has(x.inventoryId)}
-                  onSave={() => save(x.inventoryId)}
-                  onOpen={() => setOpen(x)}
-                />
-              ))}
-            </div>
-          )}
-          {search.data?.truncated && (
-            <p className="text-[12px] text-mute mt-4">
-              Showing the first 500 matches. Narrow your search to see more.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <ListingDialog
-        item={open}
-        onClose={() => setOpen(undefined)}
-        from={datesOk ? from : undefined}
-        to={datesOk ? to : undefined}
-        saved={!!open && savedIds.has(open.inventoryId)}
-        onSave={() => open && save(open.inventoryId)}
-      />
-      <CompareDialog
-        open={compare}
-        onClose={() => setCompare(false)}
-        ids={[...savedIds].slice(0, 4)}
-      />
-    </div>
-  );
-}
-
-const fmtDay = (d: string) =>
-  new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-
-function AvailabilityPill({ a }: { a: SearchItem["availability"] }) {
-  if (!a) return <Pill>Pick dates to check availability</Pill>;
-  if (a.state === "unavailable") return <Pill tone="neutral">Not available for these dates</Pill>;
-  if (a.state === "limited") return <Pill tone="hold">Partly available</Pill>;
-  return (
-    <Pill tone={a.confirmed ? "verified" : "hold"}>
-      {a.confirmed
-        ? `Available${a.capacity > 1 ? ` · ${a.minFree} ${a.unitLabel}` : ""}`
-        : `Available · ${SUBJECT_TO_VENDOR.toLowerCase()}`}
-    </Pill>
-  );
-}
-
-function Photo({
-  src,
-  alt,
-  className,
-}: {
-  src: string | undefined;
-  alt: string;
-  className: string;
-}) {
-  return src ? (
-    <img src={assetUrl(src)} alt={alt} loading="lazy" className={cn("object-cover", className)} />
-  ) : (
-    <div className={cn("bg-muted grid place-items-center text-mute", className)}>
-      <ImageOff size={22} />
-    </div>
-  );
-}
-
-function ListingCard({
-  x,
-  saved,
-  onSave,
-  onOpen,
-}: {
-  x: SearchItem;
-  saved: boolean;
-  onSave: () => void;
-  onOpen: () => void;
-}) {
-  return (
-    <article className="bg-card border border-line rounded-xl overflow-hidden hover:border-saffron transition min-w-0 flex flex-col">
-      <button onClick={onOpen} className="text-left">
-        <Photo src={x.photos[0]} alt={x.title} className="h-44 w-full" />
-      </button>
-      <div className="p-4 flex-1 flex flex-col">
-        <div className="flex items-start gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold truncate">{x.title}</div>
-            <div className="text-[12px] text-mute flex items-center gap-1 mt-0.5">
-              <MapPin size={12} />
-              {x.locality}, {x.city}
-              {x.distanceKm !== undefined && ` · ${x.distanceKm} km`}
-            </div>
-          </div>
-          {x.dataType === "DEMO" ? (
-            <Pill tone="hold">DEMO · not bookable</Pill>
-          ) : (
-            x.verified && (
-              <Pill tone="verified">
-                <BadgeCheck size={12} />
-                Verified
-              </Pill>
-            )
-          )}
-        </div>
-        <div className="mt-3">
-          <AvailabilityPill a={x.availability} />
-        </div>
-        <div className="flex justify-between mt-3 text-[13px]">
-          <span className="text-mute">{x.categoryName}</span>
-          <span className="font-semibold">{priceText(x)}</span>
-        </div>
-        <div className="flex items-center justify-between mt-auto pt-3">
-          <Btn variant="secondary" className="h-9 px-3" onClick={onOpen}>
-            View details
-          </Btn>
-          <Btn
-            variant={saved ? "dark" : "ghost"}
-            className="h-9 w-9 p-0"
-            aria-label={`${saved ? "Remove from" : "Add to"} shortlist`}
-            onClick={onSave}
-          >
-            <Heart size={16} />
-          </Btn>
-        </div>
-        <p className="text-[11px] text-mute mt-2">
-          Updated {fmtDate(x.availability?.lastUpdatedAt ?? x.updatedAt)} · {x.inventoryId}
-        </p>
-      </div>
-    </article>
-  );
-}
-
-function ListingDialog({
-  item,
-  onClose,
-  from,
-  to,
-  saved,
-  onSave,
-}: {
-  item: SearchItem | undefined;
-  onClose: () => void;
-  from?: string | undefined;
-  to?: string | undefined;
-  saved: boolean;
-  onSave: () => void;
-}) {
-  const calFrom = from ?? plus(0);
-  const calTo =
-    to && Date.parse(to) - Date.parse(calFrom) < 120 * 86_400_000
-      ? to
-      : iso(new Date(Date.parse(calFrom) + 59 * 86_400_000));
-  const cal = useCalendar(item?.inventoryId, calFrom, calTo);
-  const [ask, setAsk] = useState(false);
-  useEffect(() => setAsk(false), [item?.inventoryId]);
-  if (!item) return null;
-  const def = categoryDef(item.category);
-  return (
-    <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[92vh] overflow-y-auto">
-        <div className="flex gap-1 overflow-x-auto bg-muted">
-          {item.photos.length ? (
-            item.photos.map((p) => (
-              <Photo key={p} src={p} alt={item.title} className="h-56 min-w-[70%] sm:min-w-[50%]" />
-            ))
-          ) : (
-            <Photo src={undefined} alt="" className="h-40 w-full" />
-          )}
-        </div>
-        <div className="p-6 space-y-4">
-          <DialogHeader>
-            <DialogTitle className="text-xl flex flex-wrap items-center gap-2">
-              {item.title}
-              {item.dataType === "DEMO" ? (
-                <Pill tone="hold">DEMO · not bookable</Pill>
-              ) : (
-                item.verified && (
-                  <Pill tone="verified">
-                    <BadgeCheck size={12} />
-                    Verified by OOHRENA
-                  </Pill>
-                )
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-[13px] text-mute -mt-2">
-            {[item.landmark, item.locality, item.city, item.pin].filter(Boolean).join(", ")} ·{" "}
-            <span className="font-mono">{item.inventoryId}</span>
-          </div>
-          {item.description && <p className="text-[13px]">{item.description}</p>}
-          <div className="grid sm:grid-cols-2 gap-x-8 divide-y sm:divide-y-0 divide-line">
-            <div>
-              <Row k="Category" v={item.categoryName} />
-              {def?.attributes.map(
-                (a) =>
-                  item.attributes[a.key] !== undefined && (
-                    <Row
-                      key={a.key}
-                      k={a.label}
-                      v={
-                        typeof item.attributes[a.key] === "boolean"
-                          ? item.attributes[a.key]
-                            ? "Yes"
-                            : "No"
-                          : `${String(item.attributes[a.key])}${"unit" in a && a.unit ? ` ${a.unit}` : ""}`
-                      }
-                    />
-                  ),
-              )}
-              <Row k="Quantity" v={item.quantity} />
-            </div>
-            <div>
-              <Row k="Indicative price" v={priceText(item)} />
-              <Row k="Location" v={`${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`} />
-              <Row k="Last updated" v={fmtDate(item.updatedAt)} />
-              <p className="text-[11px] text-mute mt-1">
-                Indicative only. OOHRENA issues the final itemised quote with production,
-                installation and GST shown separately.
-              </p>
-            </div>
-          </div>
-
-          <section className="border-t border-line pt-4">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <div className="font-semibold text-[14px] mr-auto">
-                Availability {fmtDay(calFrom)} – {fmtDay(calTo)}
-              </div>
-              {cal.data && (
-                <span className="text-[12px] text-mute">
-                  Updated {fmtDate(cal.data.summary.lastUpdatedAt)}
-                  {cal.data.minDays > 1 ? ` · min ${cal.data.minDays} days` : ""}
+        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="bg-card border border-line rounded-xl p-5 space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 rounded-lg bg-saffron/10 text-saffron-deep grid place-items-center">
+                  <s.icon className="w-[18px] h-[18px]" />
                 </span>
-              )}
-            </div>
-            {cal.isPending ? (
-              <div className="h-40 rounded-lg bg-muted animate-pulse" />
-            ) : cal.isError ? (
-              <p className="text-[13px] text-destructive">{cal.error.message}</p>
-            ) : (
-              <>
-                {cal.data.note && (
-                  <p className="text-[12px] text-hold mb-2">
-                    {cal.data.note}: the media owner confirms dates after OOHRENA reviews your
-                    request. Nothing shown here is guaranteed until then.
-                  </p>
-                )}
-                <AvailabilityCalendar
-                  days={cal.data.days}
-                  unitLabel={cal.data.unitLabel}
-                  showUnits={cal.data.capacityModel !== "period"}
-                />
-              </>
-            )}
-          </section>
+                <span className="text-[12px] text-mute font-semibold">Step {i + 1}</span>
+              </div>
+              <div className="font-semibold text-ink">{s.title}</div>
+              <p className="text-[13px] text-mute">{s.body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
 
-          {ask ? (
-            <InquiryForm item={item} from={from} to={to} onDone={onClose} />
-          ) : (
-            <div className="flex gap-2">
-              <Btn className="flex-1" disabled={!item.bookable} onClick={() => setAsk(true)}>
-                {item.bookable ? "Request quotation" : "Not bookable"}
-              </Btn>
-              <Btn variant={saved ? "dark" : "secondary"} onClick={onSave}>
-                <Heart size={15} />
-                {saved ? "Shortlisted" : "Shortlist"}
-              </Btn>
-            </div>
-          )}
+      {/* Who it's for */}
+      <section className="bg-card border-y border-line">
+        <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-14 grid gap-4 md:grid-cols-3">
+          <Audience
+            icon={Megaphone}
+            title="Brands & agencies"
+            body="Plan outdoor and digital campaigns across cities, compare media, approve quotes and download proof-backed reports."
+            cta={<Link to="/register"><Btn className="w-full">Start as a client</Btn></Link>}
+          />
+          <Audience
+            icon={Store}
+            title="Media owners"
+            body="List hoardings, screens, vehicles and retail spaces. Get verified, receive work orders and track your payouts."
+            cta={
+              <Link to="/register" search={{ as: "vendor" }}>
+                <Btn variant="dark" className="w-full">List your media</Btn>
+              </Link>
+            }
+          />
+          <Audience
+            icon={Building2}
+            title="Already working with us?"
+            body="Clients, media owners, growth partners and the OOHRENA team all sign in from one place."
+            cta={
+              user ? (
+                <Link to={ROLE_HOME[user.role]}><Btn variant="secondary" className="w-full">Go to my workspace</Btn></Link>
+              ) : (
+                <Link to="/login"><Btn variant="secondary" className="w-full">Sign in</Btn></Link>
+              )
+            }
+          />
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+      </section>
 
-function InquiryForm({
-  item,
-  from,
-  to,
-  onDone,
-}: {
-  item: SearchItem;
-  from?: string | undefined;
-  to?: string | undefined;
-  onDone: () => void;
-}) {
-  const { data: user } = useSession();
-  const create = useCreateLead();
-  const [f, setF] = useState({
-    from: from ?? plus(7),
-    to: to ?? plus(36),
-    qty: "1",
-    budget: "",
-    requirement: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string>();
-  const [done, setDone] = useState<string>();
+      {/* Media types + promises */}
+      <section className="max-w-[1216px] mx-auto px-4 md:px-8 py-14 grid gap-10 md:grid-cols-2">
+        <div className="space-y-4">
+          <Eyebrow>Media you can book</Eyebrow>
+          <h2 className="text-2xl font-semibold">360° outdoor + digital</h2>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_DEFS.map((c) => (
+              <span
+                key={c.id}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-card px-3 py-2 text-[13px]"
+              >
+                <MapPinned className="w-4 h-4 text-saffron-deep" /> {c.name}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Eyebrow>Our transparency promise</Eyebrow>
+          <h2 className="text-2xl font-semibold">Client Transparency First</h2>
+          <ul className="space-y-3">
+            {PROMISES.map((p) => (
+              <li key={p} className="flex gap-3 text-[14px] text-ink">
+                <BadgeCheck className="w-5 h-5 shrink-0 text-verified mt-0.5" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
-  if (!user) {
-    return (
-      <div className="rounded-lg border border-line p-4 text-[13px] flex flex-wrap items-center gap-3">
-        <span className="flex-1">
-          Sign in with your advertiser account to request a quotation. You'll get a Lead ID to track
-          it.
-        </span>
-        <Link to="/login" search={{ redirect: "/" }}>
-          <Btn variant="secondary" className="h-9">
-            Sign in
-          </Btn>
-        </Link>
-        <Link to="/register">
-          <Btn className="h-9">Create account</Btn>
-        </Link>
-      </div>
-    );
-  }
-  if (user.role !== "client")
-    return (
-      <p className="text-[13px] text-mute">Quotation requests are made from client accounts.</p>
-    );
-  if (done) {
-    return (
-      <div className="rounded-lg border border-verified/30 bg-verified-soft p-4 text-center">
-        <CheckCircle2 className="mx-auto text-verified" size={32} />
-        <div className="font-semibold mt-2">Inquiry received</div>
-        <p className="text-[13px] mt-1">
-          Your Lead ID is <b className="font-mono">{done}</b>. OOHRENA reviews every inquiry,
-          confirms availability with the media owner, and sends an itemised quote.
-        </p>
-        <div className="flex justify-center gap-2 mt-3">
-          <Btn variant="secondary" className="h-9" onClick={onDone}>
-            Keep browsing
-          </Btn>
-          <Link to="/client">
-            <Btn className="h-9">Track in Client Portal</Btn>
+      {/* Closing CTA */}
+      <section className="max-w-[1216px] mx-auto px-4 md:px-8 pb-14">
+        <div className="rounded-2xl bg-navy text-navy-foreground p-8 md:p-10 flex flex-wrap items-center justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-saffron font-semibold text-[13px]">
+              <ShieldCheck className="w-4 h-4" /> Centralised lead tracking & audit trail
+            </div>
+            <div className="text-xl md:text-2xl font-semibold">Ready to plan your next campaign?</div>
+          </div>
+          <Link to="/marketplace">
+            <Btn className="h-12 px-6 text-[14px]">Browse verified media</Btn>
           </Link>
         </div>
-      </div>
-    );
-  }
+      </section>
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(undefined);
-    const p = leadCreateInput.safeParse({
-      inventoryIds: [item.inventoryId],
-      from: f.from,
-      to: f.to,
-      qty: f.qty,
-      budget: f.budget || undefined,
-      requirement: f.requirement,
-    });
-    if (!p.success) {
-      setErrors(Object.fromEntries(p.error.issues.map((i) => [i.path.join("."), i.message])));
-      return;
-    }
-    setErrors({});
-    create.mutate(p.data, {
-      onSuccess: (l) => {
-        setDone(l.leadId);
-        toast.success(`Inquiry ${l.leadId} submitted`);
-      },
-      onError: (err) => setFormError(err.message),
-    });
-  }
-
-  return (
-    <form
-      onSubmit={submit}
-      noValidate
-      className="border-t border-line pt-4 grid sm:grid-cols-2 gap-3 text-[13px]"
-    >
-      <div className="sm:col-span-2 font-semibold text-[14px]">Request a quotation</div>
-      {formError && (
-        <div className="sm:col-span-2">
-          <FormError message={formError} />
+      <footer className="border-t border-line">
+        <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 flex flex-wrap items-center justify-between gap-3 text-[12px] text-mute">
+          <span>© {new Date().getFullYear()} OOHRENA</span>
+          <nav className="flex gap-4">
+            <Link to="/privacy" className="hover:text-ink">Privacy</Link>
+            <Link to="/terms" className="hover:text-ink">Terms</Link>
+            <Link to="/confidentiality" className="hover:text-ink">Confidentiality</Link>
+          </nav>
         </div>
-      )}
-      <Field
-        id="lf"
-        label="Start date"
-        type="date"
-        min={plus(0)}
-        value={f.from}
-        error={errors["from"]}
-        onChange={(e) => setF({ ...f, from: e.target.value })}
-      />
-      <Field
-        id="lt"
-        label="End date"
-        type="date"
-        min={f.from}
-        value={f.to}
-        error={errors["to"]}
-        onChange={(e) => setF({ ...f, to: e.target.value })}
-      />
-      {item.quantity > 1 && (
-        <Field
-          id="lq"
-          label={`Quantity (of ${item.quantity})`}
-          inputMode="numeric"
-          value={f.qty}
-          error={errors["qty"]}
-          onChange={(e) => setF({ ...f, qty: e.target.value })}
-        />
-      )}
-      <Field
-        id="lb"
-        label="Budget ₹ (optional)"
-        inputMode="numeric"
-        value={f.budget}
-        error={errors["budget"]}
-        onChange={(e) => setF({ ...f, budget: e.target.value })}
-      />
-      <div className="sm:col-span-2 space-y-1.5">
-        <label htmlFor="lr" className="font-medium">
-          What do you need?
-        </label>
-        <Textarea
-          id="lr"
-          rows={3}
-          value={f.requirement}
-          placeholder="Campaign goal, creative ready or not, printing/installation needs…"
-          onChange={(e) => setF({ ...f, requirement: e.target.value })}
-        />
-        {errors["requirement"] && (
-          <p className="text-[12px] text-destructive">{errors["requirement"]}</p>
-        )}
-      </div>
-      <Btn type="submit" className="sm:col-span-2" disabled={create.isPending}>
-        {create.isPending ? "Submitting…" : "Submit inquiry"}
-      </Btn>
-      <p className="sm:col-span-2 text-[11px] text-mute">
-        Your request goes to OOHRENA's central team first. Media owners never receive your contact
-        details directly.
-      </p>
-    </form>
+      </footer>
+    </main>
   );
 }
 
-function CompareDialog({
-  open,
-  onClose,
-  ids,
+function Audience({
+  icon: Icon,
+  title,
+  body,
+  cta,
 }: {
-  open: boolean;
-  onClose: () => void;
-  ids: string[];
+  icon: typeof Search;
+  title: string;
+  body: string;
+  cta: React.ReactNode;
 }) {
-  const cmp = useCompare(open ? ids : []);
-  const rows: [string, (l: PublicListing) => string][] = [
-    ["City", (l) => `${l.locality}, ${l.city}`],
-    ["Category", (l) => l.categoryName],
-    ["Indicative price", priceText],
-    ["Quantity", (l) => String(l.quantity)],
-    [
-      "Size",
-      (l) =>
-        l.attributes["widthFt"]
-          ? `${String(l.attributes["widthFt"])} × ${String(l.attributes["heightFt"])} ft`
-          : "—",
-    ],
-    ["Verified", (l) => (l.verified ? "Yes" : "No")],
-  ];
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Compare shortlisted media</DialogTitle>
-        </DialogHeader>
-        {cmp.isPending ? (
-          <div className="h-40 bg-muted rounded-lg animate-pulse" />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[540px]">
-              <thead>
-                <tr>
-                  <th className="text-left p-3" />
-                  {(cmp.data ?? []).map((x) => (
-                    <th key={x.inventoryId} className="text-left p-3 align-top">
-                      {x.title}
-                      <div className="font-mono text-[11px] text-mute font-normal">
-                        {x.inventoryId}
-                      </div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(([label, fn]) => (
-                  <tr key={label} className="border-t border-line">
-                    <td className="p-3 text-mute">{label}</td>
-                    {(cmp.data ?? []).map((x) => (
-                      <td key={x.inventoryId} className="p-3">
-                        {fn(x)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <p className="text-[12px] text-mute">
-          Comparing up to 4 items. Availability depends on your dates; open each listing to check
-          its calendar.
-        </p>
-      </DialogContent>
-    </Dialog>
+    <div className="rounded-xl border border-line p-6 flex flex-col gap-3 bg-canvas">
+      <Icon className="w-6 h-6 text-saffron-deep" />
+      <div className="font-semibold text-[16px] text-ink">{title}</div>
+      <p className="text-[13px] text-mute flex-1">{body}</p>
+      {cta}
+    </div>
   );
 }

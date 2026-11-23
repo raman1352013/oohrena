@@ -18,7 +18,7 @@ export function sniffMime(buf: Buffer): string | null {
 }
 
 export type SaveOpts = {
-  kind: "kyc_document" | "inventory_photo" | "proof" | "payment_proof";
+  kind: "kyc_document" | "inventory_photo" | "proof" | "payment_proof" | "creative";
   allowed: readonly string[];
   maxBytes: number;
   encryptAtRest: boolean;

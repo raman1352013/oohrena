@@ -21,7 +21,7 @@ export type BookingDoc = {
   _id: string; quoteId: string; leadId: string; clientId?: string | null; status: string; items: Item[]; start: Date; end: Date;
   subtotal: number; serviceFee: number; gst: number; total: number; blockIds: string[]; cancellation?: Record<string, unknown> | null; createdAt: Date; updatedAt: Date;
 };
-type WorkOrderDoc = { _id: string; bookingId: string; vendorId: string; items: Item[]; instructions: string; creativeNote?: string | null; status: string; issuedAt: Date; acknowledgedAt?: Date | null };
+type WorkOrderDoc = { _id: string; bookingId: string; vendorId: string; items: Item[]; instructions: string; creativeNote?: string | null; creatives?: { fileId: string; name: string; mime: string; size: number; uploadedAt: Date }[]; status: string; issuedAt: Date; acknowledgedAt?: Date | null };
 
 const itemView = (i: Item, audience: "admin" | "client" | "vendor") => ({
   inventoryId: i.inventoryId, title: i.title, category: i.category, city: i.city, from: fromDay(i.from.getTime()), to: fromDay(i.to.getTime()), qty: i.qty,
@@ -42,6 +42,7 @@ export function bookingView(b: BookingDoc, audience: "admin" | "client") {
 export function workOrderView(w: WorkOrderDoc, audience: "admin" | "client" | "vendor") {
   return {
     workOrderId: w._id, bookingId: w.bookingId, status: w.status, instructions: w.instructions, creativeNote: w.creativeNote ?? null,
+    creatives: (w.creatives ?? []).map((c) => ({ fileId: c.fileId, name: c.name, mime: c.mime, size: c.size, uploadedAt: c.uploadedAt })),
     items: w.items.map((i) => itemView(i, audience === "client" ? "client" : audience)),
     issuedAt: w.issuedAt, acknowledgedAt: w.acknowledgedAt ?? null,
     ...(audience === "admin" ? { vendorId: w.vendorId } : {}),

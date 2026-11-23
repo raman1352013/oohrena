@@ -203,3 +203,34 @@ describe("Campaign monitoring board (Module 3)", () => {
     expect((await request(app).get("/api/v1/admin/campaigns").set(bearer(x.client.token))).status).toBe(403);
   });
 });
+
+describe("Work order creative files (Module 7)", () => {
+  it("admin attaches artwork; only the assigned vendor and admin can open it", async () => {
+    const x = await bookedWorkOrder(app, admin.token, vendor);
+    const pdf = Buffer.from("%PDF-1.4\n% creative artwork\n");
+    const add = (token: string, buf = pdf, name = "artwork.pdf") =>
+      request(app)
+        .post(`/api/v1/admin/work-orders/${x.woId}/creatives`)
+        .set(bearer(token))
+        .attach("file", buf, { filename: name, contentType: "application/pdf" });
+
+    expect((await add(vendor.token)).status).toBe(403);
+    expect((await add(admin.token, Buffer.from("plain text, not a creative"), "notes.txt")).status).toBe(400);
+    const ok = await add(admin.token);
+    expect(ok.status, JSON.stringify(ok.body)).toBe(201);
+    const fileId = ok.body.data.fileId as string;
+
+    const mine = (await request(app).get("/api/v1/vendors/me/work-orders").set(V())).body.data.find(
+      (w: { workOrderId: string }) => w.workOrderId === x.woId,
+    );
+    expect(mine.creatives).toEqual([expect.objectContaining({ fileId, name: "artwork.pdf", mime: "application/pdf" })]);
+
+    expect((await request(app).get(`/api/v1/files/${fileId}`).set(V())).status).toBe(200);
+    const other = await approvedVendor(app, admin.token);
+    expect((await request(app).get(`/api/v1/files/${fileId}`).set(bearer(other.token))).status).toBe(404);
+    expect((await request(app).get(`/api/v1/files/${fileId}`).set(bearer(x.client.token))).status).toBe(404);
+
+    const log = await AuditLog.findOne({ action: "workorder.creative.add", entityId: x.woId }).lean();
+    expect(log).toBeTruthy();
+  });
+});

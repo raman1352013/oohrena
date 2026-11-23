@@ -28,6 +28,7 @@ import { QuoteBreakdown, QuotePill } from "@/components/app/QuoteBreakdown";
 import { Field } from "@/components/app/AuthShell";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminPaymentStatus } from "@/components/app/FinanceCards";
+import { Creatives } from "@/components/app/Creatives";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/leads/$leadId")({
@@ -726,6 +727,13 @@ function BookingSection({ l }: { l: LeadDetail }) {
                     ? `Acknowledged ${fmtDate(w.acknowledgedAt)}`
                     : "Not yet acknowledged by vendor"}
                 </span>
+                <div className="basis-full">
+                  <Creatives
+                    workOrderId={w.workOrderId}
+                    files={w.creatives}
+                    canAdd={!["cancelled", "completed"].includes(w.status)}
+                  />
+                </div>
               </div>
             ))
           ) : (

@@ -4,7 +4,7 @@ import mongoose, { Schema } from "mongoose";
 const fileSchema = new Schema(
   {
     _id: { type: String, required: true }, // uuid
-    kind: { type: String, enum: ["kyc_document", "inventory_photo", "proof", "payment_proof"], required: true },
+    kind: { type: String, enum: ["kyc_document", "inventory_photo", "proof", "payment_proof", "creative"], required: true },
     mime: { type: String, required: true },
     size: { type: Number, required: true },
     sha256: { type: String, required: true, index: true },

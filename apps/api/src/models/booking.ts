@@ -111,6 +111,23 @@ const workOrderSchema = new Schema(
     items: { type: [quoteItemSchema], default: [] },
     instructions: { type: String, required: true },
     creativeNote: { type: String, default: null },
+    /** Artwork files (StoredFile kind "creative"); served only to the assigned vendor and Admin. */
+    creatives: {
+      type: [
+        new Schema(
+          {
+            fileId: { type: String, required: true },
+            name: { type: String, required: true },
+            mime: { type: String, required: true },
+            size: { type: Number, required: true },
+            uploadedBy: { type: String, required: true },
+            uploadedAt: { type: Date, required: true, default: () => new Date() },
+          },
+          { _id: false },
+        ),
+      ],
+      default: [],
+    },
     status: { type: String, enum: WORK_ORDER_STATUSES, default: "scheduled", index: true },
     previousStatus: { type: String, enum: [...WORK_ORDER_STATUSES, null], default: null },
     campaignId: { type: String, default: null, index: true },

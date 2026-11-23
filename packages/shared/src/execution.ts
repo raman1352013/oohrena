@@ -36,6 +36,9 @@ export const PROOF_STATUSES = ["uploaded", "verified", "rejected"] as const;
 export type ProofStatus = (typeof PROOF_STATUSES)[number];
 export const PROOF_MIME = ["image/jpeg", "image/png", "image/webp", "video/mp4"] as const;
 export const MAX_PROOF_BYTES = 25 * 1024 * 1024;
+/** Module 7: artwork attached to a work order by Admin; the assigned vendor downloads it. */
+export const CREATIVE_MIME = ["application/pdf", "image/jpeg", "image/png", "image/webp", "video/mp4"] as const;
+export const MAX_CREATIVE_BYTES = 25 * 1024 * 1024;
 
 /** What the screen may say about location — never "GPS verified" unless it really was. */
 export function gpsLabel(p: { gpsSource: "device" | "none"; distanceM?: number | null; accuracyM?: number | null }) {

@@ -11,6 +11,7 @@ import {
   type WorkOrderStatus,
 } from "@oohrena/shared";
 import { fmtDate } from "@/lib/format";
+import { Creatives } from "@/components/app/Creatives";
 import { useAcknowledge, useMyWorkOrders, type WorkOrderView } from "@/lib/deals-api";
 import {
   getPosition,
@@ -130,6 +131,7 @@ function WorkOrderBlock({ w }: { w: WorkOrderView }) {
         </div>
       ))}
       <p className="rounded-lg bg-muted px-3 py-2 whitespace-pre-line">{w.instructions}</p>
+      <Creatives workOrderId={w.workOrderId} files={w.creatives} />
       {status === "issue_raised" && <p className="text-destructive text-[12px]">Issue open</p>}
 
       {ex.data && !["cancelled"].includes(status) && (

@@ -90,12 +90,34 @@ export type BookingView = {
   }[];
   workOrders?: WorkOrderView[];
 };
+export type Creative = {
+  fileId: string;
+  name: string;
+  mime: string;
+  size: number;
+  uploadedAt: string;
+};
+
+/** Module 7: Admin attaches artwork to a work order. */
+export function useAddCreative() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workOrderId, file }: { workOrderId: string; file: File }) => {
+      const f = new FormData();
+      f.append("file", file);
+      return api<Creative>(`/admin/work-orders/${workOrderId}/creatives`, { form: f });
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin"] }),
+  });
+}
+
 export type WorkOrderView = {
   workOrderId: string;
   bookingId: string;
   status: WorkOrderStatus;
   instructions: string;
   creativeNote: string | null;
+  creatives?: Creative[] | undefined;
   items: Pick<QuoteItem, "inventoryId" | "title" | "category" | "city" | "from" | "to" | "qty">[];
   issuedAt: string;
   acknowledgedAt: string | null;

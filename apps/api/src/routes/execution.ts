@@ -1,9 +1,11 @@
 import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
-import { ISSUE_STATUSES, MAX_PROOF_BYTES, PROOF_STATUSES, fromDay, issueCreateInput, issueUpdateInput, proofDecisionInput, proofMetaInput, workOrderStatusInput } from "@oohrena/shared";
+import { CREATIVE_MIME, ISSUE_STATUSES, MAX_CREATIVE_BYTES, MAX_PROOF_BYTES, PROOF_STATUSES, fromDay, issueCreateInput, issueUpdateInput, proofDecisionInput, proofMetaInput, workOrderStatusInput } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { badRequest, notFound } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
+import { saveUpload } from "../lib/storage.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
 import { Booking, WorkOrder } from "../models/booking.js";
@@ -11,6 +13,7 @@ import { Campaign, ExecutionUpdate, Issue, Proof, ProofSchedule } from "../model
 import { Client, Vendor } from "../models/foundation.js";
 import { changeWorkOrderStatus, decideProof, loadWorkOrderFor, overdueSlots, proofView, raiseIssue, updateIssue, uploadProof } from "../services/execution.js";
 
+const creativeUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_CREATIVE_BYTES, files: 1, fields: 5 } });
 const proofUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_PROOF_BYTES, files: 1, fields: 20 } });
 
 export const slotView = (s: { _id: unknown; type: string; dueDate: Date; inventoryId: string; status: string; latestProofId?: string | null; receivedProofId?: string | null; workOrderId: string }) => ({
@@ -53,6 +56,20 @@ export function executionRoutes(cfg: Config) {
     if (!meta.success) throw badRequest("Please check the proof details", meta.error.flatten());
     const p = await uploadProof(cfg, req, String(req.params.id), req.file, meta.data);
     res.status(201).json({ data: proofView(cfg, p, req.user!.role === "admin" ? "admin" : "vendor") });
+  });
+
+  /** Module 7: Admin attaches artwork to a work order; the assigned vendor downloads it via /files/:id. */
+  r.post("/admin/work-orders/:id/creatives", requirePermission("workorders.manage"), creativeUpload.single("file"), async (req, res) => {
+    const w = await WorkOrder.findById(String(req.params.id)).lean();
+    if (!w) throw notFound("Work order not found");
+    if (w.status === "cancelled" || w.status === "completed") throw badRequest(`This work order is ${w.status}`);
+    if (!req.file) throw badRequest("Choose a file");
+    const name = (req.file.originalname || "creative").slice(0, 200);
+    const stored = await saveUpload(cfg, req.file.buffer, { kind: "creative", allowed: CREATIVE_MIME, maxBytes: MAX_CREATIVE_BYTES, encryptAtRest: false, ownerUserId: req.user!.userId, vendorId: w.vendorId, originalName: name });
+    const creative = { fileId: String(stored._id), name, mime: stored.mime, size: stored.size, uploadedBy: req.user!.userId, uploadedAt: new Date() };
+    await WorkOrder.updateOne({ _id: w._id }, { $push: { creatives: creative } });
+    await audit(req, { action: "workorder.creative.add", entity: "work_order", entityId: w._id, after: { fileId: creative.fileId, name, mime: creative.mime } });
+    res.status(201).json({ data: { fileId: creative.fileId, name, mime: creative.mime, size: creative.size, uploadedAt: creative.uploadedAt } });
   });
 
   /* ---------- Admin verification ---------- */

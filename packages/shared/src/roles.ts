@@ -44,6 +44,7 @@ export const PERMISSIONS = {
   "quotes.manage": { admin: "all" },
   "overrides.create": { admin: "all" },
   "campaigns.monitor": { admin: "all" },
+  "workorders.manage": { admin: "all" },
   // Module 5 — availability
   "holds.manage": { admin: "all" },
   "availability.block": { admin: "all", vendor: "own" },

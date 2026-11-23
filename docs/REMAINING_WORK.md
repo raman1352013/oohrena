@@ -112,8 +112,12 @@ Earlier ticks above were too optimistic. Status after the deploy-readiness pass:
 - [x] Web builds for Vercel (`NITRO_PRESET=vercel`, `/api/*` rewritten to the API, see `docs/DEPLOY_VERCEL_RENDER.md`) and for a Node container (`apps/web/Dockerfile`).
 - [x] Password reset / invite / email-verification emails have templates and an SMTP provider (`SMTP_URL`, required in production); `/forgot-password` and `/reset-password` pages exist. Staff invites no longer return the token outside development.
 - [x] 2FA: `/2fa/setup` refused once enabled; mandatory enrolment endpoints `/auth/2fa/enroll/start|verify`; 5-attempt limit per challenge; OTP from `crypto.randomInt` with a 5-attempt limit; `REQUIRE_2FA_PRIVILEGED="false"` now really means false.
-- [ ] **Web: login screen does not handle `2FA_SETUP_REQUIRED`** (enrolment UI with QR + code). Keep `REQUIRE_2FA_PRIVILEGED=false` until it exists.
-- [ ] **Web: a 2FA settings screen** (enable/disable from the profile).
+- [x] **Web: login handles `2FA_SETUP_REQUIRED`** (QR + key + recovery codes + 6-digit code). `REQUIRE_2FA_PRIVILEGED=true` can now be turned on for staging/production.
+- [x] **Web: `/account`** — two-factor on/off, change password, profile.
+- [x] **Campaign monitoring board** (Module 3): `GET /admin/campaigns` + admin Campaigns section.
+- [x] **Creative files on work orders** (Module 7): `POST /admin/work-orders/:id/creatives`; vendor downloads.
+- [x] **Admin IP controls** (Module 3): `ADMIN_ALLOWED_IPS` for Admin/Finance; blocked attempts audited.
+- [x] **No `window.prompt`/`confirm`**: one `ask()` dialog; user suspend requires a reason (rule 7).
 - [ ] **SMS provider** for mobile OTP (DLT-registered sender: MSG91 / Gupshup / Twilio). Until then `/auth/send-mobile-otp` returns 503 outside development.
 - [ ] **Web has 38 TypeScript errors** in screens added later (`Btn tone/size`, `Row label/value` instead of `k/v`, `exactOptionalPropertyTypes`). Some are visible bugs (blank System Health rows). Fix them, then add `"typecheck": "tsc --noEmit"` to `apps/web/package.json` so CI checks the web app.
 - [ ] Written ownership confirmation (Module 10) — the business owner signs this; it cannot be ticked by a developer.

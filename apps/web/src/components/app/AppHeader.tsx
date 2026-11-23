@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ROLE_HOME, ROLE_LABEL, useLogout, useSession } from "@/lib/auth";
+import { ApiError } from "@/lib/api";
 import { Btn } from "@/components/app/kit";
 
 const TITLES: [string, string][] = [
@@ -52,9 +53,17 @@ export function AppHeader() {
 
   function signOut() {
     logout.mutate(undefined, {
-      onSettled: () => {
+      onSuccess: () => {
         toast.success("Signed out");
         void nav({ to: "/login", replace: true });
+      },
+      // An expired session is already signed out; anything else means the server kept the session.
+      onError: (e) => {
+        if (e instanceof ApiError && e.status === 401) {
+          void nav({ to: "/login", replace: true });
+          return;
+        }
+        toast.error(`Couldn't sign out: ${e.message}. Please try again.`);
       },
     });
   }

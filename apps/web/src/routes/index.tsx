@@ -20,13 +20,13 @@ import { Btn, Eyebrow, PinLogo } from "@/components/app/kit";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "OOHRENA — Outdoor & digital advertising you can track" },
+      { title: "OOHRENA — India's Unified Advertising Platform" },
       {
         name: "description",
         content:
           "Find admin-verified hoardings, LED screens, transit and retail media. One Lead ID follows every campaign from inquiry to proof of display and payment.",
       },
-      { property: "og:title", content: "OOHRENA — Outdoor x Digital x Trackable" },
+      { property: "og:title", content: "OOHRENA — India's Unified Advertising Platform" },
       { property: "og:description", content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -62,7 +62,7 @@ function Landing() {
         <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-14 md:py-20 grid gap-10 md:grid-cols-[1.2fr_1fr] items-center">
           <div className="space-y-5">
             <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wider font-semibold text-navy-foreground/70">
-              <PinLogo size={18} /> Outdoor x Digital x Trackable
+              <PinLogo size={18} /> India&apos;s Unified Advertising Platform · Outdoor × Digital × Trackable
             </div>
             <h1 className="text-3xl md:text-5xl font-semibold leading-tight">
               Outdoor & digital advertising,

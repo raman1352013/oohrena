@@ -131,14 +131,21 @@ export function useRegisterVendor() {
   });
 }
 
+function clearSession(qc: ReturnType<typeof useQueryClient>) {
+  qc.setQueryData(SESSION_KEY, null);
+  qc.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_KEY[0] });
+}
+
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api<{ ok: true }>("/auth/logout", { method: "POST", body: {} }),
-    // Clear local state even if the session had already expired server-side.
-    onSettled: () => {
-      qc.setQueryData(SESSION_KEY, null);
-      qc.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_KEY[0] });
+    // Clear local state once the server has ended the session (or it had already expired). If the server
+    // refused (e.g. a blocked origin), keep it: pretending to be signed out while the cookie lives on
+    // made the login page sign the user straight back in.
+    onSuccess: () => clearSession(qc),
+    onError: (e) => {
+      if (e instanceof ApiError && e.status === 401) clearSession(qc);
     },
   });
 }

@@ -62,7 +62,11 @@ export function loadConfig(overrides: Record<string, unknown> = {}): Config {
   } else if (secure) throw new Error("DATA_ENCRYPTION_KEY is required in staging/production");
   // Password reset, staff invites and email verification are delivered by email; without SMTP nobody can recover an account.
   if (env.NODE_ENV === "production" && !env.SMTP_URL) throw new Error("SMTP_URL is required in production (password reset and invite emails)");
-  const corsOrigins = env.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean);
+  // Browsers send Origin as scheme://host[:port] with no path or trailing slash; normalise the configured
+  // values the same way so "https://app.example/" in the dashboard still matches.
+  const corsOrigins = env.CORS_ORIGINS.split(",")
+    .map((s) => s.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
   return {
     ...env,
     encryptionKey,

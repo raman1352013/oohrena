@@ -18,6 +18,11 @@ describe("Auth hardening — 2FA enrolment, attempt limits, delivered notificati
     expect(loadConfig({ ...base, REQUIRE_2FA_PRIVILEGED: "true" }).REQUIRE_2FA_PRIVILEGED).toBe(true);
   });
 
+  it("CORS_ORIGINS with a trailing slash still matches the browser's Origin (sign-out was blocked)", () => {
+    const cfg = loadConfig({ NODE_ENV: "test", MONGODB_URI: "x", CORS_ORIGINS: "https://app.example.com/, http://localhost:8080" });
+    expect(cfg.corsOrigins).toEqual(["https://app.example.com", "http://localhost:8080"]);
+  });
+
   it("production refuses to start without SMTP_URL", () => {
     expect(() => loadConfig({ NODE_ENV: "production", MONGODB_URI: "x", DATA_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64") })).toThrow(/SMTP_URL/);
   });

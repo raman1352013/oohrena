@@ -85,13 +85,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "OOHRENA — Outdoor x Digital x Trackable" },
+      { title: "OOHRENA — India's Unified Advertising Platform" },
       {
         name: "description",
         content:
-          "OOHRENA outdoor and digital media marketplace staging preview with sample quotes and campaign tracking.",
+          "OOHRENA — India's unified advertising platform. Outdoor x Digital x Trackable: find verified media, book it and see proof of display.",
       },
-      { property: "og:title", content: "OOHRENA — Outdoor x Digital x Trackable" },
+      { property: "og:title", content: "OOHRENA — India's Unified Advertising Platform" },
       {
         property: "og:description",
         content: "Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!",

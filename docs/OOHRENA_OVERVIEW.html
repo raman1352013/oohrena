@@ -118,6 +118,11 @@ td:first-child { font-weight: 600; white-space: nowrap; }
 .closing h2 { color: var(--navy-ink); }
 .foot { font-size: .8rem; color: color-mix(in srgb, var(--navy-ink) 55%, transparent); margin-top: .8rem; }
 
+/* Saving as PDF: keep the navy bands and chips, otherwise white headings print as faint grey on white. */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .col, .who-card, .next-item, .flow li, tr { break-inside: avoid; }
+}
 @media (max-width: 620px) {
   .versus, .who-grid { grid-template-columns: 1fr; }
   .next-item { grid-template-columns: 1fr; gap: .2rem; }

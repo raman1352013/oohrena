@@ -43,6 +43,10 @@ Live: https://oohrena-kappa.vercel.app (web, Vercel) → https://oohrena-api.onr
 | 9 | **Asli admin/finance accounts** (`npm run create-staff -w @oohrena/api`), test accounts production mein nahi | Production safety | Owner + DevOps | 1 ghanta |
 | 10 | **Security:** Atlas password rotate (screenshot mein aaya tha), Atlas Network Access `0.0.0.0/0` hatao | Data suraksha | DevOps | 1 ghanta |
 | 11 | Render paid plan (free pe 15 min baad server so jaata hai) + uptime monitor | Pehla page dheere, demo mein kharab impression | Owner | — |
+| 12a | **Work order pe creative files** (artwork upload/download) — abhi sirf instructions ka text hai | Module 7: "Work Order with … creative files" | Full-stack dev | 1 din |
+| 12b | **Campaign monitoring board** — saare live campaigns ek screen pe (proof status, overdue) — abhi Bookings tab + Proof queue alag hain | Module 3 | Frontend dev | 1 din |
+| 12c | **Admin IP/session controls** (allowed IPs, session list already hai) | Module 3 | Backend dev | 0.5 din |
+| 12d | **Backups scheduled + off-site** (Atlas paid tier backups ya cron + S3 pe `mongodump`); script hai, schedule nahi | Module 10 | DevOps | 0.5 din |
 | 12 | Owner ke decisions: partner commission rule, privacy/terms legal text, ownership confirmation sign | Document §6, Module 10 | Owner | — |
 
 ## 4. Document ke BAHAR wali cheezein (posters vs MVP)

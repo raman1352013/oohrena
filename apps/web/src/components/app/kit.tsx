@@ -27,14 +27,6 @@ export function KCard({
   );
 }
 
-export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={cn("text-[11px] uppercase tracking-wider text-mute font-semibold", className)}>
-      {children}
-    </div>
-  );
-}
-
 type Tone = "saffron" | "verified" | "hold" | "neutral" | "navy" | "danger";
 const tones: Record<Tone, string> = {
   saffron: "bg-saffron/10 text-saffron-deep",
@@ -91,24 +83,10 @@ export function Btn({
   );
 }
 
-export function Avatar({ children, dark }: { children: ReactNode; dark?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "w-8 h-8 shrink-0 rounded-full grid place-items-center text-[11px] font-semibold",
-        dark ? "bg-navy text-navy-foreground" : "bg-muted text-ink",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-export function Empty({ title, hint }: { title: string; hint?: string }) {
+export function Empty({ title }: { title: string }) {
   return (
     <div className="py-10 text-center">
       <div className="font-medium text-ink text-[13px]">{title}</div>
-      {hint && <div className="text-mute text-[12px] mt-1">{hint}</div>}
     </div>
   );
 }

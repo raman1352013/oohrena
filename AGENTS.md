@@ -78,6 +78,17 @@ npm run build -w @oohrena/web
 7. **Verify**: `npm test`, `npm run typecheck`, `npm run build -w @oohrena/web`, then click through the flow in a browser with the seeded accounts.
 8. **Update** the module status table in `README.md` and tick items in `docs/REMAINING_WORK.md`.
 
+## 5a. UI copy and layout (keep it as simple as Linear / Apple Notes)
+
+- **A heading names the screen.** No eyebrows, taglines or explanation paragraphs under it.
+- **Empty states name what is empty** (`<Empty title="No bookings" />`). `Empty` has no hint prop on purpose.
+- **Labels are short nouns** ("City", "Budget (₹)"). No `placeholder="e.g. …"` examples; `Field` has no hint prop.
+  Rules a user must know go in the label (`"Your rate (₹, private)"`) or come back as a validation error.
+- **Keep text that is state or a rule with consequences** (status pills, "Subject to vendor confirmation",
+  "Changing location, rate or size sends it back to review"). Cut text that explains how the product works.
+- If a screen only makes sense with helper text, change the layout instead of adding words.
+- Kit (`components/app/kit.tsx`) is the only set of primitives: `KCard`, `Pill`, `Btn`, `Empty`, `Row`, `PinLogo`.
+
 ## 6. Known pitfalls (learned the hard way — read before debugging)
 
 - **Router shadowing**: `routes/vendors.ts` ends with a catch-all that returns 404 for unknown `/vendors/me/*` paths. Any new `/vendors/me/...` endpoint must be added **inside `vendors.ts`** (see `/me/payables`, `/me/proofs/overdue`), not in another router.

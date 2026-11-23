@@ -12,16 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ROLE_HOME, ROLE_LABEL, useLogout, useSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
-import { Btn } from "@/components/app/kit";
-
-const TITLES: [string, string][] = [
-  ["/admin", "Central Control Tower"],
-  ["/client", "Client Portal"],
-  ["/vendor", "Vendor Space Hub"],
-  ["/finance", "Finance Ledger"],
-  ["/partner", "Growth Partner"],
-  ["/marketplace", "Media Marketplace"],
-];
+import { Btn, PinLogo } from "@/components/app/kit";
 
 const initials = (name: string) =>
   name
@@ -37,7 +28,6 @@ export function AppHeader() {
   const { data: user } = useSession();
   const logout = useLogout();
   const [q, setQ] = useState("");
-  const title = TITLES.find(([p]) => path.startsWith(p))?.[1] ?? "";
   const isAdmin = user?.role === "admin";
 
   /** Admin quick-find: Lead IDs open the lead workspace (bookings and quotes live on their lead page). */
@@ -71,14 +61,9 @@ export function AppHeader() {
   return (
     <header className="no-print bg-navy text-navy-foreground h-14 px-4 md:px-6 flex items-center gap-3 md:gap-6 sticky top-0 z-40">
       <Link to="/" className="flex items-center gap-2 shrink-0">
-        <div className="w-7 h-7 rounded-md bg-saffron grid place-items-center font-bold text-[13px]">
-          O
-        </div>
+        <PinLogo size={26} />
         <span className="font-bold tracking-wide hidden sm:inline">OOHRENA</span>
       </Link>
-      <div className="font-medium text-navy-foreground/80 text-[14px] hidden lg:block whitespace-nowrap">
-        {title}
-      </div>
       {isAdmin && (
         <form
           onSubmit={search}
@@ -88,7 +73,7 @@ export function AppHeader() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Open Lead ID (LD-2026-…)"
+            placeholder="LD-2026-000001"
             aria-label="Open a Lead ID"
             className="bg-transparent outline-none flex-1 text-[13px] text-navy-foreground placeholder:text-navy-foreground/50"
           />

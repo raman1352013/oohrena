@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Eyebrow, KCard } from "@/components/app/kit";
+import { KCard } from "@/components/app/kit";
 
 export const Route = createFileRoute("/confidentiality")({
   head: () => ({
@@ -19,8 +19,7 @@ function ConfidentialityPage() {
   return (
     <div className="max-w-[800px] mx-auto px-4 md:px-8 py-10 space-y-6 text-[14px] leading-relaxed">
       <div>
-        <Eyebrow>Legal & Compliance</Eyebrow>
-        <h1 className="text-2xl font-bold mt-1">Confidentiality & Anti-Circumvention</h1>
+        <h1 className="text-2xl font-bold">Confidentiality & Anti-Circumvention</h1>
         <p className="text-mute text-[12px] mt-1">Version 1.0 · Last Updated November 2026</p>
       </div>
 

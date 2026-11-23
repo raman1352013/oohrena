@@ -207,7 +207,6 @@ function Inbox() {
       ) : !inbox.data.items.length ? (
         <Empty
           title={status === "new" ? "No new inquiries" : "Nothing in this view"}
-          hint="Every inquiry from every source — web, phone, WhatsApp, partners — lands here with its Lead ID."
         />
       ) : (
         <div className="overflow-x-auto">
@@ -294,7 +293,6 @@ function Bookings() {
       ) : !b.data?.length ? (
         <Empty
           title="No bookings yet"
-          hint="A booking is created from a client-approved quotation on the lead page."
         />
       ) : (
         b.data.map((x) => (

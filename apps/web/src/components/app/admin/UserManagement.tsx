@@ -145,7 +145,7 @@ export function UserManagement() {
             </div>
           ))
         ) : (
-          <Empty title="No accounts found" hint="Try adjusting your role or keyword filter." />
+          <Empty title="No accounts found" />
         )}
       </KCard>
 
@@ -375,10 +375,6 @@ function ChangeRoleModal({ user, onClose }: { user: AdminUserItem; onClose: () =
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div className="bg-card border border-line rounded-xl w-full max-w-md p-6 space-y-4">
         <h2 className="text-lg font-bold">Change Role for {user.fullName}</h2>
-        <p className="text-[12px] text-mute">
-          Role change is audited and revokes all active sessions for this account. Requires recent
-          authentication.
-        </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {error && (

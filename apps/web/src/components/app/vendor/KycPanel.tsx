@@ -51,14 +51,13 @@ export function KycPanel({ me }: { me: VendorMe }) {
           <p className="text-mute">
             {me.missingDocuments.length ? (
               <>
-                Upload your{" "}
+                Missing:{" "}
                 <b className="text-ink">
                   {me.missingDocuments.map((t) => KYC_DOC_LABEL[t]).join(", ")}
-                </b>{" "}
-                so an OOHRENA admin can review your account.
+                </b>
               </>
             ) : (
-              "Your documents are with OOHRENA for review. Listings can be approved once KYC is approved."
+              "In review"
             )}
           </p>
         )}
@@ -73,11 +72,6 @@ export function KycPanel({ me }: { me: VendorMe }) {
           <p className="text-destructive">
             Your account is suspended{me.kycReason ? `: ${me.kycReason}` : ""}. Your listings are
             hidden from clients.
-          </p>
-        )}
-        {me.kycStatus === "approved" && (
-          <p className="text-mute">
-            Approved {fmtDate(me.approvedAt)}. Contact OOHRENA to change verified documents.
           </p>
         )}
 
@@ -157,9 +151,6 @@ export function KycPanel({ me }: { me: VendorMe }) {
               {upload.isPending ? "Uploading…" : "Upload"}
             </Btn>
             {err && <p className="sm:col-span-3 text-[12px] text-destructive">{err}</p>}
-            <p className="sm:col-span-3 text-[12px] text-mute">
-              Documents are encrypted and visible only to you and OOHRENA's KYC and finance teams.
-            </p>
           </form>
         )}
         {me.kycStatus === "rejected" && (
@@ -284,10 +275,6 @@ export function BankPanel({ me }: { me: VendorMe }) {
             error={errors["ifsc"]}
             onChange={(e) => setF({ ...f, ifsc: e.target.value.toUpperCase() })}
           />
-          <p className="sm:col-span-2 text-[12px] text-mute">
-            Stored encrypted. Only the last 4 digits are ever shown. Changing details resets finance
-            verification.
-          </p>
           <div className="sm:col-span-2 flex gap-2">
             <Btn type="submit" disabled={save.isPending}>
               {save.isPending ? "Saving…" : "Save bank details"}

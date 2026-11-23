@@ -12,7 +12,6 @@ export function ClientPayments() {
       ) : !d.data?.invoices.length && !d.data?.payments.length ? (
         <Empty
           title="No invoices yet"
-          hint="OOHRENA raises a tax invoice once your booking is confirmed."
         />
       ) : (
         <>
@@ -70,7 +69,6 @@ export function VendorPayables() {
       ) : !d.data?.payables.length ? (
         <Empty
           title="No payables yet"
-          hint="Each booking of your media creates a payable. It becomes due once your proof of display is verified."
         />
       ) : (
         <>

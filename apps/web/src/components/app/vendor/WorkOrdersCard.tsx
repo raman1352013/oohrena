@@ -55,7 +55,6 @@ export function WorkOrdersCard() {
       ) : !wos.data?.length ? (
         <Empty
           title="No work orders yet"
-          hint="When a client's booking includes your media, OOHRENA issues a work order here with the campaign instructions."
         />
       ) : (
         wos.data.map((w) => <WorkOrderBlock key={w.workOrderId} w={w} />)
@@ -134,8 +133,7 @@ function WorkOrderBlock({ w }: { w: WorkOrderView }) {
       <p className="rounded-lg bg-muted px-3 py-2 whitespace-pre-line">{w.instructions}</p>
       {status === "issue_raised" && (
         <p className="text-destructive text-[12px]">
-          An issue is open on this work order. OOHRENA will resolve it and the work order returns to{" "}
-          {ex.data?.previousStatus ? WO_STATUS_LABEL[ex.data.previousStatus] : "its previous step"}.
+          Issue open
         </p>
       )}
 

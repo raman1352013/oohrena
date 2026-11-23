@@ -97,11 +97,10 @@ function DecisionDialog({
           {price !== undefined && (
             <Field
               id="price"
-              label="Indicative price shown to clients (₹)"
+              label="Client price (₹)"
               inputMode="decimal"
               value={p}
               onChange={(e) => setP(e.target.value)}
-              hint="Suggested from the vendor rate plus default margin. The vendor rate stays private."
             />
           )}
           <div className="space-y-1.5">
@@ -116,9 +115,6 @@ function DecisionDialog({
             />
           </div>
           {err && <p className="text-destructive text-[12px]">{err}</p>}
-          <p className="text-[12px] text-mute">
-            This decision is recorded permanently in the audit log with your name.
-          </p>
         </div>
         <DialogFooter>
           <Btn variant="secondary" onClick={onClose}>
@@ -184,7 +180,6 @@ export function VendorKycQueue() {
           title={
             filter === "pending" ? "No vendors waiting for KYC review" : "No vendors in this view"
           }
-          hint="New vendor registrations appear here automatically."
         />
       ) : (
         <div className="divide-y divide-line">
@@ -409,7 +404,6 @@ export function ListingReviewQueue() {
           title={
             filter === "pending" ? "No listings waiting for review" : "No listings in this view"
           }
-          hint="Vendor submissions appear here before they can go live."
         />
       ) : (
         <div className="divide-y divide-line">

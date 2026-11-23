@@ -32,7 +32,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <GateMessage
         title="This workspace isn't available to your account"
-        body={`You're signed in as ${ROLE_LABEL[user.role]}. Ask an OOHRENA admin if you need different access.`}
+        body={`Signed in as ${ROLE_LABEL[user.role]}`}
       >
         <Link to={ROLE_HOME[user.role]}>
           <Btn>Go to my workspace</Btn>

@@ -94,8 +94,7 @@ function LoginPage() {
   if (challenge) {
     return (
       <AuthShell
-        title="Two-Factor Authentication"
-        sub={`Enter the code from your authenticator app for ${challenge.email}.`}
+        title="Enter your 2FA code"
         footer={
           <button
             type="button"
@@ -132,7 +131,6 @@ function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      sub="Clients, vendors, partners and OOHRENA staff all sign in here."
       footer={
         <>
           New to OOHRENA?{" "}

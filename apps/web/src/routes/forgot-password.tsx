@@ -38,19 +38,13 @@ function ForgotPasswordPage() {
 
   if (send.isSuccess) {
     return (
-      <AuthShell title="Check your email" sub={send.data.message} footer={footer}>
-        <p className="text-[13px] text-mute">
-          The link is valid for 1 hour. If nothing arrives in a few minutes, check your spam
-          folder or request a new link.
-        </p>
-      </AuthShell>
+      <AuthShell title="Check your email" sub={send.data.message} footer={footer} />
     );
   }
 
   return (
     <AuthShell
       title="Forgot password"
-      sub="Enter the email you sign in with. We'll send you a link to choose a new password."
       footer={footer}
     >
       <FormError message={send.error?.message} />

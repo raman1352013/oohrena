@@ -86,7 +86,7 @@ function RegisterPage() {
       setErrors({});
       regClient.mutate(p.data, {
         onSuccess: (r) => {
-          toast.success("Account created. Welcome to OOHRENA.");
+          toast.success("Account created");
           void nav({ to: ROLE_HOME[r.user.role], replace: true });
         },
         onError: onApiError,
@@ -115,11 +115,6 @@ function RegisterPage() {
     <AuthShell
       wide
       title="Create your account"
-      sub={
-        kind === "client"
-          ? "Discover media, request quotations and track every campaign with verified proof."
-          : "List verified inventory, receive work orders and get paid against verified proof."
-      }
       footer={
         <>
           Already registered?{" "}
@@ -239,7 +234,6 @@ function RegisterPage() {
           autoComplete="new-password"
           value={f.password}
           error={errors["password"]}
-          hint="10+ characters with upper and lower case, a number and a symbol"
           onChange={set("password")}
         />
 
@@ -268,12 +262,6 @@ function RegisterPage() {
               ? "Create advertiser account"
               : "Register as vendor"}
         </Btn>
-        {kind === "vendor" && (
-          <p className="sm:col-span-2 text-[12px] text-mute -mt-1">
-            Your KYC stays pending until an OOHRENA admin reviews it. Listings go live only after
-            admin approval.
-          </p>
-        )}
       </form>
     </AuthShell>
   );

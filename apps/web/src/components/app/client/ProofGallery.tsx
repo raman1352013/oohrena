@@ -56,13 +56,8 @@ export function ProofGallery({
             ) : (
               <Empty
                 title="No verified proof yet"
-                hint="Proof appears here after the media owner uploads it and OOHRENA verifies it. Location is shown exactly as captured."
               />
             )}
-            <p className="text-[12px] text-mute">
-              Each photo shows the server upload time and whether the device shared its location.
-              OOHRENA checks every proof before it appears here.
-            </p>
             {g.data.campaignId && (
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-line">
                 <div className="flex items-center gap-2">

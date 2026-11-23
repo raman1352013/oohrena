@@ -25,7 +25,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Btn } from "@/components/app/kit";
+import { Btn, Empty } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { ListingPill } from "@/components/app/status";
 import { selectCls } from "@/lib/format";
@@ -241,7 +241,7 @@ export function ListingEditor({
     submit.mutate(current.inventoryId, {
       onSuccess: (l) => {
         setCurrent(l as Listing);
-        toast.success("Submitted. OOHRENA will verify it before it goes live.");
+        toast.success("Submitted for review");
         onClose();
       },
       onError: (e) => {
@@ -280,13 +280,12 @@ export function ListingEditor({
         )}
         {status === "pending" && (
           <p className="text-[13px] text-mute">
-            This listing is under admin review and can't be changed until a decision is made.
+            In review. Editing is locked.
           </p>
         )}
         {status === "approved" && (
           <p className="text-[12px] text-mute">
-            Live listing. Changing location, address, rate, pricing unit or size sends it back to
-            admin review.
+            Changing location, address, rate, unit or size sends it back to review.
           </p>
         )}
         <FormError message={formError} />
@@ -314,7 +313,6 @@ export function ListingEditor({
             <Field
               id="title"
               label="Listing title"
-              placeholder="e.g. Phoolbagh Chowk Unipole"
               value={f.title}
               error={errors["title"]}
               onChange={set("title")}
@@ -383,9 +381,8 @@ export function ListingEditor({
 
             <Field
               id="rate"
-              label="Your rate (₹)"
+              label="Your rate (₹, private)"
               inputMode="decimal"
-              hint="Private — shown only to OOHRENA"
               value={f.rate}
               error={errors["rate"]}
               onChange={set("rate")}
@@ -531,10 +528,7 @@ export function ListingEditor({
                 ))}
               </div>
             ) : (
-              <p className="text-[13px] text-mute">
-                Add at least one clear daytime photo of the site. Listings without photos can't be
-                submitted.
-              </p>
+              <Empty title="No photos" />
             )}
 
             {(status === "draft" || status === "rejected") && (
@@ -542,11 +536,6 @@ export function ListingEditor({
                 <Btn onClick={sendForReview} disabled={submit.isPending || status === "rejected"}>
                   {submit.isPending ? "Submitting…" : "Submit for admin review"}
                 </Btn>
-                <span className="text-[12px] text-mute">
-                  {status === "rejected"
-                    ? "Save your corrections first — the listing returns to Draft."
-                    : "After submitting you can't edit until OOHRENA decides."}
-                </span>
               </div>
             )}
           </section>

@@ -20,7 +20,6 @@ export function RequestsCard() {
       ) : !pending.length && !recent.length ? (
         <Empty
           title="No hold requests"
-          hint="When OOHRENA holds dates on one of your on-request listings, confirm or decline here within 48 hours."
         />
       ) : (
         <>

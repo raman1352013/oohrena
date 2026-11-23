@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Btn, Empty, Eyebrow, KCard, Pill, Row } from "@/components/app/kit";
+import { Btn, Empty, KCard, Pill, Row } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { cn } from "@/lib/utils";
 
@@ -64,14 +64,7 @@ function FinancePage() {
   ] as const;
   return (
     <main className="max-w-[1280px] mx-auto p-4 md:p-6 space-y-5">
-      <div>
-        <Eyebrow>Finance / Audit</Eyebrow>
-        <h1 className="text-[22px] font-semibold">Payments & reconciliation</h1>
-        <p className="text-[13px] text-mute mt-1">
-          Every payment needs evidence and a second person to verify it. Nothing is marked received
-          automatically, and nothing is ever deleted.
-        </p>
-      </div>
+      <h1 className="text-[22px] font-semibold">Payments</h1>
       <div className="bg-card border border-line rounded-xl grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-line overflow-hidden">
         {kpis.map(([k, v]) => (
           <div key={k} className="p-4 border-b lg:border-b-0 border-line">
@@ -141,7 +134,6 @@ function PaymentList({ status }: { status?: PaymentStatus }) {
       ) : !list.data?.length ? (
         <Empty
           title={status ? "Nothing to verify" : "No payments yet"}
-          hint="Recorded payments wait here until a different Finance user checks the evidence."
         />
       ) : (
         list.data.map((p) => {
@@ -192,7 +184,7 @@ function PaymentList({ status }: { status?: PaymentStatus }) {
               {p.status === "unverified" &&
                 (own ? (
                   <span className="text-[11px] text-mute w-40">
-                    You recorded this — another Finance user must verify it.
+                    Needs another Finance user
                   </span>
                 ) : (
                   <>
@@ -524,10 +516,6 @@ function RecordDialog({ rec, onClose }: { rec: Rec | undefined; onClose: () => v
               className="block w-full text-[13px]"
             />
           </div>
-          <p className="sm:col-span-2 text-[12px] text-mute">
-            Saved as Unverified. It counts only after a different Finance user verifies the
-            evidence.
-          </p>
         </div>
         <DialogFooter>
           <Btn variant="secondary" onClick={onClose}>
@@ -625,7 +613,6 @@ function ReconciliationDialog({
                 </Btn>
               </a>
             </div>
-            <p className="text-[11px] text-mute">Exports are logged.</p>
           </div>
         )}
       </DialogContent>
@@ -651,7 +638,6 @@ function Payables() {
       {!list.data?.length ? (
         <Empty
           title="No payables"
-          hint="Payables appear when bookings are created; they become due once proof of display is verified."
         />
       ) : (
         list.data.map((p) => (

@@ -69,7 +69,6 @@ export function SystemOverview() {
         ) : (
           <Empty
             title="No deployment events logged"
-            hint="CI will record releases on staging and production deploys."
           />
         )}
       </KCard>
@@ -108,7 +107,6 @@ export function SystemOverview() {
         ) : (
           <Empty
             title="No backup events logged"
-            hint="Daily snapshot and restore verification jobs log here."
           />
         )}
       </KCard>

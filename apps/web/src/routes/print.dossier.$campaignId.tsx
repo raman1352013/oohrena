@@ -31,7 +31,7 @@ function Dossier() {
   }
   if (rep.isError || !rep.data) {
     return (
-      <Empty title="Campaign not found" hint="Please check the campaign ID or verify your login." />
+      <Empty title="Campaign not found" />
     );
   }
 
@@ -136,7 +136,6 @@ function Dossier() {
         ) : (
           <Empty
             title="No verified proof uploaded"
-            hint="Verified proofs will be displayed here once approved by central operations."
           />
         )}
       </div>

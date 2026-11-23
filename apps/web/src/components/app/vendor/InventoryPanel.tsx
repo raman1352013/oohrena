@@ -52,8 +52,7 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
       >
         {!canList && (
           <p className="px-5 pt-4 text-[12px] text-hold">
-            You can prepare and submit listings now. OOHRENA approves them once your KYC is
-            approved.
+            Listings go live after KYC approval.
           </p>
         )}
         {inv.isPending ? (
@@ -68,7 +67,6 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
         ) : !items.length ? (
           <Empty
             title="No listings yet"
-            hint="Add your first hoarding, screen or vehicle fleet, or import many at once with a CSV."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -353,10 +351,6 @@ export function CsvImportCard() {
       }
     >
       <div className="space-y-3">
-        <p className="text-mute">
-          Up to 500 rows. Every row is checked; if any row has a problem nothing is imported and
-          each problem is listed. Imported listings start as drafts — add photos, then submit.
-        </p>
         <div className="flex flex-wrap items-center gap-3">
           <label className="h-9 px-3 rounded-lg border border-line bg-card text-[12px] font-semibold flex items-center gap-2 cursor-pointer">
             <Upload size={14} />

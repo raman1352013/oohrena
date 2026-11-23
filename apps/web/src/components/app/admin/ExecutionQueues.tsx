@@ -52,7 +52,6 @@ export function ProofQueue() {
         ) : !q.data?.length ? (
           <Empty
             title="Nothing to verify"
-            hint="Vendor uploads appear here. Clients only ever see proof you verify."
           />
         ) : (
           q.data.map((p) => (
@@ -115,7 +114,6 @@ export function ProofQueue() {
         {!overdue.data?.length ? (
           <Empty
             title="No overdue proof"
-            hint="Slots whose due date passed without accepted proof show up here."
           />
         ) : (
           overdue.data.map((s) => (
@@ -170,7 +168,6 @@ export function IssueTracker() {
       ) : !list.data?.length ? (
         <Empty
           title="No issues here"
-          hint="Issues raised by vendors, clients or admins on a campaign land here."
         />
       ) : (
         list.data.map((i) => <IssueRow key={i.issueId} i={i} />)

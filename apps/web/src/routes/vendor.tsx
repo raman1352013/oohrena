@@ -6,7 +6,7 @@ import { BankPanel, KycPanel } from "@/components/app/vendor/KycPanel";
 import { CsvImportCard, InventoryPanel } from "@/components/app/vendor/InventoryPanel";
 import { RequestsCard } from "@/components/app/vendor/RequestsCard";
 import { WorkOrdersCard } from "@/components/app/vendor/WorkOrdersCard";
-import { Avatar, Btn, Eyebrow } from "@/components/app/kit";
+import { Btn } from "@/components/app/kit";
 import { VendorPayables } from "@/components/app/FinanceCards";
 
 export const Route = createFileRoute("/vendor")({
@@ -51,24 +51,7 @@ function VendorHub() {
   return (
     <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <Avatar dark>
-          {v.legalName
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((w) => w[0])
-            .join("")
-            .toUpperCase()}
-        </Avatar>
-        <div>
-          <Eyebrow>
-            Vendor Space Hub · <span className="font-mono">{v.vendorId}</span>
-          </Eyebrow>
-          <h1 className="text-[22px] font-semibold">{v.legalName}</h1>
-          <div className="text-[12px] text-mute">
-            {user?.fullName} · {v.city} · PAN {v.pan}
-            {v.gstin ? ` · GSTIN ${v.gstin}` : ""}
-          </div>
-        </div>
+        <h1 className="text-[22px] font-semibold">{v.legalName}</h1>
         <div className="ml-auto">
           <KycPill status={v.kycStatus} />
         </div>

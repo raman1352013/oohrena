@@ -22,7 +22,7 @@ import {
   type QuoteItemInput,
   type QuoteView,
 } from "@/lib/deals-api";
-import { Btn, Empty, Eyebrow, KCard, Pill, Row } from "@/components/app/kit";
+import { Btn, Empty, KCard, Pill, Row } from "@/components/app/kit";
 import { QuoteBreakdown, QuotePill } from "@/components/app/QuoteBreakdown";
 import { Field } from "@/components/app/AuthShell";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,12 +87,10 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
       </Link>
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex-1 min-w-72">
-          <Eyebrow>
-            {l.source.replace("_", " ")} inquiry · received {fmtDate(l.createdAt)}
-          </Eyebrow>
           <h1 className="text-[22px] font-semibold font-mono">{l.leadId}</h1>
           <p className="text-[13px] mt-1">{l.requirement}</p>
         </div>
+        <Pill className="text-[13px]">{l.source.replace("_", " ")}</Pill>
         <Pill tone={LEAD_TONE[l.status] ?? "neutral"} className="text-[13px]">
           {l.status.replace("_", " ")}
         </Pill>
@@ -185,7 +183,6 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
         ) : (
           <Empty
             title="No specific media chosen"
-            hint="This inquiry describes a requirement only. Find suitable listings and add them to the quote."
           />
         )}
       </KCard>
@@ -258,7 +255,7 @@ function AssignCard({ l }: { l: LeadDetail }) {
           })
         ) : (
           <p className="text-mute">
-            No vendor assigned yet. Only KYC-approved vendors can be assigned.
+            No vendor assigned
           </p>
         )}
         {open &&
@@ -372,10 +369,6 @@ function QuoteSection({ l, latest }: { l: LeadDetail; latest: QuoteView | undefi
       {!latest ? (
         canStart ? (
           <div className="text-[13px] space-y-3">
-            <p className="text-mute">
-              No quote yet. The builder starts from the requested media, dates and listing prices.
-              Assign each item's vendor first.
-            </p>
             <Btn onClick={() => setEditing(true)}>Build quotation</Btn>
           </div>
         ) : (
@@ -677,9 +670,6 @@ function QuoteEditor({
           <Btn onClick={save} disabled={act.createQuote.isPending || act.updateQuote.isPending}>
             Save draft
           </Btn>
-          <span className="text-[12px] text-mute self-center">
-            Preview only — the server recomputes every amount when you save.
-          </span>
         </div>
       </div>
     </KCard>

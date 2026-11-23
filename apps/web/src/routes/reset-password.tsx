@@ -45,11 +45,7 @@ function ResetPasswordPage() {
 
   if (reset.isSuccess) {
     return (
-      <AuthShell title="Password updated" sub={reset.data.message} footer={signIn}>
-        <p className="text-[13px] text-mute">
-          For your security, every device that was signed in to this account has been signed out.
-        </p>
-      </AuthShell>
+      <AuthShell title="Password updated" sub={reset.data.message} footer={signIn} />
     );
   }
 
@@ -69,7 +65,6 @@ function ResetPasswordPage() {
   return (
     <AuthShell
       title="Set a new password"
-      sub="Use at least 10 characters with upper and lower case letters, a number and a symbol."
       footer={signIn}
     >
       <FormError

@@ -43,7 +43,6 @@ export function MyQuotations() {
       ) : !latest.length ? (
         <Empty
           title="No quotations yet"
-          hint="OOHRENA sends an itemised quote after reviewing your inquiry and confirming availability with the media owner."
         />
       ) : (
         latest.map((q) => (
@@ -95,7 +94,7 @@ function QuoteDialog({
         onSuccess: () => {
           toast.success(
             decision === "approve"
-              ? "Quote approved — OOHRENA will confirm your booking"
+              ? "Quote approved"
               : decision === "reject"
                 ? "Quote rejected"
                 : "Revision requested",
@@ -194,7 +193,7 @@ function QuoteDialog({
               ))}
             {q.data.status === "expired" && (
               <p className="text-[13px] text-destructive">
-                This quote expired on {q.data.validUntil}. Ask OOHRENA for a fresh quote.
+                Expired on {q.data.validUntil}
               </p>
             )}
           </div>
@@ -218,7 +217,6 @@ export function MyBookings() {
       ) : !b.data?.length ? (
         <Empty
           title="No bookings yet"
-          hint="Approve a quotation and OOHRENA confirms your booking with a Booking ID."
         />
       ) : (
         b.data.map((x) => (
@@ -269,7 +267,7 @@ export function MyBookings() {
               <p className="rounded-lg bg-hold-soft border border-hold/30 p-3">
                 {fee.rule}.<br />
                 Cancellation fee <b>{inr(fee.fee)}</b> of {inr(target.total)}; refundable{" "}
-                <b>{inr(fee.refundable)}</b>. Refunds are processed by OOHRENA finance.
+                <b>{inr(fee.refundable)}</b>
               </p>
               <label htmlFor="cr" className="font-medium">
                 Reason

@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/auth";
 import { fmtDate, inr } from "@/lib/format";
 import { useMyLeads } from "@/lib/marketplace-api";
-import { Btn, Empty, Eyebrow, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
 
 const LABEL: Record<LeadStatus, string> = {
   new: "Received",
@@ -34,21 +34,7 @@ export function ClientHeading() {
   });
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <div>
-        <Eyebrow>
-          Client Portal
-          {me.data && (
-            <>
-              {" "}
-              · <span className="font-mono">{me.data.clientId}</span>
-            </>
-          )}
-        </Eyebrow>
-        <h1 className="text-[24px] font-semibold mt-1">
-          {me.data?.companyName ?? "…"}
-          {user ? <span className="text-mute font-normal"> — {user.fullName}</span> : null}
-        </h1>
-      </div>
+      <h1 className="text-[24px] font-semibold">{me.data?.companyName ?? "…"}</h1>
       <Link to="/marketplace" className="ml-auto">
         <Btn variant="secondary">Browse media</Btn>
       </Link>
@@ -76,7 +62,6 @@ export function MyInquiries() {
       ) : !leads.data.length ? (
         <Empty
           title="No inquiries yet"
-          hint="Find media on the marketplace and choose “Request quotation”. Each request gets a Lead ID you can track here."
         />
       ) : (
         leads.data.map((l) => (

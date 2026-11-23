@@ -13,7 +13,7 @@ import {
   useVendorPerformance,
 } from "@/lib/reports-api";
 import { assetUrl } from "@/lib/api";
-import { Btn, Empty, Eyebrow, KCard, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Pill } from "@/components/app/kit";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/reports")({
@@ -60,7 +60,6 @@ function ReportsScreen() {
         <KCard title="Reports">
           <Empty
             title="Your referral report lives in the partner portal"
-            hint="Referred inquiries, converted campaigns and commission are tracked on My workspace."
           />
         </KCard>
       </main>
@@ -78,16 +77,9 @@ function ClientReportsView() {
 
   return (
     <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
-      <div>
-        <Eyebrow>Client Reporting</Eyebrow>
-        <h1 className="text-2xl font-semibold">Campaign Audit Reports</h1>
-        <p className="text-mute text-[13px] mt-1">
-          Download certified campaign dossiers, verified proof logs and spend summaries for your
-          bookings.
-        </p>
-      </div>
+      <h1 className="text-2xl font-semibold">Reports</h1>
 
-      <KCard title="My Campaigns" bodyClass="divide-y divide-line">
+      <KCard title="Campaigns" bodyClass="divide-y divide-line">
         {bookings.isPending ? (
           <div className="p-8 text-center text-mute text-[13px]">
             Loading your campaign records…
@@ -99,7 +91,6 @@ function ClientReportsView() {
         ) : !bookings.data?.length ? (
           <Empty
             title="No bookings found"
-            hint="Approved quotations convert to bookings with traceable campaign records."
           />
         ) : (
           bookings.data.map((b) => (
@@ -178,13 +169,7 @@ function VendorReportsView() {
   return (
     <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Eyebrow>Vendor Analytics</Eyebrow>
-          <h1 className="text-2xl font-semibold">Media Partner Performance</h1>
-          <p className="text-mute text-[13px] mt-1">
-            Operational scorecard based on real work order and proof timestamps.
-          </p>
-        </div>
+        <h1 className="text-2xl font-semibold">Performance</h1>
         <div className="flex gap-2">
           <a href={reportDownloadUrl("vendor-performance", "pdf")} target="_blank" rel="noreferrer">
             <Btn variant="secondary" className="h-9 gap-1.5">
@@ -206,7 +191,6 @@ function VendorReportsView() {
       ) : !row ? (
         <Empty
           title="No performance data recorded"
-          hint="Complete work orders and upload installation proofs to generate your scorecard."
         />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -250,12 +234,7 @@ function AdminReportsView() {
   return (
     <main className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
       <div>
-        <Eyebrow>Operations & Finance</Eyebrow>
-        <h1 className="text-2xl font-semibold">Reports & Analytics</h1>
-        <p className="text-mute text-[13px] mt-1">
-          Cross-system reporting: conversion funnel, revenue & margins, operational exceptions,
-          vendor scores, and audit trail.
-        </p>
+        <h1 className="text-2xl font-semibold">Reports</h1>
       </div>
 
       {/* Tabs bar */}
@@ -740,7 +719,7 @@ function AuditSearchTab() {
         {logs.isPending ? (
           <div className="p-8 text-center text-mute text-[13px]">Searching audit logs…</div>
         ) : !logs.data?.items.length ? (
-          <Empty title="No matching audit records" hint="Try adjusting your filter criteria." />
+          <Empty title="No matching audit records" />
         ) : (
           <div className="divide-y divide-line text-[13px]">
             {logs.data.items.map((i) => (

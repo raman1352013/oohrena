@@ -37,7 +37,7 @@ import {
   type SearchItem,
 } from "@/lib/marketplace-api";
 import { cn } from "@/lib/utils";
-import { Btn, Empty, Pill, PinLogo, Row } from "@/components/app/kit";
+import { Btn, Empty, Pill, Row } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { AvailabilityCalendar } from "@/components/app/AvailabilityCalendar";
 
@@ -46,7 +46,7 @@ const MapView = lazy(() => import("@/components/app/MapView"));
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
     meta: [
-      { title: "OOHRENA Media Marketplace — Verified outdoor & digital media" },
+      { title: "Media — OOHRENA" },
       {
         name: "description",
         content:
@@ -118,7 +118,6 @@ function Marketplace() {
     [shortlist.data],
   );
   const items = (search.data?.items ?? []).filter((x) => !savedOnly || savedIds.has(x.inventoryId));
-  const cities = new Set((search.data?.items ?? []).map((x) => x.city));
 
   function save(id: string) {
     if (!isClient) return toast.message("Sign in with a client account to keep a shortlist");
@@ -136,36 +135,8 @@ function Marketplace() {
 
   return (
     <div>
-      <section className="bg-card border-b border-line">
-        <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-10 flex flex-wrap items-center gap-8">
-          <div className="flex-1 min-w-72">
-            <div className="flex items-center gap-2 text-[12px] font-semibold tracking-[0.2em] text-mute uppercase">
-              <PinLogo size={20} />
-              Outdoor x Digital x Trackable
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mt-3 leading-tight">
-              OOHRENA Media Marketplace
-            </h1>
-            <p className="text-saffron-deep font-semibold mt-3">
-              Ab Advertising Sirf Dikhegi Nahi... Track Bhi Hogi!
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-3 sm:gap-6 text-center w-full sm:w-auto min-w-0">
-            {[
-              ["Verified results", search.data?.total ?? "—"],
-              ["Cities", cities.size],
-              ["Every listing", "Admin-checked"],
-            ].map(([k, v]) => (
-              <div key={k as string} className="min-w-0">
-                <div className="text-xl sm:text-2xl font-bold">{v}</div>
-                <div className="text-[12px] text-mute">{k}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6">
+        <h1 className="text-2xl font-semibold mb-4">Media</h1>
         <div className="grid md:grid-cols-[1fr_160px_150px_150px_150px] gap-3 mb-3">
           <label className="relative">
             <Search size={15} className="absolute left-3 top-3 text-mute" />
@@ -272,7 +243,7 @@ function Marketplace() {
             {search.isFetching
               ? "Searching…"
               : `${items.length} result${items.length === 1 ? "" : "s"}`}
-            {datesOk ? ` · ${fmtDay(from)} – ${fmtDay(to)}` : " · pick dates to check availability"}
+            {datesOk ? ` · ${fmtDay(from)} – ${fmtDay(to)}` : ""}
           </span>
           <div className="flex rounded-lg border border-line bg-card p-0.5">
             <button
@@ -329,12 +300,7 @@ function Marketplace() {
           ) : !items.length ? (
             <Empty
               title={
-                savedOnly ? "Your shortlist is empty" : "No verified media matches these filters"
-              }
-              hint={
-                savedOnly
-                  ? "Tap the heart on any listing to save it."
-                  : "Try a nearby locality, a wider radius, other dates or another category."
+                savedOnly ? "Shortlist is empty" : "No media found"
               }
             />
           ) : view === "map" ? (
@@ -366,7 +332,7 @@ function Marketplace() {
           )}
           {search.data?.truncated && (
             <p className="text-[12px] text-mute mt-4">
-              Showing the first 500 matches. Narrow your search to see more.
+              Showing the first 500.
             </p>
           )}
         </div>
@@ -397,7 +363,7 @@ const fmtDay = (d: string) =>
   });
 
 function AvailabilityPill({ a }: { a: SearchItem["availability"] }) {
-  if (!a) return <Pill>Pick dates to check availability</Pill>;
+  if (!a) return null;
   if (a.state === "unavailable") return <Pill tone="neutral">Not available for these dates</Pill>;
   if (a.state === "limited") return <Pill tone="hold">Partly available</Pill>;
   return (
@@ -484,9 +450,6 @@ function ListingCard({
             <Heart size={16} />
           </Btn>
         </div>
-        <p className="text-[11px] text-mute mt-2">
-          Updated {fmtDate(x.availability?.lastUpdatedAt ?? x.updatedAt)} · {x.inventoryId}
-        </p>
       </div>
     </article>
   );
@@ -575,10 +538,6 @@ function ListingDialog({
               <Row k="Indicative price" v={priceText(item)} />
               <Row k="Location" v={`${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`} />
               <Row k="Last updated" v={fmtDate(item.updatedAt)} />
-              <p className="text-[11px] text-mute mt-1">
-                Indicative only. OOHRENA issues the final itemised quote with production,
-                installation and GST shown separately.
-              </p>
             </div>
           </div>
 
@@ -601,10 +560,9 @@ function ListingDialog({
             ) : (
               <>
                 {cal.data.note && (
-                  <p className="text-[12px] text-hold mb-2">
-                    {cal.data.note}: the media owner confirms dates after OOHRENA reviews your
-                    request. Nothing shown here is guaranteed until then.
-                  </p>
+                  <Pill tone="hold" className="mb-2">
+                    {cal.data.note}
+                  </Pill>
                 )}
                 <AvailabilityCalendar
                   days={cal.data.days}
@@ -678,23 +636,20 @@ function InquiryForm({
   }
   if (user.role !== "client")
     return (
-      <p className="text-[13px] text-mute">Quotation requests are made from client accounts.</p>
+      <p className="text-[13px] text-mute">Sign in with a client account to request a quote.</p>
     );
   if (done) {
     return (
       <div className="rounded-lg border border-verified/30 bg-verified-soft p-4 text-center">
         <CheckCircle2 className="mx-auto text-verified" size={32} />
         <div className="font-semibold mt-2">Inquiry received</div>
-        <p className="text-[13px] mt-1">
-          Your Lead ID is <b className="font-mono">{done}</b>. OOHRENA reviews every inquiry,
-          confirms availability with the media owner, and sends an itemised quote.
-        </p>
+        <p className="font-mono text-[15px] mt-1">{done}</p>
         <div className="flex justify-center gap-2 mt-3">
           <Btn variant="secondary" className="h-9" onClick={onDone}>
             Keep browsing
           </Btn>
           <Link to="/client">
-            <Btn className="h-9">Track in Client Portal</Btn>
+            <Btn className="h-9">Track it</Btn>
           </Link>
         </div>
       </div>
@@ -792,10 +747,6 @@ function InquiryForm({
       <Btn type="submit" className="sm:col-span-2" disabled={create.isPending}>
         {create.isPending ? "Submitting…" : "Submit inquiry"}
       </Btn>
-      <p className="sm:col-span-2 text-[11px] text-mute">
-        Your request goes to OOHRENA's central team first. Media owners never receive your contact
-        details directly.
-      </p>
     </form>
   );
 }
@@ -863,10 +814,6 @@ function CompareDialog({
             </table>
           </div>
         )}
-        <p className="text-[12px] text-mute">
-          Comparing up to 4 items. Availability depends on your dates; open each listing to check
-          its calendar.
-        </p>
       </DialogContent>
     </Dialog>
   );

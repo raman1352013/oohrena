@@ -23,7 +23,7 @@ import { audit } from "../lib/audit.js";
 import { AppError, badRequest, forbidden, unauthenticated } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { withTransaction } from "../lib/tx.js";
-import { hashToken, newToken, requireAuth } from "../middleware/auth.js";
+import { hashToken, newToken, privilegedIpAllowed, requireAuth } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { Client, Consent, Session, TwoFactorChallenge, User } from "../models/foundation.js";
 import { notify, smsDeliveryAvailable } from "../services/notifications.js";
@@ -98,6 +98,10 @@ export function authRoutes(cfg: Config, authLimiter: import("express").RequestHa
     if (user.status === "suspended") {
       await audit(req, { action: "auth.login_blocked", entity: "user", entityId: user._id, after: { status: "suspended" }, userId: user._id, role: user.role });
       throw new AppError(403, "FORBIDDEN", "This account is suspended. Contact support.");
+    }
+    if (!privilegedIpAllowed(cfg, user.role, req.ip)) {
+      await audit(req, { action: "auth.ip_blocked", entity: "user", entityId: user._id, after: { ip: req.ip ?? null }, userId: user._id, role: user.role });
+      throw new AppError(403, "FORBIDDEN", "Sign-in from this network is not allowed for your role");
     }
 
     // 2FA requirement check

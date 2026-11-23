@@ -1,9 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
-import { scopeFor, type Permission, type Role, type Scope, type SessionUser } from "@oohrena/shared";
+import { PRIVILEGED_ROLES, scopeFor, type Permission, type Role, type Scope, type SessionUser } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { Session, User } from "../models/foundation.js";
 import { AppError, forbidden, unauthenticated } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -52,6 +53,24 @@ export function loadSession() {
       await Session.updateOne({ _id: s._id }, { $set: { lastSeenAt: new Date() } });
     }
     next();
+  };
+}
+
+/** Module 3 IP controls: is this address allowed for Admin/Finance? Always true when ADMIN_ALLOWED_IPS is empty. */
+export function privilegedIpAllowed(cfg: Config, role: string, ip: string | undefined) {
+  if (!PRIVILEGED_ROLES.includes(role as Role)) return true;
+  const allowed = cfg.ADMIN_ALLOWED_IPS.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!allowed.length) return true;
+  const addr = (ip ?? "").replace(/^::ffff:/, "");
+  return allowed.includes(addr);
+}
+
+/** Refuses every Admin/Finance request from an address outside ADMIN_ALLOWED_IPS (and logs it). */
+export function restrictPrivilegedIps(cfg: Config) {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user || privilegedIpAllowed(cfg, req.user.role, req.ip)) return next();
+    await audit(req, { action: "auth.ip_blocked", entity: "user", entityId: req.user.userId, after: { ip: req.ip ?? null } });
+    next(new AppError(403, "FORBIDDEN", "Access from this network is not allowed for your role"));
   };
 }
 

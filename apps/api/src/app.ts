@@ -6,7 +6,7 @@ import { rateLimit } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
 import Redis from "ioredis";
 import type { Config } from "./config.js";
-import { csrfGuard, loadSession } from "./middleware/auth.js";
+import { csrfGuard, loadSession, restrictPrivilegedIps } from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/errors.js";
 import { authRoutes } from "./routes/auth.js";
 import { clientRoutes } from "./routes/clients.js";
@@ -80,6 +80,7 @@ export function createApp(cfg: Config) {
 
   const v1 = express.Router();
   v1.use(loadSession());
+  v1.use(restrictPrivilegedIps(cfg));
   v1.use(csrfGuard(cfg));
   v1.use("/system", healthRoutes());
   v1.use("/auth", authRoutes(cfg, authLimiter));

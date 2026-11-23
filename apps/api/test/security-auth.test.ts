@@ -356,4 +356,21 @@ describe("Module 10 — Security, Roles, 2FA & Privacy (Section B)", () => {
     expect(overview.body.data.deployments.length).toBeGreaterThanOrEqual(1);
     expect(overview.body.data.backups.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("Module 3 IP controls: Admin/Finance outside ADMIN_ALLOWED_IPS are refused and logged; others unaffected", async () => {
+    const open = testApp();
+    const admin = await createStaff(open.app, open.cfg, "admin");
+    const client = await registerClient(open.app);
+
+    const locked = testApp({ ADMIN_ALLOWED_IPS: "10.20.30.40" });
+    const blocked = await request(locked.app).get("/api/v1/admin/users").set(bearer(admin.token));
+    expect(blocked.status).toBe(403);
+    expect(await AuditLog.exists({ action: "auth.ip_blocked", entityId: admin.userId })).toBeTruthy();
+    const login = await request(locked.app).post("/api/v1/auth/login").set("x-auth-mode", "token").send({ email: admin.email, password: GOOD_PW });
+    expect(login.status).toBe(403);
+    expect((await request(locked.app).get("/api/v1/auth/me").set(bearer(client.token))).status).toBe(200);
+
+    const allowed = testApp({ ADMIN_ALLOWED_IPS: "10.20.30.40, 127.0.0.1" });
+    expect((await request(allowed.app).get("/api/v1/admin/users").set(bearer(admin.token))).status).toBe(200);
+  });
 });

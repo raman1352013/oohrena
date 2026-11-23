@@ -28,6 +28,8 @@ const Env = z.object({
   HOLD_HOURS: z.coerce.number().positive().max(24 * 30).default(48),
   /** Require 2FA for admin and finance accounts in production/staging. */
   REQUIRE_2FA_PRIVILEGED: envBool.default(false),
+  /** Comma-separated IPs allowed to sign in and work as Admin or Finance. Empty = no IP restriction. */
+  ADMIN_ALLOWED_IPS: z.string().default(""),
   /** Public web origin used in emailed links (reset password, invites, email verification). Defaults to the first CORS origin. */
   PUBLIC_WEB_URL: z.string().url().optional(),
   /** SMTP connection URL for transactional email, e.g. smtps://USER:PASS@smtp.example.com:465 (keep in the secret store). */

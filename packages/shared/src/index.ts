@@ -10,3 +10,4 @@ export * from "./execution";
 export * from "./finance";
 export * from "./reports";
 export * from "./notifications";
+export * from "./settings";

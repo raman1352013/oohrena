@@ -3,6 +3,7 @@ import { categoryDef, formatInventoryId, type PublicListing } from "@oohrena/sha
 import { arePhotosSimilar } from "../lib/phash.js";
 import { Counter } from "../models/foundation.js";
 import { DuplicateFlag, Inventory, InventoryHistory, type InventoryDoc } from "../models/inventory.js";
+import { getSetting } from "./settings.js";
 
 export async function nextInventoryId(category: string, session?: ClientSession) {
   const def = categoryDef(category);
@@ -52,15 +53,16 @@ export function submitProblems(i: InventoryDoc): string[] {
  */
 export async function detectDuplicates(item: InventoryDoc) {
   const flags: { other: string; score: number; reasons: string[] }[] = [];
+  const maxDistanceM = (await getSetting("asset.duplicate_radius_m")) ?? 30;
   const near = await Inventory.find({
     _id: { $ne: item._id },
     category: item.category,
     status: { $in: ["pending", "approved", "suspended"] },
-    location: { $nearSphere: { $geometry: { type: "Point", coordinates: item.location!.coordinates }, $maxDistance: 30 } },
+    location: { $nearSphere: { $geometry: { type: "Point", coordinates: item.location!.coordinates }, $maxDistance: Math.max(maxDistanceM, 30) } },
   }).select("_id vendorId").limit(20).lean();
   for (const o of near) {
     const sameVendor = o.vendorId === item.vendorId;
-    flags.push({ other: o._id, score: sameVendor ? 0.8 : 0.6, reasons: ["Same category within 30 m", ...(sameVendor ? ["Same vendor"] : [])] });
+    flags.push({ other: o._id, score: sameVendor ? 0.8 : 0.6, reasons: [`Same category within ${maxDistanceM} m`, "Same category within 30 m", ...(sameVendor ? ["Same vendor"] : [])] });
   }
   const hashes = (item.photos ?? []).map((p) => p.sha256);
   if (hashes.length) {

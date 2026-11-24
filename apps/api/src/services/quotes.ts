@@ -14,6 +14,7 @@ import { Inventory, type InventoryDoc } from "../models/inventory.js";
 import { Lead } from "../models/lead.js";
 import { placeHold, releaseHoldIds } from "./availability.js";
 import { notify } from "./notifications.js";
+import { getSetting } from "./settings.js";
 
 type ItemIn = z.infer<typeof quoteItemInput>;
 export type QuoteDoc = {
@@ -80,7 +81,10 @@ async function priceItems(leadId: string, items: ItemIn[], serviceFeePct: number
   return { items: priced, ...sums };
 }
 
-const defaultValidity = () => fromDay(toDay(todayIST()) + DEFAULT_QUOTE_VALIDITY_DAYS * 86_400_000);
+const defaultValidity = async () => {
+  const days = (await getSetting("quote.valid_days")) ?? DEFAULT_QUOTE_VALIDITY_DAYS;
+  return fromDay(toDay(todayIST()) + days * 86_400_000);
+};
 function checkValidity(v: string) {
   if (toDay(v) < toDay(todayIST())) throw badRequest("Validity date can't be in the past", { fieldErrors: { validUntil: ["Validity date can't be in the past"] } });
 }
@@ -92,7 +96,7 @@ export async function createQuote(req: Request, input: z.infer<typeof quoteCreat
   if (await Quote.exists({ leadId: lead._id, status: { $in: ["draft", "released", "revision_requested", "approved"] } })) {
     throw new AppError(409, "CONFLICT", "This lead already has an open quote — revise it instead");
   }
-  const validUntil = input.validUntil ?? defaultValidity();
+  const validUntil = input.validUntil ?? (await defaultValidity());
   checkValidity(validUntil);
   const priced = await priceItems(lead._id, input.items, input.serviceFeePct);
   const quoteNo = await nextId("QT");
@@ -168,7 +172,7 @@ export async function reviseQuote(req: Request, id: string) {
   if (st === "draft") throw new AppError(409, "CONFLICT", "This version is still a draft — edit it instead");
   const version = q.version + 1;
   const { _id, createdAt: _c, updatedAt: _u, holdIds: _h, releasedAt: _r, decision: _d, decisionComment: _dc, decidedAt: _da, ...rest } = q;
-  const next = await Quote.create({ ...rest, _id: `${q.quoteNo}-V${version}`, version, status: "draft", holdIds: [], createdBy: req.user!.userId, validUntil: new Date(Math.max(q.validUntil.getTime(), toDay(defaultValidity()))) });
+  const next = await Quote.create({ ...rest, _id: `${q.quoteNo}-V${version}`, version, status: "draft", holdIds: [], createdBy: req.user!.userId, validUntil: new Date(Math.max(q.validUntil.getTime(), toDay(await defaultValidity()))) });
   if (st === "released" || st === "revision_requested") await Quote.updateOne({ _id: q._id }, { $set: { status: "superseded" } });
   await audit(req, { action: "quote.revise", entity: "quote", entityId: next._id, before: { quoteId: q._id, status: st }, after: { quoteId: next._id, version } });
   return next.toObject() as unknown as QuoteDoc;

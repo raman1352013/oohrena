@@ -1,6 +1,7 @@
 import { useSystemOverview } from "@/lib/admin-users-api";
 import { fmtDate } from "@/lib/format";
 import { Empty, KCard, Loading, Pill, Row, Stats } from "@/components/app/kit";
+import { SettingsPanel } from "./SettingsPanel";
 
 const str = (d: Record<string, unknown>, k: string) =>
   typeof d[k] === "string" ? d[k] : undefined;
@@ -74,6 +75,8 @@ export function SystemOverview() {
           ))}
         </KCard>
       )}
+
+      <SettingsPanel />
     </div>
   );
 }

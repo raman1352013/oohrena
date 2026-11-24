@@ -21,6 +21,7 @@ export const ID_FORMATS = {
   EXP: { yearly: true, pad: 6 }, // EXP-2026-000001 (report export)
   NTF: { yearly: true, pad: 6 }, // NTF-2026-000001 (notification)
   TPL: { yearly: false, pad: 4 }, // TPL-0001 (notification template)
+  SSH: { yearly: true, pad: 6 }, // SSH-2026-000001 (system setting history)
 } as const;
 
 export type IdPrefix = keyof typeof ID_FORMATS;

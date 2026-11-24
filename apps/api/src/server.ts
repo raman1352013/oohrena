@@ -1,4 +1,5 @@
 import { expireHolds } from "./services/availability.js";
+import { initSettings } from "./services/settings.js";
 import { loadConfig } from "./config.js";
 import { connectDb } from "./db.js";
 import { createApp } from "./app.js";
@@ -11,6 +12,7 @@ configureNotifications(cfg);
 if (cfg.NODE_ENV !== "development" && !cfg.S3_BUCKET) logger.warn("S3_BUCKET is not set: uploads go to the local disk, which is lost on redeploy on most hosts");
 if (!cfg.SMTP_URL) logger.warn("SMTP_URL is not set: password reset, invite and verification emails are NOT delivered");
 await connectDb(cfg.MONGODB_URI);
+await initSettings();
 await SystemEvent.create({ type: "deploy", detail: { event: "api_start", env: cfg.NODE_ENV, version: process.env.npm_package_version ?? null } });
 
 // Holds stop counting at expiresAt anyway; this sweep marks them Expired for status displays and the audit log.

@@ -12,6 +12,7 @@ import { ACTIVE_BLOCK_STATUSES, AvailabilityBlock, AvailabilityRequest } from ".
 import { User } from "../models/foundation.js";
 import { Inventory, type InventoryDoc } from "../models/inventory.js";
 import { notify } from "./notifications.js";
+import { getSetting } from "./settings.js";
 
 type Block = { _id: unknown; inventoryId: string; from: Date; to: Date; qty: number; status: string; kind: string; expiresAt?: Date | null; updatedAt?: Date };
 
@@ -101,7 +102,8 @@ export async function placeHold(cfg: Config, req: Request, input: { inventoryId:
     if (inv.dataType !== "VERIFIED") throw new AppError(409, "CONFLICT", "Demo or unverified inventory can never be held or booked");
     checkRange(input.from, input.to, inv.category);
     await assertCapacity(inv, input.from, input.to, input.qty, session);
-    const expiresAt = new Date(Date.now() + cfg.HOLD_HOURS * 3600_000);
+    const holdHours = cfg.HOLD_HOURS < 1 ? cfg.HOLD_HOURS : ((await getSetting("hold.payment_window_h")) ?? cfg.HOLD_HOURS);
+    const expiresAt = new Date(Date.now() + holdHours * 3600_000);
     const pendingVendor = inv.availabilityMode !== "managed";
     const [hold] = await AvailabilityBlock.create([{
       inventoryId: inv._id, vendorId: inv.vendorId, kind: "hold", from: new Date(toDay(input.from)), to: new Date(toDay(input.to)), qty: input.qty,

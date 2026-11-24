@@ -27,6 +27,7 @@ import { financeRoutes, ownFinanceRoutes } from "./routes/finance.js";
 import { reportRoutes } from "./routes/reports.js";
 import { notificationRoutes } from "./routes/notifications.js";
 import { partnerRoutes } from "./routes/partner.js";
+import { settingsRoutes } from "./routes/settings.js";
 
 const limitHandler: Parameters<typeof rateLimit>[0] = {
   standardHeaders: "draft-8",
@@ -101,6 +102,7 @@ export function createApp(cfg: Config) {
   v1.use("/admin", adminInventoryRoutes(cfg));
   v1.use("/admin", adminLeadRoutes());
   v1.use("/admin", adminTowerRoutes(cfg));
+  v1.use("/admin/settings", settingsRoutes());
   v1.use("/", dealRoutes());
   v1.use("/", executionRoutes(cfg));
   v1.use("/finance", financeRoutes(cfg));

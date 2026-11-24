@@ -37,8 +37,8 @@ These conflict with `AGENTS.md` / the MVP document. Product owner must decide; w
 - [x] **V0.2 `system_settings`** — DONE. Versioned key/value (`key, value, effectiveFrom, changedBy`), admin screen, every change audited, maker-checker for sensitive keys. Seeded all blueprint defaults. Tests in `settings.test.ts`.
 - [x] **V0.3 New staff roles** — DONE. Added `verifier` (KYC/asset review only), `ops` (bookings, proof audit, disputes), `auditor` (read-only audit + reports export). Admin maker-checker on staff role change, suspension, reinstatement. Tests in `staff-roles.test.ts`.
 - [x] **V0.4 Audit log hardening** — DONE. Added `actorType` (user/system/impersonation), `ip`, `device`, `requestId`, masked before/after diff, SHA-256 hash chain (`prevHash`, `hash`), chain verification endpoint, and Mongoose append-only pre-hooks (updateOne, deleteMany, save blocked). Tests: AT-AUD-01, AT-AUD-02.
-- [ ] **V0.5 Background job runner** — PARTIAL (only hold expiry `setInterval` in `server.ts`, proof reminders). One job runner with a lock (so two API instances don't both run) and a `job_runs` record. Jobs: `reverify_reminder` daily, `permit_expiry_check` daily, `hold_release` 15 min, `quote_expiry` hourly, `sla_monitor` hourly, `reconciliation` daily, `score_compute` daily, `leakage_scan` daily.
-- [ ] **V0.6 Standard error `request_id`** — PARTIAL. Add `requestId` to every error body and log line.
+- [x] **V0.5 Background job runner** — DONE. Distributed locking via `job_locks`, execution history in `job_runs`, registered jobs (`hold_release`, `quote_expiry`, `reverify_reminder`, `permit_expiry_check`, `sla_monitor`, `reconciliation`, `score_compute`, `leakage_scan`), admin management & manual trigger routes. Tests in `job-runner.test.ts`.
+- [x] **V0.6 Standard error `request_id`** — DONE. Added `request_id` and `requestId` to every error response and log line across `errors.ts` (AppError, SyntaxError, MulterError, ValidationError, duplicate key, 500 internal). Verified in tests.
 
 ## P1 — Vendor registration, KYC, verified inventory (release gate)
 

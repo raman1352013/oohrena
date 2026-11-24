@@ -50,6 +50,8 @@ const appCollections = [
   "system_settings",
   "system_setting_history",
   "vendor_users",
+  "job_locks",
+  "job_runs",
 ];
 
 target.createRole({

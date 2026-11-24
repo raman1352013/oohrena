@@ -53,6 +53,8 @@ export const PERMISSIONS = {
   "system.deployments.read": { admin: "all", auditor: "all" },
   "settings.read": { admin: "all", auditor: "all" },
   "settings.manage": { admin: "all" },
+  "jobs.read": { admin: "all", auditor: "all" },
+  "jobs.manage": { admin: "all" },
   // Module 1 — client portal
   "client.profile": { client: "own" },
   "leads.create": { client: "own", growth_partner: "own", admin: "all" },

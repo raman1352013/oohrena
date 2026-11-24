@@ -1,4 +1,4 @@
-import { expireHolds } from "./services/availability.js";
+import { registerDefaultJobs, startJobRunner } from "./services/job-runner.js";
 import { initSettings } from "./services/settings.js";
 import { loadConfig } from "./config.js";
 import { connectDb } from "./db.js";
@@ -15,8 +15,9 @@ await connectDb(cfg.MONGODB_URI);
 await initSettings();
 await SystemEvent.create({ type: "deploy", detail: { event: "api_start", env: cfg.NODE_ENV, version: process.env.npm_package_version ?? null } });
 
-// Holds stop counting at expiresAt anyway; this sweep marks them Expired for status displays and the audit log.
-setInterval(() => void expireHolds().catch((e) => logger.error({ err: e }, "hold expiry sweep failed")), 60_000).unref();
+// Start distributed background job runner (hold release, reverify reminders, permit checks, etc.)
+registerDefaultJobs();
+startJobRunner();
 
 const app = createApp(cfg);
 app.listen(cfg.PORT, () => logger.info(`OOHRENA API listening on :${cfg.PORT} (${cfg.NODE_ENV})`));

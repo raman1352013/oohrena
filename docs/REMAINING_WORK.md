@@ -119,5 +119,5 @@ Earlier ticks above were too optimistic. Status after the deploy-readiness pass:
 - [x] **Admin IP controls** (Module 3): `ADMIN_ALLOWED_IPS` for Admin/Finance; blocked attempts audited.
 - [x] **No `window.prompt`/`confirm`**: one `ask()` dialog; user suspend requires a reason (rule 7).
 - [ ] **SMS provider** for mobile OTP (DLT-registered sender: MSG91 / Gupshup / Twilio). Until then `/auth/send-mobile-otp` returns 503 outside development.
-- [ ] **Web has 38 TypeScript errors** in screens added later (`Btn tone/size`, `Row label/value` instead of `k/v`, `exactOptionalPropertyTypes`). Some are visible bugs (blank System Health rows). Fix them, then add `"typecheck": "tsc --noEmit"` to `apps/web/package.json` so CI checks the web app.
+- [x] (Done 24 Nov 2026: `npm run typecheck` is clean for web too.) **Web has 38 TypeScript errors** in screens added later (`Btn tone/size`, `Row label/value` instead of `k/v`, `exactOptionalPropertyTypes`). Some are visible bugs (blank System Health rows). Fix them, then add `"typecheck": "tsc --noEmit"` to `apps/web/package.json` so CI checks the web app.
 - [ ] Written ownership confirmation (Module 10) — the business owner signs this; it cannot be ticked by a developer.

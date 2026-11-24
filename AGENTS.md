@@ -4,6 +4,7 @@ Read this file completely before changing anything. Then read:
 - `docs/OOHRENA_MVP_Compulsory_Modules_v1.0 (1).pdf` — **the base requirements source**. Every feature, rule and acceptance test comes from it.
 - `docs/OOHRENA_Vendor_Dashboard_Technical_Blueprint.pdf` — **requirements for the vendor flow** (team decision, Nov 2026). It adds to the MVP document; where the two conflict, follow the decision recorded in `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` ("Decisions needed"), and if none is recorded yet, ask the product owner — don't pick one yourself.
 - `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` — the vendor-flow tasks from that blueprint, in build order, with their acceptance tests (`AT-…`).
+- `docs/NEXT_TASKS.md` — **start here**: what is done, what is blocked on the product owner, and the next tasks in order.
 - `docs/REMAINING_WORK.md` — what is still to be built, in order, with acceptance criteria.
 - `docs/LAUNCH_GUIDE.md` — how to deploy and launch.
 - `README.md` — setup, test accounts and the module status table.

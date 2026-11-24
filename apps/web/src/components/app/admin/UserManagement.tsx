@@ -13,6 +13,8 @@ import {
   useAdminUsers,
   useAssignUserRole,
   useCreateStaffUser,
+  useApproveStaffAction,
+  useRejectStaffAction,
   useReactivateUser,
   useRevokeSession,
   useSuspendUser,
@@ -21,7 +23,7 @@ import {
 } from "@/lib/admin-users-api";
 
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
-const STAFF_ROLES = ["admin", "finance", "growth_partner"] as const;
+const STAFF_ROLES = ["admin", "finance", "growth_partner", "verifier", "ops", "auditor"] as const;
 type StaffRole = (typeof STAFF_ROLES)[number];
 
 const roleTone = (r: Role) =>
@@ -31,7 +33,11 @@ const roleTone = (r: Role) =>
       ? "verified"
       : r === "growth_partner"
         ? "hold"
-        : "neutral";
+        : r === "verifier"
+          ? "navy"
+          : r === "ops"
+            ? "saffron"
+            : "neutral";
 const statusTone = (s: AdminUserItem["status"]) =>
   s === "active" ? "verified" : s === "suspended" ? "danger" : "hold";
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -42,6 +48,8 @@ export function UserManagement() {
   const { data, isLoading } = useAdminUsers({ role, q: search || undefined });
   const suspend = useSuspendUser();
   const reactivate = useReactivateUser();
+  const approveAction = useApproveStaffAction();
+  const rejectAction = useRejectStaffAction();
   const [creating, setCreating] = useState(false);
   const [sessionsFor, setSessionsFor] = useState<AdminUserItem | null>(null);
   const [roleFor, setRoleFor] = useState<AdminUserItem | null>(null);
@@ -91,6 +99,11 @@ export function UserManagement() {
                   <span className="font-semibold">{u.fullName}</span>
                   <Pill tone={roleTone(u.role)}>{ROLE_LABELS[u.role]}</Pill>
                   <Pill tone={statusTone(u.status)}>{u.status}</Pill>
+                  {u.pendingAction && (
+                    <Pill tone="hold">
+                      Pending {u.pendingAction.type === "role_change" ? `role → ${ROLE_LABELS[u.pendingAction.targetRole!]}` : u.pendingAction.type}
+                    </Pill>
+                  )}
                   {u.twoFactorEnabled && <Pill tone="verified">2FA</Pill>}
                 </div>
                 <div className="text-[12px] text-mute mt-1 truncate">
@@ -98,6 +111,44 @@ export function UserManagement() {
                   {u.orgId && ` · ${u.orgId}`} ·{" "}
                   {u.lastLoginAt ? `Last sign-in ${fmtDate(u.lastLoginAt)}` : "Never signed in"}
                 </div>
+                {u.pendingAction && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-line/50">
+                    <span className="text-[12px] text-amber-600 dark:text-amber-400">
+                      Reason: {u.pendingAction.reason}
+                    </span>
+                    <Btn
+                      size="sm"
+                      variant="primary"
+                      disabled={approveAction.isPending}
+                      onClick={async () => {
+                        const conf = await ask({
+                          title: `Approve ${u.pendingAction!.type} for ${u.fullName}`,
+                          action: "Approve",
+                          body: `Proposed reason: ${u.pendingAction!.reason}`,
+                        });
+                        if (conf) approveAction.mutate({ userId: u.userId, reason: conf.reason || undefined }, { onError: (e) => toast.error(e.message) });
+                      }}
+                    >
+                      Approve
+                    </Btn>
+                    <Btn
+                      size="sm"
+                      variant="danger"
+                      disabled={rejectAction.isPending}
+                      onClick={async () => {
+                        const rej = await ask({
+                          title: `Reject ${u.pendingAction!.type} for ${u.fullName}`,
+                          action: "Reject",
+                          danger: true,
+                          body: "Give a reason for rejection.",
+                        });
+                        if (rej) rejectAction.mutate({ userId: u.userId, reason: rej.reason }, { onError: (e) => toast.error(e.message) });
+                      }}
+                    >
+                      Reject
+                    </Btn>
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Btn size="sm" variant="secondary" onClick={() => setSessionsFor(u)}>

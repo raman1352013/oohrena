@@ -7,7 +7,19 @@ const ts = { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } } as
 const counterSchema = new Schema({ _id: { type: String, required: true }, seq: { type: Number, required: true, default: 0 } }, { versionKey: false });
 export const Counter = mongoose.model("Counter", counterSchema, "counters");
 
-/* ---------- Users (all five roles) ---------- */
+/* ---------- Pending Maker-Checker Action on Staff ---------- */
+const pendingUserActionSchema = new Schema(
+  {
+    type: { type: String, enum: ["role_change", "suspend", "reactivate"], required: true },
+    targetRole: { type: String, enum: ROLES, default: null },
+    reason: { type: String, required: true },
+    proposedBy: { type: String, required: true },
+    proposedAt: { type: Date, required: true, default: () => new Date() },
+  },
+  { _id: false },
+);
+
+/* ---------- Users (all roles) ---------- */
 const userSchema = new Schema(
   {
     _id: { type: String, required: true }, // USR-000001
@@ -17,7 +29,9 @@ const userSchema = new Schema(
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ROLES, required: true },
     vendorRole: { type: String, enum: VENDOR_ROLES, default: null },
+    isStaff: { type: Boolean, default: false },
     status: { type: String, enum: ["active", "pending", "suspended"], default: "active" },
+    pendingAction: { type: pendingUserActionSchema, default: null },
     orgId: { type: String, default: null }, // CLT-/VND-/GP- profile id
     emailVerifiedAt: { type: Date, default: null },
     mobileVerifiedAt: { type: Date, default: null },

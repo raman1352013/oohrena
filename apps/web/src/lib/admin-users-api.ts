@@ -2,6 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Role } from "@oohrena/shared";
 import { api } from "./api";
 
+export type PendingStaffAction = {
+  type: "role_change" | "suspend" | "reactivate";
+  targetRole?: Role | null;
+  reason: string;
+  proposedBy: string;
+  proposedAt: string;
+};
+
 export type AdminUserItem = {
   userId: string;
   email: string;
@@ -12,6 +20,8 @@ export type AdminUserItem = {
   twoFactorEnabled?: boolean;
   emailVerified?: boolean;
   mobileVerified?: boolean;
+  isStaff?: boolean;
+  pendingAction?: PendingStaffAction | null;
   lastLoginAt: string | null;
   createdAt: string;
 };
@@ -63,11 +73,39 @@ export function useCreateStaffUser() {
       fullName: string;
       email: string;
       mobile: string;
-      role: "admin" | "finance" | "growth_partner";
+      role: "admin" | "finance" | "growth_partner" | "verifier" | "ops" | "auditor";
     }) =>
       api<{ user: AdminUserItem; inviteSent: boolean; devInviteLink?: string }>("/admin/users", {
         method: "POST",
         body,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+}
+
+export function useApproveStaffAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason?: string | undefined }) =>
+      api<{ ok: boolean; role?: Role; status?: string }>(`/admin/users/${userId}/approve-action`, {
+        method: "POST",
+        body: { reason },
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+}
+
+export function useRejectStaffAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: string }) =>
+      api<{ ok: boolean; rejected: boolean }>(`/admin/users/${userId}/reject-action`, {
+        method: "POST",
+        body: { reason },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "users"] });

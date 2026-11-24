@@ -6,7 +6,7 @@
  * Accounts are always named — never create shared logins.
  */
 import { parseArgs } from "node:util";
-import { email as emailSchema, mobile as mobileSchema, password as passwordPolicy } from "@oohrena/shared";
+import { email as emailSchema, mobile as mobileSchema, password as passwordPolicy, type Role } from "@oohrena/shared";
 import { loadConfig } from "../src/config.js";
 import { connectDb, disconnectDb } from "../src/db.js";
 import { audit } from "../src/lib/audit.js";
@@ -15,8 +15,10 @@ import { User } from "../src/models/foundation.js";
 import { hashPassword } from "../src/services/session.js";
 
 const { values } = parseArgs({ options: { role: { type: "string" }, email: { type: "string" }, name: { type: "string" }, mobile: { type: "string" } } });
-const role = values.role;
-if (role !== "admin" && role !== "finance") throw new Error("--role must be admin or finance");
+const role = values.role as Role;
+if (!["admin", "finance", "verifier", "ops", "auditor"].includes(role ?? "")) {
+  throw new Error("--role must be admin, finance, verifier, ops or auditor");
+}
 const email = emailSchema.parse(values.email);
 const mobile = mobileSchema.parse(values.mobile);
 const fullName = (values.name ?? "").trim();
@@ -28,7 +30,7 @@ const cfg = loadConfig();
 await connectDb(cfg.MONGODB_URI);
 if (await User.exists({ email })) throw new Error(`A user with ${email} already exists`);
 const userId = await nextId("USR");
-await User.create({ _id: userId, email, mobile, fullName, passwordHash: await hashPassword(cfg, pw.data), role, createdBy: "create-staff-script", emailVerifiedAt: new Date() });
+await User.create({ _id: userId, email, mobile, fullName, passwordHash: await hashPassword(cfg, pw.data), role, isStaff: true, createdBy: "create-staff-script", emailVerifiedAt: new Date() });
 await audit(null, { action: "user.create.staff", entity: "user", entityId: userId, after: { role, email }, userId: null, role: "system" });
 await disconnectDb();
 console.log(`Created ${role} ${email} (${userId}). Ask them to sign in and change the password.`);

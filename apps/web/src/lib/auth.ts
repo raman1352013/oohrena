@@ -17,6 +17,9 @@ export const ROLE_HOME: Record<Role, "/admin" | "/client" | "/vendor" | "/financ
   vendor: "/vendor",
   finance: "/finance",
   growth_partner: "/partner",
+  verifier: "/admin",
+  ops: "/admin",
+  auditor: "/admin",
 };
 
 /**
@@ -24,14 +27,14 @@ export const ROLE_HOME: Record<Role, "/admin" | "/client" | "/vendor" | "/financ
  * this only decides what the browser shows.
  */
 export const ROUTE_ROLES: { prefix: string; roles: readonly Role[] }[] = [
-  { prefix: "/admin", roles: ["admin"] },
+  { prefix: "/admin", roles: ["admin", "verifier", "ops", "auditor"] },
   { prefix: "/client", roles: ["client"] },
   { prefix: "/vendor", roles: ["vendor"] },
   { prefix: "/finance", roles: ["finance"] },
   { prefix: "/partner", roles: ["growth_partner"] },
-  { prefix: "/reports", roles: ["admin", "finance", "client", "vendor", "growth_partner"] },
+  { prefix: "/reports", roles: ["admin", "finance", "client", "vendor", "growth_partner", "verifier", "ops", "auditor"] },
   { prefix: "/print", roles: ["admin", "finance", "client"] },
-  { prefix: "/account", roles: ["admin", "finance", "client", "vendor", "growth_partner"] },
+  { prefix: "/account", roles: ["admin", "finance", "client", "vendor", "growth_partner", "verifier", "ops", "auditor"] },
 ];
 /** Only same-app paths are accepted as a post-login destination. */
 export const safeRedirect = (v: unknown) =>
@@ -67,6 +70,9 @@ export const ROLE_LABEL: Record<Role, string> = {
   vendor: "Vendor",
   finance: "Finance / Audit",
   growth_partner: "Growth Partner",
+  verifier: "Asset & KYC Verifier",
+  ops: "Operations",
+  auditor: "Auditor",
 };
 
 export function useSession() {

@@ -26,7 +26,7 @@ const roundTo100 = (n: number) => Math.round(n / 100) * 100;
 /** Module 3/4: listing verification, data-type control and duplicate review. */
 export function adminInventoryRoutes(cfg: Config) {
   const r = Router();
-  r.use(requirePermission("inventory.decide"));
+  r.use(["/inventory", "/duplicates"], requirePermission("inventory.decide"));
 
   r.get("/inventory", async (req, res) => {
     const q = parseQuery(listQuery, req);

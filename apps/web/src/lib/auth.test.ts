@@ -8,9 +8,10 @@ describe("workspace access rules", () => {
   });
 
   it("keeps clients and vendors out of admin pages, including nested ones", () => {
-    expect(rolesFor("/admin")).toEqual(["admin"]);
-    expect(rolesFor("/admin/leads/LD-2026-000001")).toEqual(["admin"]);
+    expect(rolesFor("/admin")).toEqual(["admin", "verifier", "ops", "auditor"]);
+    expect(rolesFor("/admin/leads/LD-2026-000001")).toEqual(["admin", "verifier", "ops", "auditor"]);
     expect(rolesFor("/admin")).not.toContain("client");
+    expect(rolesFor("/admin")).not.toContain("vendor");
   });
 
   it("leaves public pages ungated and doesn't match look-alike prefixes", () => {

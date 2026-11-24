@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ROLES } from "../roles.js";
 
 /** Indian formats; validated server-side, mirrored in forms. */
 export const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -74,12 +75,20 @@ export const clientProfileUpdate = z
   .strict();
 
 export const roleAssignInput = z.object({
-  role: z.enum(["client", "vendor", "admin", "growth_partner", "finance"]),
+  role: z.enum(ROLES),
   reason: trimmed(500),
 });
 
 /** POST /admin/users/:id/suspend — a reason is mandatory (MVP rule: suspend needs a reason). */
 export const userSuspendInput = z.object({ reason: z.string().trim().min(3, "Give a reason").max(500) }).strict();
+
+export const staffActionApproveInput = z.object({
+  reason: z.string().trim().max(500).optional(),
+});
+
+export const staffActionRejectInput = z.object({
+  reason: trimmed(500),
+});
 
 export const consentInput = z.object({ document: z.enum(CONSENT_DOCUMENTS), version: trimmed(20) });
 
@@ -116,7 +125,7 @@ export const createStaffUserInput = z.object({
   fullName: trimmed(120),
   email,
   mobile,
-  role: z.enum(["admin", "finance", "growth_partner"]),
+  role: z.enum(["admin", "finance", "growth_partner", "verifier", "ops", "auditor"]),
 });
 
 export const forgotPasswordInput = z.object({

@@ -1,4 +1,4 @@
-import type { Role } from "@oohrena/shared";
+import { type Role, isStaffRole } from "@oohrena/shared";
 import type { Config } from "./config.js";
 import { nextId } from "./lib/ids.js";
 import { audit } from "./lib/audit.js";
@@ -24,6 +24,9 @@ export const TEST_ACCOUNTS: Seed[] = [
   { email: "vendor@test.oohrena.local", fullName: "Test Vendor A", mobile: "+919000000005", role: "vendor", kyc: "approved", pan: "ABCDE1001F" },
   { email: "vendor2@test.oohrena.local", fullName: "Test Vendor B", mobile: "+919000000006", role: "vendor", kyc: "pending", pan: "ABCDE1002F" },
   { email: "partner@test.oohrena.local", fullName: "Test Growth Partner", mobile: "+919000000007", role: "growth_partner" },
+  { email: "verifier@test.oohrena.local", fullName: "Test Verifier", mobile: "+919000000009", role: "verifier" },
+  { email: "ops@test.oohrena.local", fullName: "Test Operations", mobile: "+919000000010", role: "ops" },
+  { email: "auditor@test.oohrena.local", fullName: "Test Auditor", mobile: "+919000000011", role: "auditor" },
 ];
 
 export async function seedTestAccounts(cfg: Config, password: string, log: (m: string) => void = console.log) {
@@ -59,7 +62,7 @@ export async function seedTestAccounts(cfg: Config, password: string, log: (m: s
       orgId = await nextId("GP");
       await GrowthPartner.create({ _id: orgId, userId, name: a.fullName, city: "Gwalior" });
     }
-    await User.create({ _id: userId, email: a.email, mobile: a.mobile, fullName: a.fullName, passwordHash: hash, role: a.role, orgId, createdBy: "seed", emailVerifiedAt: new Date() });
+    await User.create({ _id: userId, email: a.email, mobile: a.mobile, fullName: a.fullName, passwordHash: hash, role: a.role, isStaff: isStaffRole(a.role), orgId, createdBy: "seed", emailVerifiedAt: new Date() });
     await Consent.create(consentDocs(userId, "seed"));
     await audit(null, { action: "seed.user.create", entity: "user", entityId: userId, after: { role: a.role, email: a.email }, userId: null, role: "system" });
     log(`created ${a.role.padEnd(15)} ${a.email} (${userId}${orgId ? ` / ${orgId}` : ""})`);

@@ -35,4 +35,5 @@ export type SessionUser = {
   twoFactorEnabled?: boolean;
   emailVerified?: boolean;
   mobileVerified?: boolean;
+  isStaff?: boolean;
 };

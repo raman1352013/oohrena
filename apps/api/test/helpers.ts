@@ -78,7 +78,7 @@ export async function registerClient(app: Express, o: Record<string, unknown> = 
 }
 
 /** Admin/Finance are never self-registered — create directly, then log in through the API. */
-export async function createStaff(app: Express, cfg: Config, role: Extract<Role, "admin" | "finance">) {
+export async function createStaff(app: Express, cfg: Config, role: Role) {
   const email = `${role}-${uniq()}@example.test`;
   const userId = await nextId("USR");
   await User.create({ _id: userId, email, mobile: mobileFor(), fullName: `Test ${role}`, passwordHash: await hashPassword(cfg, GOOD_PW), role });

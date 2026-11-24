@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Request, Response } from "express";
 import type { ClientSession } from "mongoose";
-import type { SessionUser } from "@oohrena/shared";
+import { type SessionUser, isStaffRole } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { Session } from "../models/foundation.js";
 import { SESSION_COOKIE, hashToken, newToken } from "../middleware/auth.js";
@@ -43,6 +43,7 @@ export const toSessionUser = (u: {
   fullName: string;
   role: string;
   vendorRole?: string | null;
+  isStaff?: boolean | null;
   status?: string | null;
   orgId?: string | null;
   twoFactorEnabled?: boolean | null;
@@ -59,4 +60,5 @@ export const toSessionUser = (u: {
   twoFactorEnabled: !!u.twoFactorEnabled,
   emailVerified: !!u.emailVerifiedAt,
   mobileVerified: !!u.mobileVerifiedAt,
+  isStaff: !!u.isStaff || isStaffRole(u.role),
 });

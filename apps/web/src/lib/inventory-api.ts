@@ -307,3 +307,50 @@ export function useResolveDuplicate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: K.adminInventory }),
   });
 }
+
+/* ---------- Vendor Team ---------- */
+export type VendorStaffItem = {
+  vendorUserId: string;
+  userId: string;
+  role: "owner" | "manager" | "field" | "accounts";
+  status: "active" | "invited" | "suspended";
+  invitedBy: string | null;
+  name: string;
+  email: string;
+  mobile: string;
+  createdAt: string;
+};
+
+export function useVendorTeam() {
+  return useQuery({
+    queryKey: ["vendor", "team"],
+    queryFn: () => api<VendorStaffItem[]>("/vendors/me/team"),
+  });
+}
+
+export function useInviteVendorStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; email: string; mobile: string; role: "manager" | "field" | "accounts" }) =>
+      api<VendorStaffItem>("/vendors/me/team/invite", { body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vendor", "team"] }),
+  });
+}
+
+export function useUpdateVendorStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, ...body }: { userId: string; role?: "manager" | "field" | "accounts"; status?: "active" | "suspended" }) =>
+      api<VendorStaffItem>(`/vendors/me/team/${userId}`, { method: "PATCH", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vendor", "team"] }),
+  });
+}
+
+export function useRemoveVendorStaff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api<{ removed: boolean }>(`/vendors/me/team/${userId}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vendor", "team"] }),
+  });
+}

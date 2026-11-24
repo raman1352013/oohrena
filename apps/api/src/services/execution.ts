@@ -6,7 +6,7 @@ import {
 } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { audit } from "../lib/audit.js";
-import { AppError, badRequest, notFound } from "../lib/errors.js";
+import { AppError, badRequest, forbidden, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { signFileUrl } from "../lib/signed-url.js";
 import { saveUpload } from "../lib/storage.js";
@@ -17,7 +17,7 @@ import { Inventory } from "../models/inventory.js";
 import { syncPayables } from "./finance.js";
 import { notify } from "./notifications.js";
 
-type WO = { _id: string; bookingId: string; vendorId: string; status: string; previousStatus?: string | null; campaignId?: string | null; items: { inventoryId: string; from: Date; to: Date }[] };
+type WO = { _id: string; bookingId: string; vendorId: string; status: string; previousStatus?: string | null; campaignId?: string | null; assignedUserId?: string | null; items: { inventoryId: string; from: Date; to: Date }[] };
 
 function haversineM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   const r = (d: number) => (d * Math.PI) / 180;
@@ -75,6 +75,9 @@ async function syncBooking(req: Request, bookingId: string) {
 /** Validated work-order transitions with the evidence each step needs. */
 export async function changeWorkOrderStatus(req: Request, id: string, to: "installed" | "inspection_due" | "completed", note?: string) {
   const w = await loadWorkOrderFor(req, id);
+  if (req.user!.role === "vendor" && req.user!.vendorRole === "field" && w.assignedUserId !== req.user!.userId) {
+    throw forbidden("You are not assigned to this work order");
+  }
   const from = w.status as WorkOrderStatus;
   if (!WO_FLOW[from].includes(to)) {
     throw new AppError(409, "INVALID_TRANSITION", from === "issue_raised" ? "Resolve the open issue first" : `A work order can't move from ${from.replace("_", " ")} to ${to.replace("_", " ")}`);
@@ -99,6 +102,9 @@ export async function changeWorkOrderStatus(req: Request, id: string, to: "insta
 /** Proof upload: server timestamp is authoritative; device time and GPS are stored as reported, labelled honestly. */
 export async function uploadProof(cfg: Config, req: Request, woId: string, file: Express.Multer.File | undefined, meta: { inventoryId: string; scheduleId?: string | undefined; capturedAt?: string | undefined; lat?: number | undefined; lng?: number | undefined; accuracyM?: number | undefined; note?: string | undefined }) {
   const w = await loadWorkOrderFor(req, woId);
+  if (req.user!.role === "vendor" && req.user!.vendorRole === "field" && w.assignedUserId !== req.user!.userId) {
+    throw forbidden("You are not assigned to this work order");
+  }
   if (["completed", "cancelled"].includes(w.status)) throw new AppError(409, "CONFLICT", `Proof can't be added to a ${w.status} work order`);
   if (!w.campaignId) throw new AppError(409, "CONFLICT", "This work order has no campaign yet");
   if (!w.items.some((i) => i.inventoryId === meta.inventoryId)) throw badRequest("That media item is not on this work order");

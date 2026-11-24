@@ -1,6 +1,6 @@
 import { Router, type RequestHandler } from "express";
 import { z } from "zod";
-import { DOC_MIME, KYC_DOC_TYPES, MAX_DOC_BYTES, REQUIRED_KYC_DOCS, registerVendorInput, vendorBankInput, type RegisterVendorInput } from "@oohrena/shared";
+import { DOC_MIME, KYC_DOC_TYPES, MAX_DOC_BYTES, REQUIRED_KYC_DOCS, inviteVendorStaffInput, registerVendorInput, updateVendorStaffInput, vendorBankInput, type RegisterVendorInput } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { audit } from "../lib/audit.js";
 import { encryptString } from "../lib/crypto.js";
@@ -8,12 +8,13 @@ import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { saveUpload } from "../lib/storage.js";
 import { withTransaction } from "../lib/tx.js";
-import { requirePermission } from "../middleware/auth.js";
+import { requirePermission, requireVendorRole } from "../middleware/auth.js";
 import { currentVendor, upload } from "../middleware/upload.js";
 import { validateBody } from "../middleware/validate.js";
-import { Consent, User, Vendor } from "../models/foundation.js";
+import { Consent, User, Vendor, VendorUser } from "../models/foundation.js";
+import { AuditLog } from "../models/audit-log.js";
 import { VendorBank, VendorDocument } from "../models/vendor-kyc.js";
-import { hashPassword, startSession, toSessionUser } from "../services/session.js";
+import { hashPassword, revokeAllSessions, startSession, toSessionUser } from "../services/session.js";
 import { consentDocs } from "./auth.js";
 import { vendorInventoryRoutes } from "./vendor-inventory.js";
 import { vendorWorkOrderRoutes } from "./deals.js";
@@ -45,10 +46,12 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
       const userId = await nextId("USR", session);
       const vendorId = await nextId("VND", session);
       const [user] = await User.create(
-        [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "vendor", status: "active", orgId: vendorId }],
+        [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "vendor", vendorRole: "owner", status: "active", orgId: vendorId }],
         { session },
       );
       await Vendor.create([{ _id: vendorId, userId, legalName: input.legalName, pan: input.pan, gstin: input.gstin ?? null, city: input.city, kycStatus: "pending" }], { session });
+      const vnuId = await nextId("VNU", session);
+      await VendorUser.create([{ _id: vnuId, vendorId, userId, role: "owner", status: "active" }], { session });
       await Consent.create(consentDocs(userId, req.ip), { session, ordered: true });
       await audit(req, { action: "vendor.register", entity: "vendor", entityId: vendorId, after: { kycStatus: "pending", legalName: input.legalName }, userId, role: "vendor" }, session);
       const s = await startSession(cfg, req, res, userId, session);
@@ -94,12 +97,131 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
     res.status(201).json({ data: { docId: String(doc._id), type: doc.type, fileId: f._id, status: doc.status, uploadedAt: doc.uploadedAt } });
   });
 
-  r.get("/me/bank", async (req, res) => {
+  /* ---------- Team management (Blueprint §2.1) ---------- */
+  r.get("/me/team", requireVendorRole("owner", "manager"), async (req, res) => {
+    const v = await currentVendor(req);
+    const members = await VendorUser.find({ vendorId: v._id }).lean();
+    const userIds = members.map((m) => m.userId);
+    const users = await User.find({ _id: { $in: userIds } }).lean();
+    const userMap = new Map(users.map((u) => [u._id, u]));
+    const data = members.map((m) => {
+      const u = userMap.get(m.userId);
+      return {
+        vendorUserId: m._id,
+        userId: m.userId,
+        role: m.role,
+        status: m.status,
+        name: u?.fullName ?? "Unknown",
+        fullName: u?.fullName ?? "Unknown",
+        email: u?.email ?? "",
+        mobile: u?.mobile ?? "",
+        createdAt: m.createdAt,
+      };
+    });
+    res.json({ data });
+  });
+
+  r.post("/me/team/invite", requireVendorRole("owner"), validateBody(inviteVendorStaffInput), async (req, res) => {
+    const v = await currentVendor(req);
+    const input = req.body as z.infer<typeof inviteVendorStaffInput>;
+    const existing = await User.findOne({ email: input.email }).lean();
+    if (existing) throw new AppError(409, "CONFLICT", "A user with this email already exists");
+
+    const password = input.password ?? "Temp!Password123";
+    const passwordHash = await hashPassword(cfg, password);
+    const out = await withTransaction(async (session) => {
+      const userId = await nextId("USR", session);
+      const [user] = await User.create(
+        [
+          {
+            _id: userId,
+            email: input.email,
+            mobile: input.mobile,
+            fullName: input.fullName,
+            passwordHash,
+            role: "vendor",
+            vendorRole: input.role,
+            status: "active",
+            orgId: v._id,
+            createdBy: req.user!.userId,
+          },
+        ],
+        { session },
+      );
+      const vnuId = await nextId("VNU", session);
+      const [vu] = await VendorUser.create(
+        [
+          {
+            _id: vnuId,
+            vendorId: v._id,
+            userId,
+            role: input.role,
+            status: "active",
+            invitedBy: req.user!.userId,
+          },
+        ],
+        { session },
+      );
+      await audit(req, {
+        action: "vendor.staff.invite",
+        entity: "vendor_user",
+        entityId: vnuId,
+        after: { vendorId: v._id, userId, role: input.role, email: input.email },
+      }, session);
+      return {
+        vendorUserId: vu!._id,
+        userId,
+        name: user!.fullName,
+        fullName: user!.fullName,
+        email: user!.email,
+        mobile: user!.mobile,
+        role: vu!.role,
+        status: vu!.status,
+        tempPassword: password,
+        createdAt: vu!.createdAt,
+      };
+    });
+    res.status(201).json({ data: out });
+  });
+
+  r.patch("/me/team/:userId", requireVendorRole("owner"), validateBody(updateVendorStaffInput), async (req, res) => {
+    const v = await currentVendor(req);
+    const targetUserId = String(req.params.userId);
+    const vu = await VendorUser.findOne({ vendorId: v._id, userId: targetUserId });
+    if (!vu) throw notFound("Team member not found");
+    if (vu.role === "owner" && req.user!.userId !== targetUserId) {
+      throw new AppError(403, "FORBIDDEN", "Cannot modify the primary vendor owner");
+    }
+    const input = req.body as z.infer<typeof updateVendorStaffInput>;
+    const before = { role: vu.role, status: vu.status };
+    if (input.role) vu.role = input.role;
+    if (input.status) vu.status = input.status;
+    await vu.save();
+    await User.updateOne({ _id: targetUserId }, { $set: { ...(input.role ? { vendorRole: input.role } : {}), ...(input.status ? { status: input.status } : {}) } });
+    await audit(req, { action: "vendor.staff.update", entity: "vendor_user", entityId: vu._id, before, after: { role: vu.role, status: vu.status } });
+    res.json({ data: { vendorUserId: vu._id, userId: vu.userId, role: vu.role, status: vu.status } });
+  });
+
+  r.delete("/me/team/:userId", requireVendorRole("owner"), async (req, res) => {
+    const v = await currentVendor(req);
+    const targetUserId = String(req.params.userId);
+    const vu = await VendorUser.findOne({ vendorId: v._id, userId: targetUserId });
+    if (!vu) throw notFound("Team member not found");
+    if (vu.role === "owner") throw new AppError(403, "FORBIDDEN", "Cannot remove the vendor owner");
+    await VendorUser.deleteOne({ _id: vu._id });
+    await User.updateOne({ _id: targetUserId }, { $set: { status: "suspended" } });
+    await revokeAllSessions(targetUserId);
+    await audit(req, { action: "vendor.staff.remove", entity: "vendor_user", entityId: vu._id, before: { userId: targetUserId, role: vu.role } });
+    res.json({ data: { removed: true } });
+  });
+
+  /* ---------- Bank details (Owner only) ---------- */
+  r.get("/me/bank", requireVendorRole("owner"), async (req, res) => {
     const v = await currentVendor(req);
     res.json({ data: await maskedBank(v._id) });
   });
 
-  r.put("/me/bank", validateBody(vendorBankInput), async (req, res) => {
+  r.put("/me/bank", requireVendorRole("owner"), validateBody(vendorBankInput), async (req, res) => {
     const v = await currentVendor(req);
     const b = req.body as z.infer<typeof vendorBankInput>;
     const before = await maskedBank(v._id);
@@ -117,7 +239,7 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
   });
 
   /** Rejected → Pending after the vendor fixes documents. */
-  r.post("/me/kyc/resubmit", async (req, res) => {
+  r.post("/me/kyc/resubmit", requireVendorRole("owner", "manager"), async (req, res) => {
     const v = await currentVendor(req);
     if (v.kycStatus !== "rejected") throw new AppError(409, "INVALID_TRANSITION", `KYC is ${v.kycStatus}; only rejected KYC can be resubmitted`);
     const docs = await kycDocsFor(v._id);
@@ -130,13 +252,24 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
 
   r.use("/me/inventory", vendorInventoryRoutes(cfg));
   r.use("/me/work-orders", vendorWorkOrderRoutes());
-  r.get("/me/payables", async (req, res) => {
+  r.get("/me/payables", requireVendorRole("owner", "accounts"), async (req, res) => {
     const v = await currentVendor(req);
     res.json({ data: await ownPayables(v._id) });
   });
 
-  /** Own overdue proof slots (alerts). */
-  r.get("/me/proofs/overdue", async (req, res) => {
+  r.get("/me/audit", requireVendorRole("owner"), async (req, res) => {
+    const v = await currentVendor(req);
+    const filter = {
+      $or: [{ entityId: v._id }, { "after.vendorId": v._id }, { userId: req.user!.userId }],
+    };
+    const items = await AuditLog.find(filter).sort({ at: -1, _id: -1 }).limit(100).lean();
+    res.json({
+      data: items.map(({ _id, ...rest }) => ({ logId: String(_id), ...rest })),
+    });
+  });
+
+  /** Own overdue proof slots (alerts: owner, manager, field). */
+  r.get("/me/proofs/overdue", requireVendorRole("owner", "manager", "field"), async (req, res) => {
     const v = await currentVendor(req);
     res.json({ data: (await overdueSlots({ vendorId: v._id })).map(slotView) });
   });

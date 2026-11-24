@@ -42,6 +42,7 @@ export const toSessionUser = (u: {
   email: string;
   fullName: string;
   role: string;
+  vendorRole?: string | null;
   status?: string | null;
   orgId?: string | null;
   twoFactorEnabled?: boolean | null;
@@ -52,6 +53,7 @@ export const toSessionUser = (u: {
   email: u.email,
   fullName: u.fullName,
   role: u.role as SessionUser["role"],
+  vendorRole: (u.vendorRole ?? (u.role === "vendor" ? "owner" : undefined)) as SessionUser["vendorRole"],
   status: (u.status ?? "active") as SessionUser["status"],
   orgId: u.orgId ?? null,
   twoFactorEnabled: !!u.twoFactorEnabled,

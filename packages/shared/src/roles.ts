@@ -14,6 +14,17 @@ export const ROLE_LABELS: Record<Role, string> = {
   finance: "Finance / Audit",
 };
 
+/** Blueprint §2: Vendor internal team roles. */
+export const VENDOR_ROLES = ["owner", "manager", "field", "accounts"] as const;
+export type VendorRole = (typeof VENDOR_ROLES)[number];
+
+export const VENDOR_ROLE_LABELS: Record<VendorRole, string> = {
+  owner: "Owner / Director",
+  manager: "Operations / Sales Manager",
+  field: "Field Executive / Installer",
+  accounts: "Accounts / Finance",
+};
+
 /** Scope of a grant: own records, records assigned to the user, or everything. */
 export type Scope = "own" | "assigned" | "all";
 

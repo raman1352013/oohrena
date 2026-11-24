@@ -1,4 +1,4 @@
-import type { Role } from "./roles";
+import type { Role, VendorRole } from "./roles";
 
 /**
  * API contract: every success is `{ data }`, every failure is `{ error }`.
@@ -28,6 +28,7 @@ export type SessionUser = {
   email: string;
   fullName: string;
   role: Role;
+  vendorRole?: VendorRole;
   status: "active" | "pending" | "suspended";
   /** CLT-/VND-/GP- id of the organisation profile tied to this login, if any. */
   orgId: string | null;

@@ -33,11 +33,7 @@ These conflict with `AGENTS.md` / the MVP document. Product owner must decide; w
 
 ## P0 — Auth, roles, audit core, config, files
 
-- [ ] **V0.1 Vendor team roles** — MISSING. Today one `vendor` login per vendor.
-  Add `vendor_users` (vendorId, userId, role ∈ owner | manager | field | accounts). Owner invites staff. Enforce the §2.1 matrix on the server:
-  asset create/edit owner+manager; rate/availability owner+manager; quote owner+manager; proof upload owner+manager+field; bank change owner only (OTP); invoices/payments owner+accounts (manager limited); audit log owner (own vendor).
-  Field users see only work orders assigned to them, never rate/price fields (field-level filtering in responses).
-  Tests: AT-RBAC-01, AT-WO-01, AT-WO-02, AT-SEC-01.
+- [x] **V0.1 Vendor team roles** — DONE. Added `vendor_users` (vendorId, userId, role ∈ owner | manager | field | accounts). Owner invites staff. Server-side §2.1 matrix enforcement. Field filtering on work orders. Passing AT-RBAC-01, AT-WO-01, AT-WO-02, AT-SEC-01.
 - [ ] **V0.2 `system_settings`** — MISSING. Versioned key/value (`key, value, effectiveFrom, changedBy`), admin screen, every change audited, maker-checker for sensitive keys. Seed all blueprint defaults:
   `gps.max_accuracy_m=20`, `gps.photo_pin_max_m=50`, `asset.duplicate_radius_m=15`, `reverify.cycle_days=90`, `reverify.high_risk_days=60`, `reverify.reminders=[30,14,7,1]`, `verifier.sla_days=3`, `photo.max_age_days=30`, `photo.min_long_side_px=1600`, `photo.max_mb=15`, `photo.gallery_allowed=false`, `rate.change_guard_pct=25`, `hold.payment_window_h=48`, `quote.valid_days=5`, `enquiry.ack_sla_h=24`, `enquiry.quote_sla_h=48`, `availability.reminder_days=14`, `availability.unconfirmed_days=30`, `proof.max_upload_delay_h=2`, `proof.inspection_every_days=7`, `bank.payout_hold_h=48`, `dispute.window_days=5`, `location.retention_days=90`, score weights (§10.1).
 - [ ] **V0.3 New staff roles** — MISSING. `verifier` (KYC/asset review only), `ops` (bookings, proof audit, disputes), `auditor` (read-only audit + reports export). Admin maker-checker on role change, suspension, reinstatement.

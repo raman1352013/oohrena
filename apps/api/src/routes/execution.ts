@@ -3,10 +3,10 @@ import multer from "multer";
 import { z } from "zod";
 import { CREATIVE_MIME, ISSUE_STATUSES, MAX_CREATIVE_BYTES, MAX_PROOF_BYTES, PROOF_STATUSES, fromDay, issueCreateInput, issueUpdateInput, proofDecisionInput, proofMetaInput, workOrderStatusInput } from "@oohrena/shared";
 import type { Config } from "../config.js";
-import { badRequest, notFound } from "../lib/errors.js";
+import { badRequest, forbidden, notFound } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
 import { saveUpload } from "../lib/storage.js";
-import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { requireAuth, requirePermission, requireVendorRole } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
 import { Booking, WorkOrder } from "../models/booking.js";
 import { Campaign, ExecutionUpdate, Issue, Proof, ProofSchedule } from "../models/execution.js";
@@ -27,13 +27,16 @@ export function executionRoutes(cfg: Config) {
   const r = Router();
 
   /* ---------- Work order execution (assigned vendor or Admin) ---------- */
-  r.post("/work-orders/:id/status", requirePermission("workorders.execute"), validateBody(workOrderStatusInput), async (req, res) => {
+  r.post("/work-orders/:id/status", requirePermission("workorders.execute"), requireVendorRole("owner", "manager", "field"), validateBody(workOrderStatusInput), async (req, res) => {
     const { status, note } = req.body as z.infer<typeof workOrderStatusInput>;
     res.json({ data: await changeWorkOrderStatus(req, String(req.params.id), status, note) });
   });
 
   r.get("/work-orders/:id/execution", requirePermission("workorders.execute"), async (req, res) => {
     const w = await loadWorkOrderFor(req, String(req.params.id));
+    if (req.user!.role === "vendor" && req.user!.vendorRole === "field" && w.assignedUserId !== req.user!.userId) {
+      throw notFound("Work order not found");
+    }
     const audience = req.user!.role === "admin" ? "admin" : "vendor";
     const [schedule, proofs, updates, issues] = await Promise.all([
       ProofSchedule.find({ workOrderId: w._id }).sort({ dueDate: 1 }).lean(),
@@ -51,7 +54,7 @@ export function executionRoutes(cfg: Config) {
   });
 
   /** multipart: file=<jpg/png/webp/mp4 ≤25 MB>, inventoryId, scheduleId?, capturedAt?, lat?, lng?, accuracyM?, note? */
-  r.post("/work-orders/:id/proofs", requirePermission("workorders.execute"), proofUpload.single("file"), async (req, res) => {
+  r.post("/work-orders/:id/proofs", requirePermission("workorders.execute"), requireVendorRole("owner", "manager", "field"), proofUpload.single("file"), async (req, res) => {
     const meta = proofMetaInput.safeParse(req.body ?? {});
     if (!meta.success) throw badRequest("Please check the proof details", meta.error.flatten());
     const p = await uploadProof(cfg, req, String(req.params.id), req.file, meta.data);

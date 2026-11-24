@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
-import { ROLES, CONSENT_DOCUMENTS } from "@oohrena/shared";
+import { ROLES, VENDOR_ROLES, CONSENT_DOCUMENTS } from "@oohrena/shared";
 
 const ts = { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } } as const;
 
@@ -16,6 +16,7 @@ const userSchema = new Schema(
     fullName: { type: String, required: true },
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ROLES, required: true },
+    vendorRole: { type: String, enum: VENDOR_ROLES, default: null },
     status: { type: String, enum: ["active", "pending", "suspended"], default: "active" },
     orgId: { type: String, default: null }, // CLT-/VND-/GP- profile id
     emailVerifiedAt: { type: Date, default: null },
@@ -111,6 +112,22 @@ const vendorSchema = new Schema(
 );
 vendorSchema.index({ pan: 1 }, { unique: true });
 export const Vendor = mongoose.model("Vendor", vendorSchema, "vendors");
+
+/* ---------- Vendor Users (team members with sub-roles) ---------- */
+const vendorUserSchema = new Schema(
+  {
+    _id: { type: String, required: true }, // VNU-000001
+    vendorId: { type: String, required: true, index: true },
+    userId: { type: String, required: true, index: true },
+    role: { type: String, enum: VENDOR_ROLES, required: true },
+    status: { type: String, enum: ["active", "suspended"], default: "active" },
+    invitedBy: { type: String, default: null },
+  },
+  ts,
+);
+vendorUserSchema.index({ vendorId: 1, userId: 1 }, { unique: true });
+export const VendorUser = mongoose.model("VendorUser", vendorUserSchema, "vendor_users");
+export type VendorUserDoc = InferSchemaType<typeof vendorUserSchema> & { _id: string };
 
 const partnerSchema = new Schema(
   { _id: { type: String, required: true }, userId: { type: String, required: true, unique: true }, name: { type: String, required: true }, city: String },

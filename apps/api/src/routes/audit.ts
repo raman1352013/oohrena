@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { forbidden } from "../lib/errors.js";
 import { renderPdf } from "../lib/pdf.js";
 import { requirePermission } from "../middleware/auth.js";
 import { parseQuery } from "../middleware/validate.js";
@@ -18,7 +19,7 @@ const query = z.object({
   format: z.enum(["json", "csv", "pdf"]).default("json"),
 });
 
-/** Module 3/9: searchable, read-only audit trail (Admin, Finance/Audit). No write routes exist. */
+/** Module 3/9: searchable, read-only audit trail. Admin and Finance only. */
 export function auditRoutes() {
   const r = Router();
   r.get("/", requirePermission("audit.read"), async (req, res) => {

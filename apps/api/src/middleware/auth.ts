@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
-import { PRIVILEGED_ROLES, scopeFor, type Permission, type Role, type Scope, type SessionUser } from "@oohrena/shared";
+import { PRIVILEGED_ROLES, scopeFor, type Permission, type Role, type Scope, type SessionUser, type VendorRole } from "@oohrena/shared";
 import type { Config } from "../config.js";
 import { Session, User } from "../models/foundation.js";
 import { AppError, forbidden, unauthenticated } from "../lib/errors.js";
@@ -45,6 +45,7 @@ export function loadSession() {
       twoFactorEnabled: !!u.twoFactorEnabled,
       emailVerified: !!u.emailVerifiedAt,
       mobileVerified: !!u.mobileVerifiedAt,
+      vendorRole: (u.vendorRole ?? (u.role === "vendor" ? "owner" : undefined)) as SessionUser["vendorRole"],
     };
     req.sessionId = String(s._id);
     req.authVia = bearer ? "bearer" : "cookie";
@@ -94,6 +95,18 @@ export function requireRole(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) return next(unauthenticated());
     if (!roles.includes(req.user.role)) return next(forbidden());
+    next();
+  };
+}
+
+/** Blueprint §2.1: Enforces internal vendor sub-roles (owner, manager, field, accounts). */
+export function requireVendorRole(...allowed: VendorRole[]) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) return next(unauthenticated());
+    if (req.user.role === "admin") return next();
+    if (req.user.role !== "vendor") return next(forbidden());
+    const vRole = req.user.vendorRole ?? "owner";
+    if (!allowed.includes(vRole)) return next(forbidden());
     next();
   };
 }

@@ -158,3 +158,29 @@ export type LoginInput = z.infer<typeof loginInput>;
 export type ClientProfileUpdate = z.infer<typeof clientProfileUpdate>;
 export type CreateStaffUserInput = z.infer<typeof createStaffUserInput>;
 export type PartnerLeadInput = z.infer<typeof partnerLeadInput>;
+
+export const inviteVendorStaffInput = z
+  .object({
+    fullName: trimmed(120).optional(),
+    name: trimmed(120).optional(),
+    email,
+    mobile,
+    role: z.enum(["manager", "field", "accounts"]),
+    password: password.optional(),
+  })
+  .transform((d) => ({
+    ...d,
+    fullName: d.fullName ?? d.name ?? "Vendor Staff",
+  }));
+export type InviteVendorStaffInput = z.infer<typeof inviteVendorStaffInput>;
+
+export const updateVendorStaffInput = z.object({
+  role: z.enum(["manager", "field", "accounts"]).optional(),
+  status: z.enum(["active", "suspended"]).optional(),
+});
+export type UpdateVendorStaffInput = z.infer<typeof updateVendorStaffInput>;
+
+export const assignWorkOrderFieldInput = z.object({
+  assignedUserId: z.string().trim().min(1, "Choose a field staff user"),
+});
+export type AssignWorkOrderFieldInput = z.infer<typeof assignWorkOrderFieldInput>;

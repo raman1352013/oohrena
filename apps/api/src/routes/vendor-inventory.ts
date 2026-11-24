@@ -15,6 +15,7 @@ import { saveUpload } from "../lib/storage.js";
 import { withTransaction } from "../lib/tx.js";
 import { currentVendor, upload } from "../middleware/upload.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
+import { requireVendorRole } from "../middleware/auth.js";
 import { Inventory, InventoryHistory, type InventoryDoc } from "../models/inventory.js";
 import { addBlock, blocksFor, computeDays, removeBlock, toHoldView } from "../services/availability.js";
 import { detectDuplicates, diff, flatten, nextInventoryId, submitProblems, toOwnerView, writeHistory } from "../services/inventory.js";
@@ -47,7 +48,7 @@ async function ownListing(vendorId: string, id: string) {
 export function vendorInventoryRoutes(cfg: Config) {
   const r = Router();
 
-  r.get("/", async (req, res) => {
+  r.get("/", requireVendorRole("owner", "manager", "accounts"), async (req, res) => {
     const v = await currentVendor(req);
     const q = parseQuery(listQuery, req);
     const filter: Record<string, unknown> = { vendorId: v._id };
@@ -60,7 +61,7 @@ export function vendorInventoryRoutes(cfg: Config) {
     res.json({ data: { items: items.map(toOwnerView), total, page: q.page, pageSize: q.pageSize } });
   });
 
-  r.post("/", validateBody(inventoryCreateInput), async (req, res) => {
+  r.post("/", requireVendorRole("owner", "manager"), validateBody(inventoryCreateInput), async (req, res) => {
     const v = await currentVendor(req);
     const input = req.body as InventoryCreateInput;
     const id = await nextInventoryId(input.category);
@@ -73,7 +74,7 @@ export function vendorInventoryRoutes(cfg: Config) {
    * Bulk import (CSV). All-or-nothing: if any row fails, nothing is created and every bad row is reported.
    * Body: { csv: "<file text>", dryRun?: boolean }.
    */
-  r.post("/import", express.json({ limit: "2.5mb" }), validateBody(inventoryImportInput), async (req, res) => {
+  r.post("/import", requireVendorRole("owner", "manager"), express.json({ limit: "2.5mb" }), validateBody(inventoryImportInput), async (req, res) => {
     const v = await currentVendor(req);
     const { csv, dryRun } = req.body as z.infer<typeof inventoryImportInput>;
     const rows = parseCsv(csv);
@@ -121,12 +122,12 @@ export function vendorInventoryRoutes(cfg: Config) {
     return res.status(201).json({ data: { created, validRows: valid.length, dryRun: false } });
   });
 
-  r.get("/:id", async (req, res) => {
+  r.get("/:id", requireVendorRole("owner", "manager", "accounts"), async (req, res) => {
     const v = await currentVendor(req);
     res.json({ data: toOwnerView(await ownListing(v._id, String(req.params.id))) });
   });
 
-  r.get("/:id/history", async (req, res) => {
+  r.get("/:id/history", requireVendorRole("owner", "manager", "accounts"), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     const rows = await InventoryHistory.find({ inventoryId: i._id }).sort({ changedAt: -1 }).limit(200).lean();
@@ -137,7 +138,7 @@ export function vendorInventoryRoutes(cfg: Config) {
    * Edit. Draft/Rejected: free edit (Rejected returns to Draft). Pending/Suspended: locked.
    * Approved: allowed, but a change to a critical field (location, address, rate, unit, size) sends it back to Pending.
    */
-  r.patch("/:id", validateBody(inventoryUpdateInput), async (req, res) => {
+  r.patch("/:id", requireVendorRole("owner", "manager"), validateBody(inventoryUpdateInput), async (req, res) => {
     const v = await currentVendor(req);
     const patch = req.body as InventoryUpdateInput;
     const out = await withTransaction(async (session) => {
@@ -182,7 +183,7 @@ export function vendorInventoryRoutes(cfg: Config) {
   });
 
   /** multipart/form-data: photos=<up to 10 images ≤8 MB>, capturedAt=<ISO, optional>. Draft/Rejected/Approved only. */
-  r.post("/:id/photos", upload.array("photos", MAX_PHOTOS_PER_LISTING), async (req, res) => {
+  r.post("/:id/photos", requireVendorRole("owner", "manager"), upload.array("photos", MAX_PHOTOS_PER_LISTING), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     if (i.status === "pending" || i.status === "suspended") throw new AppError(409, "CONFLICT", "Photos can't be changed while the listing is under review or suspended");
@@ -202,7 +203,7 @@ export function vendorInventoryRoutes(cfg: Config) {
     res.status(201).json({ data: toOwnerView(updated!) });
   });
 
-  r.delete("/:id/photos/:fileId", async (req, res) => {
+  r.delete("/:id/photos/:fileId", requireVendorRole("owner", "manager"), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     if (i.status !== "draft" && i.status !== "rejected") throw new AppError(409, "CONFLICT", "Photos can only be removed while the listing is a draft");
@@ -215,7 +216,7 @@ export function vendorInventoryRoutes(cfg: Config) {
   });
 
   /** Vendor's own calendar, including who-held-what detail that the public view hides. */
-  r.get("/:id/availability", async (req, res) => {
+  r.get("/:id/availability", requireVendorRole("owner", "manager", "accounts"), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     const q = parseQuery(availabilityQuery, req);
@@ -223,21 +224,21 @@ export function vendorInventoryRoutes(cfg: Config) {
     res.json({ data: { inventoryId: i._id, mode: i.availabilityMode ?? "on_request", days: computeDays(i, blocks, q.from, q.to), entries: blocks.map((b) => toHoldView(b as never)) } });
   });
 
-  r.post("/:id/availability", validateBody(blockInput), async (req, res) => {
+  r.post("/:id/availability", requireVendorRole("owner", "manager"), validateBody(blockInput), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     if (i.status !== "approved") throw new AppError(409, "CONFLICT", "Dates can be blocked once the listing is approved");
     res.status(201).json({ data: await addBlock(req, i._id, req.body as z.infer<typeof blockInput>, "vendor") });
   });
 
-  r.delete("/:id/availability/:blockId", async (req, res) => {
+  r.delete("/:id/availability/:blockId", requireVendorRole("owner", "manager"), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     res.json({ data: await removeBlock(req, i._id, String(req.params.blockId), v._id) });
   });
 
   /** managed = vendor keeps the calendar live (holds are instant); on_request = every hold needs vendor confirmation. */
-  r.patch("/:id/availability-mode", validateBody(availabilityModeInput), async (req, res) => {
+  r.patch("/:id/availability-mode", requireVendorRole("owner", "manager"), validateBody(availabilityModeInput), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     const { mode } = req.body as z.infer<typeof availabilityModeInput>;
@@ -248,7 +249,7 @@ export function vendorInventoryRoutes(cfg: Config) {
   });
 
   /** Draft → Pending. Checks mandatory fields and runs duplicate detection. */
-  r.post("/:id/submit", async (req, res) => {
+  r.post("/:id/submit", requireVendorRole("owner", "manager"), async (req, res) => {
     const v = await currentVendor(req);
     const i = await ownListing(v._id, String(req.params.id));
     if (i.status !== "draft") throw new AppError(409, "INVALID_TRANSITION", `Only draft listings can be submitted (this one is ${i.status})`);

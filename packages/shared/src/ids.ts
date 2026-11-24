@@ -6,6 +6,7 @@ export const ID_FORMATS = {
   USR: { yearly: false, pad: 6 }, // USR-000001
   CLT: { yearly: false, pad: 6 }, // CLT-000001 (client organisation)
   VND: { yearly: false, pad: 6 }, // VND-000001
+  VNU: { yearly: false, pad: 6 }, // VNU-000001 (vendor user mapping)
   GP: { yearly: false, pad: 6 }, // GP-000001 (growth partner)
   LD: { yearly: true, pad: 6 }, // LD-2026-000001
   QT: { yearly: true, pad: 6 }, // QT-2026-000001 (+ -V1 suffix via quoteVersionId)

@@ -131,6 +131,7 @@ const workOrderSchema = new Schema(
     status: { type: String, enum: WORK_ORDER_STATUSES, default: "scheduled", index: true },
     previousStatus: { type: String, enum: [...WORK_ORDER_STATUSES, null], default: null },
     campaignId: { type: String, default: null, index: true },
+    assignedUserId: { type: String, default: null, index: true },
     issuedAt: { type: Date, required: true, default: () => new Date() },
     issuedBy: { type: String, required: true },
     acknowledgedAt: { type: Date, default: null },

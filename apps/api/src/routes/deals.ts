@@ -1,16 +1,16 @@
 import { Router } from "express";
 import type { z } from "zod";
-import { BOOKING_TRANSITIONS, bookingCancelInput, cancellationFor, fromDay, quoteDecisionInput, todayIST, type BookingStatus } from "@oohrena/shared";
+import { BOOKING_TRANSITIONS, assignWorkOrderFieldInput, bookingCancelInput, cancellationFor, fromDay, quoteDecisionInput, todayIST, type BookingStatus } from "@oohrena/shared";
 import { audit } from "../lib/audit.js";
-import { AppError, forbidden, notFound } from "../lib/errors.js";
+import { AppError, badRequest, forbidden, notFound } from "../lib/errors.js";
 import { withTransaction } from "../lib/tx.js";
-import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { requireAuth, requirePermission, requireVendorRole } from "../middleware/auth.js";
 import { currentVendor } from "../middleware/upload.js";
 import { validateBody } from "../middleware/validate.js";
 import { Booking, BookingHistory, Quote, WorkOrder } from "../models/booking.js";
 import { Campaign } from "../models/execution.js";
 import { CreditNote, Invoice } from "../models/finance.js";
-import { Client } from "../models/foundation.js";
+import { Client, VendorUser } from "../models/foundation.js";
 import { nextId } from "../lib/ids.js";
 import { releaseBookingBlocks } from "../services/availability.js";
 import { clientDecision, quoteView, renderQuotePdf, type QuoteDoc } from "../services/quotes.js";
@@ -21,11 +21,11 @@ export type BookingDoc = {
   _id: string; quoteId: string; leadId: string; clientId?: string | null; status: string; items: Item[]; start: Date; end: Date;
   subtotal: number; serviceFee: number; gst: number; total: number; blockIds: string[]; cancellation?: Record<string, unknown> | null; createdAt: Date; updatedAt: Date;
 };
-type WorkOrderDoc = { _id: string; bookingId: string; vendorId: string; items: Item[]; instructions: string; creativeNote?: string | null; creatives?: { fileId: string; name: string; mime: string; size: number; uploadedAt: Date }[]; status: string; issuedAt: Date; acknowledgedAt?: Date | null };
+type WorkOrderDoc = { _id: string; bookingId: string; vendorId: string; items: Item[]; instructions: string; creativeNote?: string | null; creatives?: { fileId: string; name: string; mime: string; size: number; uploadedAt: Date }[]; status: string; issuedAt: Date; acknowledgedAt?: Date | null; assignedUserId?: string | null };
 
-const itemView = (i: Item, audience: "admin" | "client" | "vendor") => ({
+const itemView = (i: Item, audience: "admin" | "client" | "vendor" | "field") => ({
   inventoryId: i.inventoryId, title: i.title, category: i.category, city: i.city, from: fromDay(i.from.getTime()), to: fromDay(i.to.getTime()), qty: i.qty,
-  ...(audience !== "vendor" ? { rate: i.rate, billableUnits: i.billableUnits, media: i.media, production: i.production, installation: i.installation, lineTotal: i.lineTotal } : {}),
+  ...(audience !== "vendor" && audience !== "field" ? { rate: i.rate, billableUnits: i.billableUnits, media: i.media, production: i.production, installation: i.installation, lineTotal: i.lineTotal } : {}),
   ...(audience === "admin" ? { vendorId: i.vendorId, vendorCost: i.vendorCost } : {}),
 });
 
@@ -38,13 +38,14 @@ export function bookingView(b: BookingDoc, audience: "admin" | "client") {
   };
 }
 
-/** Vendors see campaign details for their own items only — no client price, client identity or other vendors. */
-export function workOrderView(w: WorkOrderDoc, audience: "admin" | "client" | "vendor") {
+/** Vendors see campaign details for their own items only — no client price, client identity or other vendors. Field users see no financial details. */
+export function workOrderView(w: WorkOrderDoc, audience: "admin" | "client" | "vendor" | "field") {
   return {
     workOrderId: w._id, bookingId: w.bookingId, status: w.status, instructions: w.instructions, creativeNote: w.creativeNote ?? null,
     creatives: (w.creatives ?? []).map((c) => ({ fileId: c.fileId, name: c.name, mime: c.mime, size: c.size, uploadedAt: c.uploadedAt })),
     items: w.items.map((i) => itemView(i, audience === "client" ? "client" : audience)),
     issuedAt: w.issuedAt, acknowledgedAt: w.acknowledgedAt ?? null,
+    assignedUserId: w.assignedUserId ?? null,
     ...(audience === "admin" ? { vendorId: w.vendorId } : {}),
   };
 }
@@ -160,7 +161,13 @@ export function dealRoutes() {
     const u = req.user!;
     if (!w) throw notFound("Work order not found");
     if (u.role === "admin") return res.json({ data: workOrderView(w, "admin") });
-    if (u.role === "vendor" && u.orgId === w.vendorId) return res.json({ data: workOrderView(w, "vendor") });
+    if (u.role === "vendor" && u.orgId === w.vendorId) {
+      if (u.vendorRole === "field") {
+        if (w.assignedUserId !== u.userId) throw notFound("Work order not found");
+        return res.json({ data: workOrderView(w, "field") });
+      }
+      return res.json({ data: workOrderView(w, "vendor") });
+    }
     if (u.role === "client" && (await Booking.exists({ _id: w.bookingId, clientId: u.orgId }))) return res.json({ data: workOrderView(w, "client") });
     throw notFound("Work order not found");
   });
@@ -185,8 +192,38 @@ export function vendorWorkOrderRoutes() {
   const r = Router();
   r.get("/", requirePermission("workorders.read"), async (req, res) => {
     const v = await currentVendor(req);
-    const items = await WorkOrder.find({ vendorId: v._id }).sort({ issuedAt: -1 }).limit(200).lean<WorkOrderDoc[]>();
-    res.json({ data: items.map((w) => workOrderView(w, "vendor")) });
+    const u = req.user!;
+    const filter: Record<string, unknown> = { vendorId: v._id };
+    if (u.vendorRole === "field") {
+      filter.assignedUserId = u.userId;
+    }
+    const items = await WorkOrder.find(filter).sort({ issuedAt: -1 }).limit(200).lean<WorkOrderDoc[]>();
+    res.json({ data: items.map((w) => workOrderView(w, u.vendorRole === "field" ? "field" : "vendor")) });
   });
+
+  r.patch("/:id/assign", requirePermission("workorders.execute"), requireVendorRole("owner", "manager"), validateBody(assignWorkOrderFieldInput), async (req, res) => {
+    const v = await currentVendor(req);
+    const { assignedUserId } = req.body;
+    if (assignedUserId) {
+      const staff = await VendorUser.findOne({ vendorId: v._id, userId: assignedUserId, status: "active" });
+      if (!staff || staff.role !== "field") {
+        throw badRequest("Assigned user must be an active field staff member of your organisation");
+      }
+    }
+    const w = await WorkOrder.findOneAndUpdate(
+      { _id: String(req.params.id), vendorId: v._id },
+      { $set: { assignedUserId: assignedUserId || null } },
+      { returnDocument: "after" },
+    ).lean<WorkOrderDoc>();
+    if (!w) throw notFound("Work order not found");
+    await audit(req, {
+      action: "workorder.assign",
+      entity: "work_order",
+      entityId: w._id,
+      after: { assignedUserId: w.assignedUserId },
+    });
+    res.json({ data: workOrderView(w, "vendor") });
+  });
+
   return r;
 }

@@ -47,6 +47,9 @@ const appCollections = [
   "notification_templates",
   "user_tokens",
   "two_factor_challenges",
+  "system_settings",
+  "system_setting_history",
+  "vendor_users",
 ];
 
 target.createRole({

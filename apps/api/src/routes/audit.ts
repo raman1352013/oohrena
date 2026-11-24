@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { verifyAuditChain } from "../lib/audit.js";
 import { forbidden } from "../lib/errors.js";
 import { renderPdf } from "../lib/pdf.js";
 import { requirePermission } from "../middleware/auth.js";
@@ -22,6 +23,20 @@ const query = z.object({
 /** Module 3/9: searchable, read-only audit trail. Admin and Finance only. */
 export function auditRoutes() {
   const r = Router();
+
+  r.get("/verify-chain", requirePermission("audit.read"), async (_req, res) => {
+    const logs = await AuditLog.find().sort({ _id: 1 }).lean();
+    const result = verifyAuditChain(logs);
+    return res.json({
+      data: {
+        valid: result.valid,
+        totalChecked: logs.length,
+        brokenAt: result.brokenAt ?? null,
+        reason: result.reason ?? null,
+      },
+    });
+  });
+
   r.get("/", requirePermission("audit.read"), async (req, res) => {
     const q = parseQuery(query, req);
     const filter: Record<string, unknown> = {};
@@ -43,9 +58,23 @@ export function auditRoutes() {
     res.setHeader("Content-Disposition", `attachment; filename="audit-log.${q.format}"`);
 
     if (q.format === "csv") {
-      const lines = [toCsvRow(["Timestamp", "User ID", "Role", "Action", "Entity", "Entity ID", "Reason", "IP"])];
+      const lines = [toCsvRow(["Timestamp", "User ID", "Role", "Actor Type", "Action", "Entity", "Entity ID", "Reason", "IP", "Request ID", "Hash"])];
       for (const i of items) {
-        lines.push(toCsvRow([i.at.toISOString(), i.userId, i.role, i.action, i.entity, i.entityId, i.reason, i.ip]));
+        lines.push(
+          toCsvRow([
+            i.at.toISOString(),
+            i.userId,
+            i.role,
+            i.actorType ?? "user",
+            i.action,
+            i.entity,
+            i.entityId,
+            i.reason,
+            i.ip,
+            i.requestId,
+            i.hash,
+          ]),
+        );
       }
       return res.type("text/csv").send(lines.join("\n"));
     }

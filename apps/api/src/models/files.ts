@@ -9,6 +9,8 @@ const fileSchema = new Schema(
     size: { type: Number, required: true },
     sha256: { type: String, required: true, index: true },
     storagePath: { type: String, required: true },
+    /** Backend holding the bytes. Missing on files saved before this field existed = local disk. */
+    storage: { type: String, enum: ["s3", "mongo", "disk"], default: "disk" },
     encrypted: { type: Boolean, required: true },
     ownerUserId: { type: String, required: true },
     vendorId: { type: String, default: null, index: true },

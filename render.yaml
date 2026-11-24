@@ -32,6 +32,7 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # Uploads go to MongoDB (GridFS) unless S3_BUCKET is set; Render's own disk is wiped on every deploy.
       - key: S3_BUCKET
         sync: false
       - key: S3_REGION

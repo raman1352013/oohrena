@@ -38,7 +38,13 @@ const Env = z.object({
   EMAIL_FROM: z.string().default("OOHRENA <no-reply@oohrena.com>"),
   /** Partner commission percentage on completed bookings. */
   PARTNER_COMMISSION_PCT: z.coerce.number().min(0).max(100).default(5),
-  /** S3-compatible object storage bucket (AWS S3, Cloudflare R2, MinIO). If unset, falls back to local UPLOAD_DIR. */
+  /**
+   * Where uploaded bytes live: "s3" (S3/R2/MinIO), "mongo" (GridFS in MONGODB_URI) or "disk" (UPLOAD_DIR).
+   * Default: s3 when S3_BUCKET is set, otherwise mongo in staging/production (hosts like Render wipe the
+   * local disk on every deploy) and disk in development/test.
+   */
+  FILE_STORAGE: z.enum(["s3", "mongo", "disk"]).optional(),
+  /** S3-compatible object storage bucket (AWS S3, Cloudflare R2, MinIO). */
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().default("auto"),
   S3_ENDPOINT: z.string().optional(),
@@ -48,7 +54,14 @@ const Env = z.object({
   REDIS_URL: z.string().optional(),
 });
 
-export type Config = z.infer<typeof Env> & { corsOrigins: string[]; secureCookies: boolean; encryptionKey: Buffer; webUrl: string };
+export type FileStorage = "s3" | "mongo" | "disk";
+export type Config = z.infer<typeof Env> & {
+  corsOrigins: string[];
+  secureCookies: boolean;
+  encryptionKey: Buffer;
+  webUrl: string;
+  fileStorage: FileStorage;
+};
 
 /** Fixed key for local dev/test only — production and staging must set DATA_ENCRYPTION_KEY. */
 const DEV_KEY = Buffer.alloc(32, "oohrena-dev-only-key");
@@ -69,8 +82,11 @@ export function loadConfig(overrides: Record<string, unknown> = {}): Config {
   const corsOrigins = env.CORS_ORIGINS.split(",")
     .map((s) => s.trim().replace(/\/+$/, ""))
     .filter(Boolean);
+  const fileStorage: FileStorage = env.FILE_STORAGE ?? (env.S3_BUCKET ? "s3" : secure ? "mongo" : "disk");
+  if (fileStorage === "s3" && !env.S3_BUCKET) throw new Error("FILE_STORAGE=s3 needs S3_BUCKET");
   return {
     ...env,
+    fileStorage,
     encryptionKey,
     corsOrigins,
     webUrl: (env.PUBLIC_WEB_URL ?? corsOrigins[0] ?? "http://localhost:8080").replace(/\/$/, ""),

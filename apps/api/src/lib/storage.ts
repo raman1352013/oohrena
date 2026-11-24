@@ -2,7 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import type { Config } from "../config.js";
+import mongoose from "mongoose";
+import type { Config, FileStorage } from "../config.js";
 import { StoredFile } from "../models/files.js";
 import { badRequest } from "./errors.js";
 import { decrypt, encrypt } from "./crypto.js";
@@ -46,9 +47,41 @@ function getS3Client(cfg: Config): S3Client {
   return s3Client;
 }
 
+/** GridFS bucket in the app database: uploads survive redeploys without a separate storage account. */
+const gridfs = () => new mongoose.mongo.GridFSBucket(mongoose.connection.db!, { bucketName: "uploads" });
+
+async function writeBytes(cfg: Config, where: FileStorage, key: string, data: Buffer, mime: string) {
+  if (where === "s3") {
+    await getS3Client(cfg).send(
+      new PutObjectCommand({ Bucket: cfg.S3_BUCKET, Key: key, Body: data, ContentType: mime, ServerSideEncryption: "AES256" }),
+    );
+  } else if (where === "mongo") {
+    await new Promise<void>((resolve, reject) => {
+      gridfs().openUploadStream(key, { metadata: { mime } }).on("finish", () => resolve()).on("error", reject).end(data);
+    });
+  } else {
+    const abs = path.resolve(cfg.UPLOAD_DIR, key);
+    await mkdir(path.dirname(abs), { recursive: true });
+    await writeFile(abs, data, { flag: "wx" });
+  }
+}
+
+async function readBytes(cfg: Config, where: FileStorage, key: string): Promise<Buffer> {
+  if (where === "s3") {
+    const res = await getS3Client(cfg).send(new GetObjectCommand({ Bucket: cfg.S3_BUCKET, Key: key }));
+    return Buffer.from((await res.Body?.transformToByteArray()) ?? []);
+  }
+  if (where === "mongo") {
+    const chunks: Buffer[] = [];
+    for await (const c of gridfs().openDownloadStreamByName(key)) chunks.push(c as Buffer);
+    return Buffer.concat(chunks);
+  }
+  return readFile(path.resolve(cfg.UPLOAD_DIR, key));
+}
+
 /**
- * Stores an upload in private object storage (S3 / Cloudflare R2 / MinIO) or private local UPLOAD_DIR
- * and records it in `files`. Files are never served statically.
+ * Stores an upload in the configured private storage (cfg.fileStorage: S3/R2, MongoDB GridFS or local
+ * UPLOAD_DIR) and records it in `files`, including which backend holds it. Never served statically.
  */
 export async function saveUpload(cfg: Config, buf: Buffer, o: SaveOpts) {
   if (!buf.length) throw badRequest("The file is empty");
@@ -59,40 +92,18 @@ export async function saveUpload(cfg: Config, buf: Buffer, o: SaveOpts) {
   const rel = `${o.kind}/${id}${o.encryptAtRest ? ".enc" : ""}`;
   const data = o.encryptAtRest ? encrypt(cfg.encryptionKey, buf) : buf;
 
-  if (cfg.S3_BUCKET) {
-    const s3 = getS3Client(cfg);
-    await s3.send(
-      new PutObjectCommand({
-        Bucket: cfg.S3_BUCKET,
-        Key: rel,
-        Body: data,
-        ContentType: mime,
-        ServerSideEncryption: "AES256",
-      }),
-    );
-  } else {
-    const abs = path.resolve(cfg.UPLOAD_DIR, rel);
-    await mkdir(path.dirname(abs), { recursive: true });
-    await writeFile(abs, data, { flag: "wx" });
-  }
+  await writeBytes(cfg, cfg.fileStorage, rel, data, mime);
 
   const sha256 = createHash("sha256").update(buf).digest("hex");
   const doc = await StoredFile.create({
-    _id: id, kind: o.kind, mime, size: buf.length, sha256, storagePath: rel, encrypted: o.encryptAtRest,
+    _id: id, kind: o.kind, mime, size: buf.length, sha256, storagePath: rel, storage: cfg.fileStorage, encrypted: o.encryptAtRest,
     ownerUserId: o.ownerUserId, vendorId: o.vendorId ?? null, originalName: o.originalName?.slice(0, 200) ?? null,
   });
   return doc.toObject();
 }
 
-export async function readUpload(cfg: Config, f: { storagePath: string; encrypted: boolean }) {
-  let raw: Buffer;
-  if (cfg.S3_BUCKET) {
-    const s3 = getS3Client(cfg);
-    const res = await s3.send(new GetObjectCommand({ Bucket: cfg.S3_BUCKET, Key: f.storagePath }));
-    const bytes = await res.Body?.transformToByteArray();
-    raw = Buffer.from(bytes ?? []);
-  } else {
-    raw = await readFile(path.resolve(cfg.UPLOAD_DIR, f.storagePath));
-  }
+/** Reads from the backend the file was saved to, so switching FILE_STORAGE never orphans older files. */
+export async function readUpload(cfg: Config, f: { storagePath: string; encrypted: boolean; storage?: string | null }) {
+  const raw = await readBytes(cfg, (f.storage as FileStorage | null | undefined) ?? "disk", f.storagePath);
   return f.encrypted ? decrypt(cfg.encryptionKey, raw) : raw;
 }

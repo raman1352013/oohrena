@@ -32,7 +32,7 @@ Live: https://oohrena-kappa.vercel.app (web, Vercel) → https://oohrena-api.onr
 
 | # | Kaam | Kyun zaroori | Kaun | Andaaza |
 |---|------|--------------|------|---------|
-| 1 | **File storage: Cloudflare R2 / AWS S3** — Render env mein `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. Code ready hai. | Abhi photos/proof/KYC Render disk pe — har redeploy/restart pe gayab | DevOps + owner (account) | 0.5 din |
+| 1 | ✅ **Files ab MongoDB (GridFS) mein** — redeploy/restart pe nahi mit-ti. Launch se pehle (zyada photos/videos ke liye) **Cloudflare R2 / AWS S3**: Render env mein `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` — purani files MongoDB se padhti rahengi. | Atlas free tier 512 MB tak; videos ke liye S3/R2 sasta | DevOps + owner (account) | 0.5 din |
 | 2 | **`DATA_ENCRYPTION_KEY`** Render aur local seeding dono mein same; `CORS_ORIGINS` = `https://oohrena-kappa.vercel.app` (bina `/` ke, ab code dono chalata hai) | Encrypted files/bank details ek jagah se doosri jagah padhe ja sakein | DevOps | 1 ghanta |
 | 3 | **Email (SMTP)** — `SMTP_URL`, `MAIL_FROM` | Password reset, Lead ID/quote/booking alerts, staff invite | Owner (account) + dev | 0.5 din |
 | 4 | **2FA screens** — login pe QR enrol (`2FA_SETUP_REQUIRED`), profile mein on/off; phir `REQUIRE_2FA_PRIVILEGED=true` | Admin/Finance accounts ki suraksha (document Module 10) | Frontend dev | 1–2 din |
@@ -65,4 +65,4 @@ Aur **Trust Rule 2**: unverified stats (jaise "500+ locations, 850+ bookings") p
 
 - Pehle `AGENTS.md` padho. Har endpoint: role check + object-level check, zod validation, server-side money maths, audit log, transition tables.
 - Har feature ke saath API tests (negative cases bhi). `npm test`, typecheck, `npm run build -w @oohrena/web` pass hone chahiye.
-- `main` pe push = Render + Vercel auto-deploy. **Jab tak S3/R2 nahi lagta, har deploy ke baad photos mitengi** — demo data reset: `apps/api/scripts/reset-demo-db.ts` → `npm run seed:api` → `seed:demo` with `API_URL`.
+- `main` pe push = Render + Vercel auto-deploy. Files MongoDB mein hain, isliye deploy ke baad reseed ki zaroorat **nahi**. Demo data poora naya chahiye toh: `apps/api/scripts/reset-demo-db.ts` → `ensure-indexes.ts` → `npm run seed:api` → `seed:demo` with `API_URL`.

@@ -1,12 +1,14 @@
 # OOHRENA — instructions for developers and AI coding agents
 
 Read this file completely before changing anything. Then read:
-- `docs/OOHRENA_MVP_Compulsory_Modules_v1.0 (1).pdf` — **the only requirements source**. Every feature, rule and acceptance test comes from it.
+- `docs/OOHRENA_MVP_Compulsory_Modules_v1.0 (1).pdf` — **the base requirements source**. Every feature, rule and acceptance test comes from it.
+- `docs/OOHRENA_Vendor_Dashboard_Technical_Blueprint.pdf` — **requirements for the vendor flow** (team decision, Nov 2026). It adds to the MVP document; where the two conflict, follow the decision recorded in `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` ("Decisions needed"), and if none is recorded yet, ask the product owner — don't pick one yourself.
+- `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` — the vendor-flow tasks from that blueprint, in build order, with their acceptance tests (`AT-…`).
 - `docs/REMAINING_WORK.md` — what is still to be built, in order, with acceptance criteria.
 - `docs/LAUNCH_GUIDE.md` — how to deploy and launch.
 - `README.md` — setup, test accounts and the module status table.
 
-Ignore any other document in `docs/` (for example an older vendor's handover PDF). It is not a requirement, and it is deliberately kept out of git.
+Ignore any other document in `docs/` not listed above (for example an older vendor's handover PDF). It is not a requirement, and it is deliberately kept out of git.
 
 ---
 
@@ -62,7 +64,7 @@ npm run build -w @oohrena/web
 7. **Reasons are mandatory** for reject / suspend / override / cancel / proof rejection / payment rejection.
 8. **DEMO inventory is never bookable or quotable**, and never shown as verified. Unconfirmed availability is labelled "Subject to vendor confirmation". GPS is labelled exactly as captured — never "GPS verified".
 9. **Maker-checker for money**: whoever records a payment can never verify it; only Finance verifies. Payments need a proof file and start `unverified`. No hard deletes of financial records; edits only before verification, with `PaymentHistory` rows.
-10. **Sensitive data**: bank account numbers and KYC/payment files are AES-256-GCM encrypted at rest (`lib/crypto.ts`, `saveUpload(..., encryptAtRest: true)`); show bank numbers masked except to Finance (logged). Proof media is served only through short-lived signed URLs (`lib/signed-url.ts`). Uploads are type-checked by file signature (`sniffMime`), not by extension.
+10. **Sensitive data**: bank account numbers and KYC/payment files are AES-256-GCM encrypted at rest (`lib/crypto.ts`, `saveUpload(..., encryptAtRest: true)`); show bank numbers masked except to Finance (logged). Proof media is served only through short-lived signed URLs (`lib/signed-url.ts`). Bytes go through `saveUpload`/`readUpload` only: the backend (`FILE_STORAGE` = s3 | mongo | disk) is chosen in config and recorded per file, never on a host's local disk in staging/production. Uploads are type-checked by file signature (`sniffMime`), not by extension.
 11. **No secrets in the repo** — not in code, tests, docs or commit messages. Real credentials live in the hosting provider's secret store.
 12. **Double booking is prevented in the database layer**: every hold/booking runs in a MongoDB transaction that bumps `Inventory.availabilityRev` (see `services/availability.ts`). Keep that pattern for anything that consumes capacity.
 13. **Phase 2 features are out of scope** (AI recommendations, dynamic pricing, payment-gateway escrow/splitting, native apps, social ads). Don't build them.

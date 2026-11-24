@@ -12,7 +12,7 @@ Rule from the MVP doc (§8.7): **the company owns and controls** the domain, hos
 |------|----------------|-----|
 | Database | **MongoDB Atlas**, region Mumbai (`ap-south-1`), dedicated tier (M10+) | Replica set (transactions are required for holds/bookings), automated backups, point-in-time restore |
 | API | Docker container on a managed host in Mumbai (AWS ECS/App Runner, Google Cloud Run, Render, Railway) — at least 2 instances behind HTTPS | Stateless; scale horizontally once uploads are on object storage (REMAINING_WORK D.3) and rate limits use Redis (D.4) |
-| Files (KYC docs, photos, proof, payment evidence) | Private S3-compatible bucket (S3 / Cloudflare R2 / GCS) with versioning | Until D.3 is done the API stores files on local disk (`UPLOAD_DIR`): then run **one** instance with a **persistent, backed-up volume** |
+| Files (KYC docs, photos, proof, payment evidence) | Private S3-compatible bucket (S3 / Cloudflare R2 / GCS) with versioning | Without `S3_BUCKET`, staging/production store files in MongoDB GridFS (`FILE_STORAGE=mongo`, the default there), so they survive redeploys and are covered by database backups. Each file records its backend, so moving to S3 later keeps older files readable. |
 | Web | The current build targets **Cloudflare Workers** (nitro default in the Lovable Vite config): `npm run build -w @oohrena/web` then `npx nitro deploy --prebuilt` from `apps/web`. Alternatively switch the nitro preset to `node-server` and run it as a container. | |
 | Domains | `oohrena.com` (web) and `api.oohrena.com` (API) — same parent domain | The session cookie is `SameSite=Lax`; web and API must be **same-site** (same registrable domain) for the browser to send it |
 | Secrets | The host's secret manager (AWS Secrets Manager / GCP Secret Manager / Render env groups) | Never in the repo, chat or tickets |
@@ -30,7 +30,8 @@ Defined and validated in `apps/api/src/config.ts`. With `NODE_ENV=production` or
 | `MONGODB_URI` | Atlas SRV string for a DB user that has only the `oohrenaApp` role (§3) |
 | `CORS_ORIGINS` | `https://oohrena.com,https://www.oohrena.com` (exact origins, comma-separated) |
 | `DATA_ENCRYPTION_KEY` | 32 random bytes, base64 — `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. **Losing it makes bank numbers and KYC/payment files unreadable**: keep it in the secret manager **and** an offline sealed copy held by the owner. Different key per environment. |
-| `UPLOAD_DIR` | path on the persistent volume (until object storage is implemented) |
+| `FILE_STORAGE` | `s3`, `mongo` or `disk` (default: s3 with a bucket, else mongo in staging/production) |
+| `UPLOAD_DIR` | local path, only used when `FILE_STORAGE=disk` (development) |
 | `TRUST_PROXY` | `1` behind one load balancer/proxy (needed for correct client IPs in rate limits and audit logs) |
 | `SESSION_TTL_HOURS` | `12` |
 | `BCRYPT_COST` | `12` |

@@ -24,6 +24,7 @@ import { AppError, badRequest, forbidden, unauthenticated } from "../lib/errors.
 import { nextId } from "../lib/ids.js";
 import { withTransaction } from "../lib/tx.js";
 import { newReferralCode, resolveReferredBy } from "../lib/referral-code.js";
+import { onUserRegistered, tryQualify } from "../services/referrals.js";
 import { hashToken, newToken, privilegedIpAllowed, requireAuth } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { Client, Consent, Session, TwoFactorChallenge, User } from "../models/foundation.js";
@@ -68,6 +69,7 @@ export function authRoutes(cfg: Config, authLimiter: import("express").RequestHa
       );
       await Client.create([{ _id: clientId, userId, companyName: input.companyName, gstin: input.gstin ?? null }], { session });
       await Consent.create(consentDocs(userId, req.ip), { session, ordered: true });
+      await onUserRegistered(user!, session);
       await audit(req, { action: "auth.register", entity: "user", entityId: userId, after: { role: "client", email: input.email, clientId, referredByCode }, userId, role: "client" }, session);
       const s = await startSession(cfg, req, res, userId, session);
       return { user: toSessionUser(user!.toObject()), ...s };
@@ -405,6 +407,7 @@ export function authRoutes(cfg: Config, authLimiter: import("express").RequestHa
       { _id: user._id },
       { $set: { mobileVerifiedAt: new Date(), mobileOtpHash: null, mobileOtpExpiresAt: null, mobileOtpAttempts: 0 } },
     );
+    await tryQualify(user._id);
     await audit(req, { action: "auth.mobile_verified", entity: "user", entityId: user._id });
     res.json({ data: { verified: true } });
   });

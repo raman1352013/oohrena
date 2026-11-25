@@ -15,6 +15,7 @@ import { withTransaction } from "../lib/tx.js";
 import { User, Vendor } from "../models/foundation.js";
 import { VendorBank, VendorDocument } from "../models/vendor-kyc.js";
 import { notify } from "./notifications.js";
+import { onOnboardingSubmitted } from "./referrals.js";
 
 /** Mask PAN for audit records as ******1234 */
 export function maskPanForAudit(val: unknown): unknown {
@@ -31,14 +32,6 @@ export function maskPanForAudit(val: unknown): unknown {
     }
   }
   return out;
-}
-
-/**
- * Hook called when a vendor submits onboarding.
- * T5 will award welcome bonus coins here.
- */
-export async function onOnboardingSubmitted(userId: string, session?: mongoose.ClientSession): Promise<void> {
-  // T5 will fill referral/welcome bonus coins here
 }
 
 /** Returns the 8 wizard steps done state, submittedAt, and saved form data. */
@@ -217,7 +210,7 @@ export async function submitOnboarding(
     await vendor.save({ session });
 
     // Hook for T5 referral reward/welcome bonus
-    await onOnboardingSubmitted(vendor.userId, session);
+    const reward = await onOnboardingSubmitted(vendor.userId, session);
 
     await audit(
       req,
@@ -248,6 +241,6 @@ export async function submitOnboarding(
       );
     }
 
-    return { submittedAt: now.toISOString(), reward: null };
+    return { submittedAt: now.toISOString(), reward };
   });
 }

@@ -197,7 +197,7 @@ Leave a prop/slot onSubmitted(result) on the wizard — T6 will open the gift bo
 
 ---
 
-### ☐ T5 — Referral records + coin ledger API
+### ☑ T5 — Referral records + coin ledger API
 Branch `feat/onboard-t5-referral-coins-api` · needs T2 (T3 for the submit hook)
 
 Prompt:

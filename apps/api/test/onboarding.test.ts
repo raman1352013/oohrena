@@ -356,7 +356,10 @@ describe("T3 — Vendor Onboarding Wizard API", () => {
 
     expect(subRes.status).toBe(200);
     expect(subRes.body.data.submittedAt).toBeDefined();
-    expect(subRes.body.data.reward).toBeNull();
+    expect(subRes.body.data.reward).toMatchObject({
+      welcomeBonus: 25,
+      status: "pending",
+    });
 
     // Verify vendor state
     const v = await Vendor.findById(vendor1Id).lean();

@@ -23,6 +23,7 @@ import { slotView } from "./execution.js";
 import { ownPayables } from "./finance.js";
 import { overdueSlots } from "../services/execution.js";
 import { getOnboardingState, saveOnboardingStep, submitOnboarding } from "../services/onboarding.js";
+import { onUserRegistered } from "../services/referrals.js";
 
 export const maskPan = (pan: string | null | undefined) => (pan ? `${pan.slice(0, 2)}XXXXX${pan.slice(-3)}` : null);
 export const maskAccount = (last4: string) => `XXXXXX${last4}`;
@@ -58,6 +59,7 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
       const vnuId = await nextId("VNU", session);
       await VendorUser.create([{ _id: vnuId, vendorId, userId, role: "owner", status: "active" }], { session });
       await Consent.create(consentDocs(userId, req.ip), { session, ordered: true });
+      await onUserRegistered(user!, session);
       await audit(req, { action: "vendor.register", entity: "vendor", entityId: vendorId, after: { kycStatus: "pending", legalName: input.legalName, categories: input.categories, referredByCode }, userId, role: "vendor" }, session);
       const s = await startSession(cfg, req, res, userId, session);
       return { user: toSessionUser(user!.toObject()), vendorId, kycStatus: "pending" as const, ...s };

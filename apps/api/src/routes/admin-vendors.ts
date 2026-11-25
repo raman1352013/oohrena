@@ -11,6 +11,7 @@ import { Inventory } from "../models/inventory.js";
 import { VendorDocument } from "../models/vendor-kyc.js";
 import { kycDocsFor, maskPan, maskedBank } from "./vendors.js";
 import { notify } from "../services/notifications.js";
+import { onVendorRejected, tryQualify } from "../services/referrals.js";
 
 const listQuery = z.object({
   kycStatus: z.enum(KYC_STATUSES).optional(),
@@ -101,9 +102,15 @@ export function adminVendorRoutes() {
       const set: Record<string, unknown> = { kycStatus: to, kycReason: reason ?? null };
       if (to === "approved") { set.approvedBy = req.user!.userId; set.approvedAt = now; }
       await Vendor.updateOne({ _id: v._id, kycStatus: from }, { $set: set }, { session });
-      if (to === "approved") await VendorDocument.updateMany({ vendorId: v._id, status: "uploaded" }, { $set: { status: "verified", verifiedBy: req.user!.userId, verifiedAt: now } }, { session });
+      if (to === "approved") {
+        await VendorDocument.updateMany({ vendorId: v._id, status: "uploaded" }, { $set: { status: "verified", verifiedBy: req.user!.userId, verifiedAt: now } }, { session });
+        await tryQualify(v.userId, session);
+      }
       // A suspended vendor's live listings stop being visible immediately.
       if (to === "suspended") await Inventory.updateMany({ vendorId: v._id, status: "approved" }, { $set: { status: "suspended", statusReason: "Vendor suspended" } }, { session });
+      if (to === "rejected" || to === "suspended") {
+        await onVendorRejected(v.userId, session);
+      }
       await audit(req, { action: `vendor.kyc.${decision}`, entity: "vendor", entityId: v._id, before: { kycStatus: from }, after: { kycStatus: to }, reason: reason ?? null }, session);
       const vUser = await User.findById(v.userId).select("_id email mobile").lean();
       if (vUser) {

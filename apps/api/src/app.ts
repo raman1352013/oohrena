@@ -29,6 +29,7 @@ import { notificationRoutes } from "./routes/notifications.js";
 import { partnerRoutes } from "./routes/partner.js";
 import { settingsRoutes } from "./routes/settings.js";
 import { jobRoutes } from "./routes/jobs.js";
+import { referralRoutes, walletRoutes } from "./routes/referrals.js";
 
 const limitHandler: Parameters<typeof rateLimit>[0] = {
   standardHeaders: "draft-8",
@@ -112,6 +113,8 @@ export function createApp(cfg: Config) {
   v1.use("/reports", reportRoutes(cfg));
   v1.use("/", notificationRoutes());
   v1.use("/partner", partnerRoutes(cfg));
+  v1.use("/referrals", referralRoutes(cfg));
+  v1.use("/wallet", walletRoutes());
 
   app.use("/api/v1", v1);
   app.use(notFoundHandler);

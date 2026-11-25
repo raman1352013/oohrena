@@ -5,7 +5,7 @@ Read this file completely before changing anything. Then read:
 - `docs/OOHRENA_Vendor_Dashboard_Technical_Blueprint.pdf` — **requirements for the vendor flow** (team decision, Nov 2026). It adds to the MVP document; where the two conflict, follow the decision recorded in `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` ("Decisions needed"), and if none is recorded yet, ask the product owner — don't pick one yourself.
 - `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` — the vendor-flow tasks from that blueprint, in build order, with their acceptance tests (`AT-…`).
 - `docs/NEXT_TASKS.md` — **start here**: what is done, what is blocked on the product owner, and the next tasks in order.
-- `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md` + `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` + `docs/WEEKEND_BUILD_PLAYBOOK.md` — current priority: vendor self-registration, referral coins, public vendor profile (tasks T1–T10, one branch each). The architecture file is the design to follow; it wins over the playbook prompts.
+- `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md` + `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` + `docs/WEEKEND_BUILD_PLAYBOOK.md` — current priority: vendor self-registration, referral coins, public vendor profile (tasks T1–T10, one branch each). The architecture file is the design to follow and `docs/VENDOR_ONBOARDING_UX.md` is the screen spec; both win over the playbook prompts.
 - `docs/REMAINING_WORK.md` — what is still to be built, in order, with acceptance criteria.
 - `docs/LAUNCH_GUIDE.md` — how to deploy and launch.
 - `README.md` — setup, test accounts and the module status table.

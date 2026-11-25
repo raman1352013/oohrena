@@ -57,3 +57,16 @@ export const PHOTO_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 export const MAX_DOC_BYTES = 5 * 1024 * 1024;
 export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_PHOTOS_PER_LISTING = 10;
+
+/** Vendor form §B partner category (asked at sign-up). */
+export const VENDOR_CATEGORIES = ["media_owner", "aggregator", "execution_partner", "agency", "proposed_super_vendor", "other"] as const;
+export type VendorCategory = (typeof VENDOR_CATEGORIES)[number];
+export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
+  media_owner: "Media owner / site owner",
+  aggregator: "Authorised operator / aggregator",
+  execution_partner: "Execution partner",
+  agency: "Agency / media buying",
+  proposed_super_vendor: "Regional network partner / Super Vendor",
+  other: "Other",
+};
+

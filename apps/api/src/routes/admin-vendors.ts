@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { KYC_STATUSES, KYC_TRANSITIONS, REQUIRED_KYC_DOCS, kycDecisionInput, type KycStatus } from "@oohrena/shared";
 import { audit } from "../lib/audit.js";
-import { AppError, notFound } from "../lib/errors.js";
+import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { withTransaction } from "../lib/tx.js";
 import { requirePermission } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
@@ -47,7 +47,7 @@ export function adminVendorRoutes() {
           const d = docCounts.find((x) => x._id === v._id);
           const u = users.find((x) => x._id === v.userId);
           return {
-            vendorId: v._id, legalName: v.legalName, city: v.city, pan: maskPan(v.pan), gstin: v.gstin, kycStatus: v.kycStatus, kycReason: v.kycReason,
+            vendorId: v._id, legalName: v.legalName, city: v.city, pan: maskPan(v.pan), gstin: v.gstin, categories: v.categories, kycStatus: v.kycStatus, kycReason: v.kycReason,
             contactName: u?.fullName ?? null, documentCount: d?.n ?? 0,
             missingDocuments: REQUIRED_KYC_DOCS.filter((t) => !d?.types.includes(t)),
             listingCount: invCounts.find((x) => x._id === v._id)?.n ?? 0, createdAt: v.createdAt, approvedAt: v.approvedAt,
@@ -65,7 +65,7 @@ export function adminVendorRoutes() {
     await audit(req, { action: "vendor.kyc.view", entity: "vendor", entityId: v._id });
     res.json({
       data: {
-        vendorId: v._id, legalName: v.legalName, city: v.city, pan: v.pan, gstin: v.gstin, kycStatus: v.kycStatus, kycReason: v.kycReason,
+        vendorId: v._id, legalName: v.legalName, city: v.city, pan: v.pan, gstin: v.gstin, categories: v.categories, kycStatus: v.kycStatus, kycReason: v.kycReason,
         approvedBy: v.approvedBy, approvedAt: v.approvedAt, createdAt: v.createdAt,
         contact: u ? { name: u.fullName, email: u.email, mobile: u.mobile } : null,
         documents: await kycDocsFor(v._id),
@@ -89,6 +89,7 @@ export function adminVendorRoutes() {
         const missing = REQUIRED_KYC_DOCS.filter((t) => !types.includes(t));
         if (missing.length) throw new AppError(409, "CONFLICT", `Can't approve: missing required documents (${missing.join(", ")})`);
       }
+      if (to === "approved" && !v.pan) throw badRequest("Can't approve: the vendor hasn't added a PAN yet", { field: "pan" });
       const now = new Date();
       const set: Record<string, unknown> = { kycStatus: to, kycReason: reason ?? null };
       if (to === "approved") { set.approvedBy = req.user!.userId; set.approvedAt = now; }

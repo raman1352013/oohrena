@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { DEFAULT_SYSTEM_SETTINGS } from "@oohrena/shared";
-import { bearer, createStaff, startTestDb, stopTestDb, testApp } from "./helpers.js";
+import { bearer, createStaff, startTestDb, stopTestDb, testApp, vendorPayload } from "./helpers.js";
 import { AuditLog } from "../src/models/audit-log.js";
 import { SystemSetting, SystemSettingHistory } from "../src/models/settings.js";
 import { initSettings } from "../src/services/settings.js";
@@ -29,16 +29,7 @@ describe("V0.2 System Settings & Thresholds Core", () => {
     const vRes = await request(app)
       .post("/api/v1/vendors/register")
       .set("x-auth-mode", "token")
-      .send({
-        fullName: "Test Media Owner",
-        email: "media@vendor.test",
-        mobile: "+919876543290",
-        password: "Str0ng!Passw0rd",
-        legalName: "Test Media Private Limited",
-        city: "Mumbai",
-        pan: "ABCDE1234F",
-        acceptTerms: true,
-      });
+      .send(vendorPayload({ email: "media@vendor.test" }));
     vendorToken = vRes.body.data.token;
 
     await initSettings();

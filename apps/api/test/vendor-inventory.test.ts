@@ -6,8 +6,9 @@ import path from "node:path";
 import { AuditLog } from "../src/models/audit-log.js";
 import { StoredFile } from "../src/models/files.js";
 import { InventoryHistory } from "../src/models/inventory.js";
+import { Vendor } from "../src/models/foundation.js";
 import { VendorBank } from "../src/models/vendor-kyc.js";
-import { bearer, createStaff, registerClient, startTestDb, stopTestDb, testApp, vendorPayload } from "./helpers.js";
+import { bearer, createStaff, panFor, registerClient, startTestDb, stopTestDb, testApp, vendorPayload } from "./helpers.js";
 
 const uploadDir = mkdtempSync(path.join(tmpdir(), "oohrena-up-"));
 const { app, cfg } = testApp({ UPLOAD_DIR: uploadDir });
@@ -32,6 +33,7 @@ async function uploadPan(token: string) {
 }
 async function approvedVendor() {
   const v = await newVendor();
+  await Vendor.updateOne({ _id: v.vendorId }, { $set: { pan: panFor() } });
   await uploadPan(v.token);
   const d = await request(app).post(`/api/v1/admin/vendors/${v.vendorId}/kyc-decision`).set(bearer(admin.token)).send({ decision: "approve" });
   expect(d.status).toBe(200);
@@ -99,6 +101,7 @@ describe("T-01 Vendor registration & KYC approval", () => {
     expect(await AuditLog.countDocuments({ action: "vendor.kyc.reject", entityId: noDocs.vendorId, reason: "PAN document missing" })).toBe(1);
 
     // Vendor fixes and resubmits → pending → approved.
+    await Vendor.updateOne({ _id: noDocs.vendorId }, { $set: { pan: panFor() } });
     await uploadPan(noDocs.token);
     expect((await request(app).post("/api/v1/vendors/me/kyc/resubmit").set(bearer(noDocs.token))).body.data.kycStatus).toBe("pending");
     const ok = await request(app).post(`/api/v1/admin/vendors/${noDocs.vendorId}/kyc-decision`).set(bearer(admin.token)).send({ decision: "approve" });
@@ -175,6 +178,7 @@ describe("T-02 Inventory upload & admin approval", () => {
 
     // Vendor KYC still pending → listing approval is blocked.
     expect((await request(app).post(`/api/v1/admin/inventory/${l.inventoryId}/decision`).set(bearer(admin.token)).send({ decision: "approve" })).status).toBe(409);
+    await Vendor.updateOne({ _id: v.vendorId }, { $set: { pan: panFor() } });
     await uploadPan(v.token);
     await request(app).post(`/api/v1/admin/vendors/${v.vendorId}/kyc-decision`).set(bearer(admin.token)).send({ decision: "approve" });
     const ok = await request(app).post(`/api/v1/admin/inventory/${l.inventoryId}/decision`).set(bearer(admin.token)).send({ decision: "approve", indicativePrice: 50000 });

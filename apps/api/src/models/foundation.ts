@@ -1,5 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from "mongoose";
-import { ROLES, VENDOR_ROLES, CONSENT_DOCUMENTS } from "@oohrena/shared";
+import { ROLES, VENDOR_ROLES, CONSENT_DOCUMENTS, VENDOR_CATEGORIES } from "@oohrena/shared";
 
 const ts = { timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" } } as const;
 
@@ -49,11 +49,15 @@ const userSchema = new Schema(
     mobileOtpHash: { type: String, default: null, select: false },
     mobileOtpExpiresAt: { type: Date, default: null, select: false },
     mobileOtpAttempts: { type: Number, default: 0, select: false },
+    // Referral programme (docs/VENDOR_ONBOARDING_ARCHITECTURE.md §3.1). Staff have no code.
+    referralCode: { type: String, default: undefined }, // OOH-XXXXXX
+    referredByCode: { type: String, default: null }, // stored only when it matched a user
   },
   ts,
 );
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ mobile: 1 }, { unique: true });
+userSchema.index({ referralCode: 1 }, { unique: true, partialFilterExpression: { referralCode: { $type: "string" } } });
 export const User = mongoose.model("User", userSchema, "users");
 export type UserDoc = InferSchemaType<typeof userSchema> & { _id: string };
 
@@ -113,7 +117,8 @@ const vendorSchema = new Schema(
     _id: { type: String, required: true }, // VND-000001
     userId: { type: String, required: true, unique: true },
     legalName: { type: String, required: true },
-    pan: { type: String, required: true },
+    // Asked after sign-in (onboarding step "business"); KYC can't be approved without it.
+    pan: { type: String, default: null },
     gstin: { type: String, default: null },
     city: { type: String, required: true },
     // Module 2 / §6 transitions: pending → approved | rejected; approved ⇄ suspended
@@ -121,10 +126,24 @@ const vendorSchema = new Schema(
     kycReason: { type: String, default: null },
     approvedBy: { type: String, default: null },
     approvedAt: { type: Date, default: null },
+    categories: { type: [String], enum: VENDOR_CATEGORIES, default: [] },
+    // Onboarding wizard (vendor form §A–K). Step data is validated by the shared zod schemas before it is written.
+    business: { type: Schema.Types.Mixed, default: null },
+    category: { type: Schema.Types.Mixed, default: null },
+    territory: { type: Schema.Types.Mixed, default: null },
+    execution: { type: Schema.Types.Mixed, default: null },
+    sla: { type: Schema.Types.Mixed, default: null },
+    declaration: { type: Schema.Types.Mixed, default: null },
+    onboarding: {
+      savedSteps: { type: Map, of: Date, default: () => new Map() },
+      submittedAt: { type: Date, default: null },
+    },
   },
   ts,
 );
-vendorSchema.index({ pan: 1 }, { unique: true });
+// PAN is optional until onboarding, so uniqueness applies only to vendors that have one.
+// connectDb() runs syncIndexes on start, which drops the old pan_1 index and builds this one.
+vendorSchema.index({ pan: 1 }, { name: "pan_unique_when_set", unique: true, partialFilterExpression: { pan: { $type: "string" } } });
 export const Vendor = mongoose.model("Vendor", vendorSchema, "vendors");
 
 /* ---------- Vendor Users (team members with sub-roles) ---------- */

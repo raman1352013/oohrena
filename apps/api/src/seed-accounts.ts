@@ -7,6 +7,7 @@ import { hashPassword } from "./services/session.js";
 import { consentDocs } from "./routes/auth.js";
 import { saveUpload } from "./lib/storage.js";
 import { VendorDocument } from "./models/vendor-kyc.js";
+import { newReferralCode } from "./lib/referral-code.js";
 
 /** Minimal valid PDF, so an approved test vendor has KYC documents on file like a real one. */
 const SAMPLE_PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
@@ -46,7 +47,7 @@ export async function seedTestAccounts(cfg: Config, password: string, log: (m: s
       orgId = await nextId("VND");
       const approved = a.kyc === "approved";
       await Vendor.create({
-        _id: orgId, userId, legalName: `${a.fullName} Media`, pan: a.pan, city: "Gwalior",
+        _id: orgId, userId, legalName: `${a.fullName} Media`, pan: a.pan, city: "Gwalior", categories: ["media_owner"],
         kycStatus: a.kyc, approvedBy: approved ? "seed" : null, approvedAt: approved ? new Date() : null,
       });
       if (approved) {
@@ -62,7 +63,8 @@ export async function seedTestAccounts(cfg: Config, password: string, log: (m: s
       orgId = await nextId("GP");
       await GrowthPartner.create({ _id: orgId, userId, name: a.fullName, city: "Gwalior" });
     }
-    await User.create({ _id: userId, email: a.email, mobile: a.mobile, fullName: a.fullName, passwordHash: hash, role: a.role, isStaff: isStaffRole(a.role), orgId, createdBy: "seed", emailVerifiedAt: new Date() });
+    const referralCode = isStaffRole(a.role) ? undefined : await newReferralCode();
+    await User.create({ _id: userId, email: a.email, mobile: a.mobile, fullName: a.fullName, passwordHash: hash, role: a.role, isStaff: isStaffRole(a.role), orgId, createdBy: "seed", emailVerifiedAt: new Date(), ...(referralCode ? { referralCode } : {}) });
     await Consent.create(consentDocs(userId, "seed"));
     await audit(null, { action: "seed.user.create", entity: "user", entityId: userId, after: { role: a.role, email: a.email }, userId: null, role: "system" });
     log(`created ${a.role.padEnd(15)} ${a.email} (${userId}${orgId ? ` / ${orgId}` : ""})`);

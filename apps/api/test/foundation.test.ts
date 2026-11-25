@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { AuditLog } from "../src/models/audit-log.js";
-import { Consent } from "../src/models/foundation.js";
+import { Consent, Vendor } from "../src/models/foundation.js";
 import { nextId } from "../src/lib/ids.js";
 import { GOOD_PW, ORIGIN, bearer, clientPayload, createStaff, registerClient, startTestDb, stopTestDb, testApp, vendorPayload } from "./helpers.js";
 
@@ -68,6 +68,11 @@ describe("Module 2 — vendor registration", () => {
     expect(res.body.data.vendorId).toMatch(/^VND-\d{6}$/);
     expect(res.body.data.kycStatus).toBe("pending");
     const t = res.body.data.token;
+    // Before onboarding step "business", PAN is null
+    const initial = await request(app).get("/api/v1/vendors/me").set(bearer(t));
+    expect(initial.body.data.pan).toBeNull();
+    // Once PAN is added, it is displayed masked
+    await Vendor.updateOne({ _id: res.body.data.vendorId }, { $set: { pan: "ABCDE1234F" } });
     const me = await request(app).get("/api/v1/vendors/me").set(bearer(t));
     expect(me.body.data.pan).toMatch(/^[A-Z]{2}X{5}/);
     expect((await request(app).get("/api/v1/clients/me").set(bearer(t))).status).toBe(403);

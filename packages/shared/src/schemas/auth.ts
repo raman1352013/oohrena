@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { ROLES } from "../roles.js";
+import { REFERRAL_CODE_RE } from "../referral.js";
+import { VENDOR_CATEGORIES } from "../vendor.js";
 
 /** Indian formats; validated server-side, mirrored in forms. */
 export const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -38,6 +40,19 @@ const address = z.object({
 
 export const contactPerson = z.object({ name: trimmed(120), email: email.optional(), mobile: mobile.optional(), designation: z.string().trim().max(80).optional() });
 
+/**
+ * Referral code typed at sign-up or carried in from a share link (?ref=).
+ * A malformed code never blocks sign-up: it is dropped here, and an unknown one is ignored by the server.
+ */
+export const signupRef = z
+  .string()
+  .max(40)
+  .optional()
+  .transform((v) => {
+    const code = v?.trim().toUpperCase();
+    return code && REFERRAL_CODE_RE.test(code) ? code : undefined;
+  });
+
 /** POST /api/v1/auth/register — role is fixed server-side to client. */
 export const registerClientInput = z.object({
   fullName: trimmed(120),
@@ -46,19 +61,27 @@ export const registerClientInput = z.object({
   password,
   companyName: trimmed(160),
   gstin: gstin.optional(),
+  ref: signupRef,
   acceptTerms,
 });
 
-/** POST /api/v1/vendors/register — vendor starts as KYC pending. */
+/**
+ * POST /api/v1/vendors/register — quick sign-up; vendor starts as KYC pending.
+ * PAN and GSTIN are asked after sign-in (onboarding step "business"); KYC can't be approved without PAN.
+ */
 export const registerVendorInput = z.object({
   fullName: trimmed(120),
   email,
   mobile,
   password,
   legalName: trimmed(160),
-  pan,
-  gstin: gstin.optional(),
   city: trimmed(80),
+  categories: z
+    .array(z.enum(VENDOR_CATEGORIES))
+    .min(1, "Choose what you do")
+    .max(VENDOR_CATEGORIES.length)
+    .refine((a) => new Set(a).size === a.length, "Remove duplicates"),
+  ref: signupRef,
   acceptTerms,
 });
 

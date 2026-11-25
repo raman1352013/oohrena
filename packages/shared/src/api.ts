@@ -14,6 +14,7 @@ export type ErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "DUPLICATE_PAN"
   | "ACCOUNT_LOCKED"
   | "RATE_LIMITED"
   | "INVALID_TRANSITION"

@@ -161,7 +161,7 @@ Done when: sign up as a vendor in the browser with only name/mobile/email/passwo
 
 ---
 
-### ☐ T3 — Onboarding API (PDF form sections A, B, C, H, I, K)
+### ☑ T3 — Onboarding API (PDF form sections A, B, C, H, I, K)
 Branch `feat/onboard-t3-onboarding-api` · needs T2
 
 Prompt:

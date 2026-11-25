@@ -11,6 +11,7 @@ import { VendorShell, VENDOR_TABS, type VendorTab } from "@/components/app/vendo
 import { Btn, KCard, Loading, Pill } from "@/components/app/kit";
 import { VendorPayables } from "@/components/app/FinanceCards";
 import { VENDOR_ROLE_LABELS, type VendorRole } from "@oohrena/shared";
+import { OnboardingWizard } from "@/components/app/vendor/OnboardingWizard";
 
 export const Route = createFileRoute("/vendor")({
   validateSearch: (search: Record<string, unknown>): { tab?: VendorTab | undefined } => {
@@ -56,6 +57,12 @@ function VendorHub() {
     );
 
   const v = me.data;
+  const isSubmitted = !!v.onboarding?.submittedAt;
+
+  if (!isSubmitted) {
+    return <OnboardingWizard />;
+  }
+
   const vRole = (user?.vendorRole ?? "owner") as VendorRole;
   const isOwner = vRole === "owner";
   const isManager = vRole === "manager";
@@ -73,7 +80,10 @@ function VendorHub() {
               {VENDOR_ROLE_LABELS[vRole] ?? vRole}
             </Pill>
           </div>
-          <KycPill status={v.kycStatus} />
+          <div className="flex items-center gap-2">
+            {v.kycStatus === "pending" && <Pill tone="saffron">Under review</Pill>}
+            <KycPill status={v.kycStatus} />
+          </div>
         </div>
 
         {/* Tab content */}

@@ -180,7 +180,7 @@ Tests (apps/api/test/onboarding.test.ts): each step saves; unknown field → 400
 
 ---
 
-### ☐ T4 — Onboarding wizard UI
+### ☑ T4 — Onboarding wizard UI
 Branch `feat/onboard-t4-onboarding-ui` · needs T3
 
 Prompt:

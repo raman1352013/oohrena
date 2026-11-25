@@ -8,6 +8,7 @@ import type {
   KycStatus,
   ListingStatus,
   PricingUnit,
+  VendorCategory,
 } from "@oohrena/shared";
 import { api } from "./api";
 
@@ -34,12 +35,17 @@ export type VendorMe = {
   pan: string;
   gstin: string | null;
   city: string;
+  categories?: VendorCategory[] | undefined;
   kycStatus: KycStatus;
   kycReason: string | null;
   approvedAt: string | null;
   documents: KycDoc[];
   missingDocuments: KycDocType[];
   bank: MaskedBank;
+  onboarding?: {
+    savedSteps?: Record<string, string> | undefined;
+    submittedAt: string | null;
+  } | null | undefined;
 };
 export type Listing = {
   inventoryId: string;

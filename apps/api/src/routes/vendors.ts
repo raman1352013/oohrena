@@ -77,6 +77,10 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
         documents: docs,
         missingDocuments: REQUIRED_KYC_DOCS.filter((t) => !docs.some((d) => d.type === t)),
         bank: await maskedBank(v._id),
+        onboarding: v.onboarding ? {
+          savedSteps: v.onboarding.savedSteps ? JSON.parse(JSON.stringify(v.onboarding.savedSteps)) : {},
+          submittedAt: v.onboarding.submittedAt,
+        } : null,
       },
     });
   });

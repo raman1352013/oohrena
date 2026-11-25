@@ -9,6 +9,7 @@ Details and acceptance tests for every task live in `docs/VENDOR_BLUEPRINT_BUILD
 2. `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` — full task list with `AT-…` acceptance tests.
 3. `docs/VENDOR_BLUEPRINT_PROGRESS_REPORT.md` — how P0 was built (files, patterns, tests). Copy those patterns.
 4. `docs/OOHRENA_Vendor_Dashboard_Technical_Blueprint.pdf` — the source requirement for the vendor flow.
+5. **Current priority (weekend of 28 Nov 2026):** vendor self-registration, referral coins and public vendor profile — what/why in `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`, task-by-task prompts in `docs/WEEKEND_BUILD_PLAYBOOK.md`. Do that before Sprint 1 below.
 
 ## Where things stand
 

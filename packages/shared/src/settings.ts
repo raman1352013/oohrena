@@ -46,6 +46,17 @@ export const DEFAULT_SYSTEM_SETTINGS = {
     buyer_rating: 10,
     compliance: 5,
   } as Record<string, number>,
+
+  // Referral coins (docs/VENDOR_ONBOARDING_ARCHITECTURE.md §3.5). Coins have no rupee value.
+  "referral.enabled": true as boolean,
+  "referral.coins.b2b": 100,
+  "referral.coins.b2c": 50,
+  "referral.coins.c2c": 25,
+  "referral.coins.c2v": 50,
+  "referral.coins.sv": 35,
+  "referral.welcome_bonus": 25,
+  "referral.daily_cap": 20,
+  "referral.require_kyc_for_vendor": true as boolean,
 };
 
 export type SystemSettingKey = keyof typeof DEFAULT_SYSTEM_SETTINGS;
@@ -59,8 +70,9 @@ export const SENSITIVE_SETTING_KEYS: SystemSettingKey[] = [
   "score.weights",
 ];
 
+/** Every referral.* key changes what people earn, so all of them need a second admin. */
 export const isSensitiveSetting = (key: string): boolean =>
-  SENSITIVE_SETTING_KEYS.includes(key as SystemSettingKey);
+  SENSITIVE_SETTING_KEYS.includes(key as SystemSettingKey) || key.startsWith("referral.");
 
 export const settingUpdateInput = z
   .object({

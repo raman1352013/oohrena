@@ -97,6 +97,13 @@ export const PERMISSIONS = {
   "notifications.read": { admin: "all", ops: "all" },
   // Module 10 — growth partner
   "partner.earnings.read": { growth_partner: "own", admin: "all", finance: "all", auditor: "all" },
+  // Vendor onboarding + referral coins (docs/VENDOR_ONBOARDING_ARCHITECTURE.md §5)
+  "vendor.onboarding": { vendor: "own" },
+  "vendor.review": { admin: "all", verifier: "all" },
+  "referral.read": { client: "own", vendor: "own", growth_partner: "own", admin: "all" },
+  "wallet.read": { client: "own", vendor: "own", growth_partner: "own", admin: "all", finance: "all", auditor: "all" },
+  /** Maker only: a second admin approves through the pending-action flow. */
+  "wallet.adjust": { admin: "all" },
 } as const satisfies Record<string, Partial<Record<Role, Scope>>>;
 
 export type Permission = keyof typeof PERMISSIONS;

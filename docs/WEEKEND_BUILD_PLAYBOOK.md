@@ -1,7 +1,9 @@
 # Weekend build playbook — vendor onboarding, referral coins, vendor profile
 
 Written 25 Nov 2026. **One file to run the whole build with an AI coding agent (Claude Code, Antigravity, Cursor…).**
-What and why: `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`. Rules: `AGENTS.md`. This file = **how**, task by task, with a prompt to paste.
+What and why: `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`. Design (data model, API, coin ledger, security): `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` — **it wins if this file disagrees**. Rules: `AGENTS.md`. This file = **how**, task by task, with a prompt to paste.
+
+**Using Antigravity?** See section 7 at the end.
 
 ---
 
@@ -48,7 +50,9 @@ What and why: `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`. Rules: `AGENTS.md`. Thi
 ```
 You are working in the OOHRENA monorepo (npm workspaces: apps/api, apps/web, packages/shared).
 Before writing code, read AGENTS.md completely and follow it exactly — it overrides your defaults.
-Then read docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md and docs/WEEKEND_BUILD_PLAYBOOK.md (this task's section).
+Then read docs/VENDOR_ONBOARDING_ARCHITECTURE.md (the design — follow its data model, API table and coin ledger rules exactly),
+docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md and docs/WEEKEND_BUILD_PLAYBOOK.md (this task's section).
+If the architecture file and the task prompt disagree, follow the architecture file and say so in your summary.
 Rules you must not break:
 - Shared zod schemas/enums/maths go in packages/shared/src and are exported from src/index.ts.
 - Every endpoint: requirePermission(...) + object-level ownership check; another user's record returns 404.
@@ -98,6 +102,7 @@ Task T1: add the shared contracts for vendor onboarding and referral coins. No A
 2. packages/shared/src/vendor.ts:
    - VENDOR_CATEGORIES = media_owner | aggregator | execution_partner | agency | proposed_super_vendor | other (PDF §B).
    - BUSINESS_TYPES = proprietorship | partnership | llp | pvt_ltd | individual | other.
+   - INDIAN_STATES: array of { code, name } for all states + UTs (ISO 3166-2:IN codes, e.g. RJ, MH, DL). Addresses and territory store stateCode, not free text (architecture §3.2).
    - Extend KYC_DOC_TYPES with business_registration, ownership_proof, municipal_permission, cancelled_cheque, rate_card (+ labels).
    - zod .strict() schemas, one per onboarding step:
      onboardingBusinessInput (PDF §A: tradeName, designation, whatsapp, website, officeAddress{line1,line2,city,district,state,pin}, businessType, yearEstablished, pan (required here), gstin optional, udyam optional, language),
@@ -109,16 +114,19 @@ Task T1: add the shared contracts for vendor onboarding and referral coins. No A
    - ONBOARDING_STEPS = business | category | territory | execution | sla | declaration, and a type map step → schema.
 3. New file packages/shared/src/referral.ts:
    - REFERRAL_KINDS = b2b | b2c | c2c | c2v | sv ; REFERRAL_STATUSES = pending | qualified | rewarded | rejected with REFERRAL_TRANSITIONS.
-   - COIN_REASONS = referral_reward | welcome_bonus | reversal | admin_adjust ; COIN_STATUSES = pending | available | reversed.
-   - referralKindFor(referrerRole, referrerIsSuperVendor, refereeRole) → kind.
+   - COIN_REASONS = referral_reward | welcome_bonus | release | reversal | admin_adjust ; COIN_BUCKETS = pending | available.
+   - coinIdemKey helpers that build exactly the keys in architecture §3.4 (hold, release pending/available, void, welcome hold/release, adjust).
+   - referralKindFor(referrerRole, referrerIsSuperVendor, refereeRole) → kind | null (null for growth_partner or staff referrers = no coins).
+   - generateReferralCode(random) using the 31-char alphabet without 0 O 1 I L.
    - REFERRAL_CODE_RE = /^OOH-[A-Z0-9]{6}$/ ; coinAdjustInput (userId, delta int non-zero, reason min 3 chars) .strict().
-   - walletBalance(rows) → { available, pending } pure function.
+   - walletBalance(rows) → { available, pending } pure function (sum of delta per bucket).
+   - maskName("Raman Kumar") → "Ra*** Ku***" for referral lists.
 4. packages/shared/src/settings.ts defaults: referral.coins.b2b 100, referral.coins.b2c 50, referral.coins.c2c 25,
    referral.coins.c2v 50, referral.coins.sv 35, referral.welcome_bonus 25, referral.daily_cap 20,
-   referral.require_kyc_for_vendor true. Make every referral.* key sensitive in isSensitiveSetting.
+   referral.require_kyc_for_vendor true, referral.enabled true. Make every referral.* key sensitive in isSensitiveSetting.
 5. roles.ts: permissions referral.read {client own, vendor own, growth_partner own, admin all},
    wallet.read {client own, vendor own, admin all, finance all, auditor all}, wallet.adjust {admin all},
-   vendor.onboarding {vendor own}. Update roles.test.ts if it snapshots the matrix.
+   vendor.onboarding {vendor own}, vendor.review {verifier all, admin all}. Update roles.test.ts if it snapshots the matrix.
 6. Unit tests next to the code: referralKindFor for all combinations, walletBalance, each onboarding schema rejects unknown fields and the declaration rejects any false flag.
 Export everything from packages/shared/src/index.ts.
 ```
@@ -143,7 +151,9 @@ API:
 6. Update seed + test fixtures so existing tests still pass (approvedVendor sets pan).
 Tests (apps/api/test/onboarding-signup.test.ts): sign-up without PAN → 201 and pending; two vendors with no PAN both allowed; ref code stored; unknown ref ignored; every user gets a referralCode; approve KYC without PAN → 400.
 Web:
-7. apps/web/src/routes/register.tsx vendor form: drop PAN/GST fields, add category checkboxes; read ?ref= from the URL into a hidden/prefilled "Referral code" field for both client and vendor forms.
+7. apps/web/src/lib/referral-capture.ts: on app load, if the URL has ?ref=, save { code, at } in localStorage for 30 days (first touch wins, every access in try/catch). Call it from the root route.
+8. apps/web/src/routes/register.tsx vendor form: drop PAN/GST fields, add category checkboxes; pre-fill a "Referral code" field from ?ref= or the saved code, for both client and vendor forms.
+Server side, generate codes with generateReferralCode from shared (T1).
 ```
 Done when: sign up as a vendor in the browser with only name/mobile/email/password/city/category.
 
@@ -160,7 +170,8 @@ Task T3: onboarding wizard API for vendors. All endpoints INSIDE apps/api/src/ro
    business step sets Vendor.pan/gstin too; duplicate PAN → 409 DUPLICATE_PAN. Saving is allowed until submitted; after submit, only while kycStatus is rejected (resubmission) → else 409 INVALID_TRANSITION.
    audit action "vendor.onboarding.save" with before/after (mask PAN as ******1234 in audit).
 3. POST /vendors/me/onboarding/submit — owner only, body onboardingDeclarationInput. Requires all other steps done (400 with the list of missing steps). Stores declaration with text version "2026-11", signedAt, ip. Sets onboarding.submittedAt, notifies admins (existing notify()), audit "vendor.onboarding.submit".
-   Return { submittedAt }. (T5 will hook coins into this; leave a clearly named function call point onOnboardingSubmitted(vendorId, session) that does nothing yet.)
+   Return { submittedAt, reward: null } (architecture §5). T5 fills reward. Leave a clearly named call point onOnboardingSubmitted(userId, session) that does nothing yet.
+   Put the logic in apps/api/src/services/onboarding.ts; the route only validates, calls the service and shapes the response.
 4. Admin: GET /admin/vendors/:id returns the onboarding data (PAN masked unless finance/admin view already logs it — follow existing bank masking pattern).
 Tests (apps/api/test/onboarding.test.ts): each step saves; unknown field → 400; client role → 403; manager can save but not submit → 403; submit with missing steps → 400 listing them; declaration with a false flag → 400; save after submit → 409; duplicate PAN → 409; another vendor cannot read my onboarding (data stays scoped by req.user.orgId).
 ```
@@ -191,20 +202,25 @@ Prompt:
 Task T5: referrals and coin wallet on the server.
 Models (apps/api/src/models/referral.ts):
 - Referral { _id RFL-…, referrerUserId, refereeUserId (unique), kind (REFERRAL_KINDS), status (REFERRAL_STATUSES), coins, reason, qualifiedAt, rewardedAt } indexes: referrerUserId+createdAt, status.
-- CoinLedger { _id CNL-…, userId, delta int, reason (COIN_REASONS), status (COIN_STATUSES), refType, refId, createdBy, createdAt } — APPEND-ONLY: copy the pre-hooks from models/audit-log.ts so updateOne/updateMany/deleteOne/deleteMany/findOneAndUpdate/findOneAndDelete throw. Status change = insert a new row (e.g. a "reversal" row), never edit.
-  Wallet balance = walletBalance() from shared over the user's rows. Index userId+createdAt.
-  Pending→available: insert a reason:"referral_reward" status:"available" row and a matching negative pending row (so the sum stays honest). Put this in one service function.
+- CoinLedger exactly as architecture §3.4: { _id CNL-…, userId, bucket (pending|available), delta int non-zero, reason, refType, refId, idemKey (UNIQUE index), createdBy, createdAt }.
+  APPEND-ONLY: copy the pre-hooks from models/audit-log.ts so every update/delete/replace/bulkWrite throws. Changes = new rows, never edits.
+  Every insert uses the idemKey from shared coinIdemKey helpers; a duplicate-key error on idemKey = already done → return success (this is what stops double coins).
+  Pending→available = two rows (−N pending, +N available) with the release keys. Never let a bucket go below zero.
+  Balance = aggregate sum of delta grouped by bucket. Index userId+createdAt.
+  Only services/referrals.ts may write Referral or CoinLedger.
 Service apps/api/src/services/referrals.ts (all inside withTransaction):
-- onUserRegistered(user, session): if referredByCode matches a user → reject self-referral, same mobile, or (vendor) same PAN later; enforce referral.daily_cap per referrer; create Referral pending with kind = referralKindFor(...) and coins = setting referral.coins.<kind>; add CoinLedger pending row for the referrer. Call it from both register routes (T2 code).
+- If setting referral.enabled is false, every function below returns without creating anything.
+- onUserRegistered(user, session): if referredByCode matches a user → reject self-referral, same mobile/email, or (vendor) same PAN later; referralKindFor() null → no Referral; enforce referral.daily_cap per referrer; create Referral pending with kind = referralKindFor(...) and coins = setting referral.coins.<kind>; add CoinLedger pending row for the referrer. Call it from both register routes (T2 code).
 - tryQualify(refereeUserId, session): qualified when the referee's mobile is verified AND (if referee is a vendor and referral.require_kyc_for_vendor) kycStatus approved. Then reward: make referrer coins available, status rewarded. Call it from verify-mobile (auth.ts) and KYC approve (admin-vendors.ts).
 - onOnboardingSubmitted(vendorId, session): welcome bonus referral.welcome_bonus once per user (pending until qualified, same rule). Wire into the T3 hook. Also give clients the welcome bonus once when they finish profile (skip if no such step exists; note it).
-- KYC rejected/suspended permanently or account suspended → reversal rows for still-pending coins, Referral rejected with reason.
+- onVendorRejected(userId, session): KYC rejected finally or account suspended → still-pending referrals for this referee become rejected + void rows. Never claw back available coins automatically.
+- onOnboardingSubmitted returns { welcomeBonus, pendingReferralCoins, status } and the T3 submit route returns it as reward.
 Routes apps/api/src/routes/referrals.ts mounted in app.ts:
 - GET /referrals/me → my code, share link (cfg web origin + /register?ref=CODE), my referrals (referee shown as masked name + kind + status + coins, never their email/mobile).
 - GET /wallet/me → { available, pending, rows (paged) }.
 - GET /wallet/:userId (admin/finance/auditor) and POST /wallet/adjust (admin, coinAdjustInput, reason required, audited; delta beyond ±1000 requires a second admin via existing maker-checker pending action pattern — if that is too large, block > ±1000 with 400 and note it).
 Audit: referral.create, referral.qualify, referral.reject, coin.credit, coin.reverse, coin.adjust.
-Tests (apps/api/test/referrals.test.ts): vendor→vendor gives 100 pending; becomes available only after mobile verified + KYC approved; vendor→client 50; client→client 25; self-referral rejected; same referee twice → only one Referral (unique); daily cap; CoinLedger update/delete throw; GET /wallet/USR-of-someone-else as client → 403/404 per matrix; adjust without reason → 400; numbers come from settings (change a setting in the test and see the new amount).
+Tests (apps/api/test/referrals.test.ts): calling tryQualify twice pays once; two parallel tryQualify calls pay once; vendor→vendor gives 100 pending; becomes available only after mobile verified + KYC approved; vendor→client 50; client→client 25; self-referral rejected; same referee twice → only one Referral (unique); daily cap; CoinLedger update/delete throw; GET /wallet/USR-of-someone-else as client → 403/404 per matrix; adjust without reason → 400; numbers come from settings (change a setting in the test and see the new amount).
 ```
 
 ---
@@ -216,9 +232,9 @@ Prompt:
 ```
 Task T6: wallet + referral UI and the gift box.
 1. apps/web/src/lib/referral-api.ts: useMyReferrals(), useMyWallet().
-2. components/app/WalletPanel.tsx (shared by vendor, client, partner screens): Stats (Available, Pending), Share card with the code, Copy button and a WhatsApp link (https://wa.me/?text=<encoded message + link>), table of referrals (name masked, kind, Pill status, coins), ledger list. Empty state <Empty title="No referrals" />.
+2. components/app/WalletPanel.tsx (shared by vendor, client, partner screens): Stats (Available, Pending), Share card with the code, Copy button and a WhatsApp link (https://wa.me/?text=<encoded message + link>, message text from one constant in lib/share-text.ts), table of referrals (name masked, kind, Pill status, coins), ledger list. Empty state <Empty title="No referrals" />.
    Add a "Wallet" tab on vendor.tsx, client.tsx and partner.tsx.
-3. components/app/GiftBox.tsx: full-screen Dialog, closed box → tap/auto after 600 ms → lid opens (CSS transform, no new animation library), coins count up to the welcome bonus + pending referral coins from /wallet/me, then "Saved to your wallet" and a Btn to the Wallet tab. Respect prefers-reduced-motion (show the result without animation). Open it from the wizard's onSubmitted slot (T4).
+3. components/app/GiftBox.tsx: full-screen Dialog, closed box → tap/auto after 600 ms → lid opens (CSS transform, no new animation library), coins count up to reward.welcomeBonus + reward.pendingReferralCoins from the submit response (never computed in the browser; no gift box if reward is null), then "Saved to your wallet" and a Btn to the Wallet tab. Respect prefers-reduced-motion (show the result without animation). Open it from the wizard's onSubmitted slot (T4).
 4. Coins are labelled "Pending" until available — never show pending coins as earned.
 Check 375px width and dark mode.
 ```
@@ -287,3 +303,16 @@ Branch none — do it yourself (or ask an agent only to run commands and report)
 
 ## 6. Parallel or one by one?
 One agent at a time is safest. If you want two at once: **T7 can run beside T3–T6** (different files). Everything else follows the chain T1 → T2 → T3 → (T4, T5, T8) → T6 → T9.
+
+## 7. Running this with Antigravity (or any agent IDE)
+
+1. Open the repo folder in Antigravity. `.agent/rules/oohrena.md` tells it to read `AGENTS.md` first. If your version doesn't pick it up, the Common prefix (section 2) does the same job — always paste it.
+2. **One task = one new conversation.** Don't continue T2 in T1's chat.
+3. Use **Planning mode**, not Fast. When it shows its implementation plan, check it against the task prompt and `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` **before** letting it write code. Reject a plan that:
+   - adds a coin balance field instead of using the CoinLedger,
+   - puts a new `/vendors/me/...` endpoint outside `routes/vendors.ts`,
+   - writes Referral/CoinLedger from anywhere except `services/referrals.ts`,
+   - touches finance models, `routeTree.gen.ts`, or files from another task.
+4. Terminal: let it run `npm test`, `npm run typecheck`, `npm run build -w @oohrena/web` and the dev servers. **Don't allow** `git push`, `git reset --hard`, deleting folders, or anything with `.env` without you watching.
+5. Ask it to open `http://localhost:8080`, sign in with a seeded account (README) and click the task's flow at phone width — then look at the screenshots yourself.
+6. When it says done, run the Review checklist (section 3) yourself, then open the PR.

@@ -3,7 +3,7 @@
 Written: 25 Nov 2026. Source: team discussion (WhatsApp, Nov 2026), `OOHRENA_Vendor_Registration_and_Inventory_Form.pdf` (sections A–L), Super Vendor Network poster.
 Goal: vendors can **register and upload inventory themselves** after this weekend's final testing; every share brings a reward, so word of mouth grows the network.
 
-All rules in `AGENTS.md` still apply: server-side permission + ownership checks, zod validation, audit, `nextId`, no secrets, encrypted bank/KYC files, DEMO never bookable.
+Design (data model, API, coin ledger, anti-fraud): `docs/VENDOR_ONBOARDING_ARCHITECTURE.md`. All rules in `AGENTS.md` still apply: server-side permission + ownership checks, zod validation, audit, `nextId`, no secrets, encrypted bank/KYC files, DEMO never bookable.
 
 ---
 
@@ -105,6 +105,8 @@ Design:
 | Q7 | Show a vendor on the marketplace before KYC approval? | No — only approved |
 | Q8 | Daily referral cap / fraud rules | 20 referrals/day; same mobile/PAN/device rejected |
 | Q9 | Logo file + referral programme T&C text | Owner to send |
+| Q10 | Do Growth Partners also earn coins? (they already earn through the partner programme) | No coins for now — avoids paying twice |
+| Q11 | Does the sharer's sharer get anything (multi-level)? | No — only the direct sharer. Multi-level rewards look like MLM and carry legal risk |
 | — | SMS provider (DLT) for OTP — already pending | Needed for Q1 anti-fraud |
 
 ---

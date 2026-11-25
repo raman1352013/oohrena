@@ -1,7 +1,7 @@
 # Vendor onboarding, referral coins & vendor profile — architecture
 
 Written 25 Nov 2026. Status: **approved design, build not started.**
-Read with: `AGENTS.md` (rules), `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md` (what and why), `docs/WEEKEND_BUILD_PLAYBOOK.md` (tasks T1–T10 and prompts).
+Read with: `AGENTS.md` (rules), `docs/VENDOR_ONBOARDING_UX.md` (screens), `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md` (what and why), `docs/WEEKEND_BUILD_PLAYBOOK.md` (tasks T1–T10 and prompts).
 If this file and the playbook disagree, **this file wins** — fix the playbook in the same PR.
 
 ---
@@ -150,7 +150,7 @@ All under `/api/v1`. Every row: `requirePermission` + ownership filter + `valida
 | `PATCH /vendors/me/onboarding/:step` | `vendor.onboarding` + vendor role owner/manager | own vendor | schema per step | `vendor.onboarding.save` (PAN masked) | 404 unknown step, 409 `DUPLICATE_PAN`, 409 `INVALID_TRANSITION` after submit |
 | `POST /vendors/me/onboarding/submit` | `vendor.onboarding` + owner | own vendor | `onboardingDeclarationInput` | `vendor.onboarding.submit` | 400 `{ missing: [...] }` |
 | `PATCH /admin/vendors/:id/review` | `vendor.review` (verifier, admin) | all | `vendorReviewInput` | `vendor.review` | 400 reason missing on reject |
-| `GET /referrals/me` | `referral.read` | own | `?page` | — | |
+| `GET /referrals/me` | `referral.read` | own | `?page` → code, share link, current rates from settings, my referrals (masked) | — | |
 | `GET /wallet/me` | `wallet.read` | own | `?page` | — | |
 | `GET /wallet/:userId` | `wallet.read` (admin, finance, auditor) | all | — | `wallet.view` | 404 |
 | `POST /wallet/adjust` | `wallet.adjust` (admin) | all | `coinAdjustInput` (reason ≥ 3 chars) | `coin.adjust.request` → checker approves → `coin.adjust` | 400, 403 maker = checker |

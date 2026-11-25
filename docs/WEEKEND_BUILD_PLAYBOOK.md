@@ -1,7 +1,7 @@
 # Weekend build playbook — vendor onboarding, referral coins, vendor profile
 
 Written 25 Nov 2026. **One file to run the whole build with an AI coding agent (Claude Code, Antigravity, Cursor…).**
-What and why: `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`. Design (data model, API, coin ledger, security): `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` — **it wins if this file disagrees**. Rules: `AGENTS.md`. This file = **how**, task by task, with a prompt to paste.
+What and why: `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`. Design (data model, API, coin ledger, security): `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` — **it wins if this file disagrees**. Screens and UX: `docs/VENDOR_ONBOARDING_UX.md` — every UI task follows it. Rules: `AGENTS.md`. This file = **how**, task by task, with a prompt to paste.
 
 **Using Antigravity?** See section 7 at the end.
 
@@ -52,7 +52,8 @@ You are working in the OOHRENA monorepo (npm workspaces: apps/api, apps/web, pac
 Before writing code, read AGENTS.md completely and follow it exactly — it overrides your defaults.
 Then read docs/VENDOR_ONBOARDING_ARCHITECTURE.md (the design — follow its data model, API table and coin ledger rules exactly),
 docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md and docs/WEEKEND_BUILD_PLAYBOOK.md (this task's section).
-If the architecture file and the task prompt disagree, follow the architecture file and say so in your summary.
+For any screen, follow docs/VENDOR_ONBOARDING_UX.md (layout, input attributes, states, phone-first) and its §8 UX acceptance row for this task.
+If the architecture or UX file and the task prompt disagree, follow those files and say so in your summary.
 Rules you must not break:
 - Shared zod schemas/enums/maths go in packages/shared/src and are exported from src/index.ts.
 - Every endpoint: requirePermission(...) + object-level ownership check; another user's record returns 404.
@@ -85,6 +86,7 @@ Then check by eye:
 - [ ] `audit(` called on every create / status change.
 - [ ] No hard-coded coin numbers outside `settings.ts`.
 - [ ] Run it: `npm run dev:api:memory` + `npm run dev:web`, click the flow with a seeded account (README), and at phone width.
+- [ ] UI tasks: the task's row in `docs/VENDOR_ONBOARDING_UX.md` §8 is true in the browser.
 
 If something fails, paste the failure back to the same agent: "Fix this without changing anything else: <output>".
 
@@ -155,7 +157,7 @@ Web:
 8. apps/web/src/routes/register.tsx vendor form: drop PAN/GST fields, add category checkboxes; pre-fill a "Referral code" field from ?ref= or the saved code, for both client and vendor forms.
 Server side, generate codes with generateReferralCode from shared (T1).
 ```
-Done when: sign up as a vendor in the browser with only name/mobile/email/password/city/category.
+Done when: sign up as a vendor in the browser with only name/mobile/email/password/city/business name/category, laid out as UX §4.1 (referral as an applied chip, input attributes from UX §3).
 
 ---
 
@@ -189,6 +191,7 @@ Task T4: vendor onboarding wizard UI for the T3 API.
    Declaration step: the 9 checkboxes with the PDF §K wording, signatory name, designation, place, Submit button (disabled until all steps done; show which are missing as Pills, not a paragraph).
 3. In routes/vendor.tsx: if onboarding.submittedAt is null, show the wizard instead of the dashboard tabs; after submit show the dashboard with a "Under review" Pill.
 4. Labels are short nouns (AGENTS.md §5a). <Loading /> while loading, error via FormError. Check at 375px width.
+Layout, step states, sticky footer, local drafts and leave-without-saving: UX §4.2 and §4.4.
 Leave a prop/slot onSubmitted(result) on the wizard — T6 will open the gift box there.
 ```
 
@@ -216,7 +219,7 @@ Service apps/api/src/services/referrals.ts (all inside withTransaction):
 - onVendorRejected(userId, session): KYC rejected finally or account suspended → still-pending referrals for this referee become rejected + void rows. Never claw back available coins automatically.
 - onOnboardingSubmitted returns { welcomeBonus, pendingReferralCoins, status } and the T3 submit route returns it as reward.
 Routes apps/api/src/routes/referrals.ts mounted in app.ts:
-- GET /referrals/me → my code, share link (cfg web origin + /register?ref=CODE), my referrals (referee shown as masked name + kind + status + coins, never their email/mobile).
+- GET /referrals/me → my code, share link (cfg web origin + /register?ref=CODE), current rates { b2b, b2c, c2c, c2v, welcomeBonus } from settings (for the wallet's Rewards block), my referrals (referee shown as masked name + kind + status + coins, never their email/mobile).
 - GET /wallet/me → { available, pending, rows (paged) }.
 - GET /wallet/:userId (admin/finance/auditor) and POST /wallet/adjust (admin, coinAdjustInput, reason required, audited; delta beyond ±1000 requires a second admin via existing maker-checker pending action pattern — if that is too large, block > ±1000 with 400 and note it).
 Audit: referral.create, referral.qualify, referral.reject, coin.credit, coin.reverse, coin.adjust.
@@ -236,6 +239,7 @@ Task T6: wallet + referral UI and the gift box.
    Add a "Wallet" tab on vendor.tsx, client.tsx and partner.tsx.
 3. components/app/GiftBox.tsx: full-screen Dialog, closed box → tap/auto after 600 ms → lid opens (CSS transform, no new animation library), coins count up to reward.welcomeBonus + reward.pendingReferralCoins from the submit response (never computed in the browser; no gift box if reward is null), then "Saved to your wallet" and a Btn to the Wallet tab. Respect prefers-reduced-motion (show the result without animation). Open it from the wizard's onSubmitted slot (T4).
 4. Coins are labelled "Pending" until available — never show pending coins as earned.
+Screens exactly as UX §4.3 (gift box) and §4.5 (wallet & share: navigator.share with WhatsApp/copy fallback, "Invite a vendor" / "Invite a client").
 Check 375px width and dark mode.
 ```
 
@@ -263,7 +267,7 @@ Prompt:
 Task T8: admin vendor review = PDF §L "Office use".
 Add to Vendor: review { identity, ownership, assets (pending|partial|verified|rejected), permission, rateCard (pending|approved|clarification), siteVisitRequired, territory, assignedSuperVendorId (null for now), remarks, nextReviewDate, reviewedBy, reviewedAt }.
 PATCH /admin/vendors/:id/review (permission used by verifier + admin, validateBody .strict(), reason required when any item is rejected, audited).
-Admin vendor detail screen (components/app/admin/...) shows the onboarding data read-only (PAN masked) + the review form. kycStatus approval stays the existing decision endpoint.
+Admin vendor detail screen (components/app/admin/...) shows the onboarding data read-only (PAN masked) + the review form, laid out as UX §4.7. kycStatus approval stays the existing decision endpoint.
 Tests: verifier can save review, client/vendor 403, rejected without reason 400, unknown vendor 404.
 ```
 
@@ -276,7 +280,7 @@ Prompt:
 ```
 Task T9: public vendor profile.
 API: GET /api/v1/public/vendors/:vendorId (no login): only when kycStatus approved, else 404. Returns tradeName||legalName, city/state, categories, memberSince, verified: true, listings = only verified & non-DEMO listings (same filter search uses). Never return PAN, GSTIN, email, mobile, bank, address line, userId. Rate-limit like other public routes.
-Web: route apps/web/src/routes/v.$vendorId.tsx — header with name + "Verified" Pill (only because the API says approved), listing cards reusing the marketplace card. Marketplace cards link to /v/<vendorId>. isPublicPath in apps/web/src/lib/auth.ts matches exact paths only: extend it to also accept paths starting with "/v/" (not ROUTE_ROLES), and add cases to apps/web/src/lib/auth.test.ts proving "/v/VND-000001" is public while "/vendor" and "/vendor/x" still need login.
+Web (layout: UX §4.6): route apps/web/src/routes/v.$vendorId.tsx — header with name + "Verified" Pill (only because the API says approved), listing cards reusing the marketplace card. Marketplace cards link to /v/<vendorId>. isPublicPath in apps/web/src/lib/auth.ts matches exact paths only: extend it to also accept paths starting with "/v/" (not ROUTE_ROLES), and add cases to apps/web/src/lib/auth.test.ts proving "/v/VND-000001" is public while "/vendor" and "/vendor/x" still need login.
 Tests: approved vendor → 200 with no private fields (assert keys); pending/rejected/suspended → 404; DEMO listing never in the response.
 ```
 

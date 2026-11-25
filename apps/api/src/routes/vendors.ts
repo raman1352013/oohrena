@@ -8,6 +8,7 @@ import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { saveUpload } from "../lib/storage.js";
 import { withTransaction } from "../lib/tx.js";
+import { newReferralCode, resolveReferredBy } from "../lib/referral-code.js";
 import { requirePermission, requireVendorRole } from "../middleware/auth.js";
 import { currentVendor, upload } from "../middleware/upload.js";
 import { validateBody } from "../middleware/validate.js";
@@ -22,7 +23,7 @@ import { slotView } from "./execution.js";
 import { ownPayables } from "./finance.js";
 import { overdueSlots } from "../services/execution.js";
 
-export const maskPan = (pan: string) => `${pan.slice(0, 2)}XXXXX${pan.slice(-3)}`;
+export const maskPan = (pan: string | null | undefined) => (pan ? `${pan.slice(0, 2)}XXXXX${pan.slice(-3)}` : null);
 export const maskAccount = (last4: string) => `XXXXXX${last4}`;
 
 export async function kycDocsFor(vendorId: string) {
@@ -45,15 +46,18 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
     const out = await withTransaction(async (session) => {
       const userId = await nextId("USR", session);
       const vendorId = await nextId("VND", session);
+      const referralCode = await newReferralCode(session);
+      const referredByCode = await resolveReferredBy(input.ref, session);
       const [user] = await User.create(
-        [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "vendor", vendorRole: "owner", status: "active", orgId: vendorId }],
+        [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "vendor", vendorRole: "owner", status: "active", orgId: vendorId, referralCode, referredByCode }],
         { session },
       );
-      await Vendor.create([{ _id: vendorId, userId, legalName: input.legalName, pan: input.pan, gstin: input.gstin ?? null, city: input.city, kycStatus: "pending" }], { session });
+      // PAN and GSTIN come later, in onboarding step "business".
+      await Vendor.create([{ _id: vendorId, userId, legalName: input.legalName, city: input.city, categories: input.categories, kycStatus: "pending" }], { session });
       const vnuId = await nextId("VNU", session);
       await VendorUser.create([{ _id: vnuId, vendorId, userId, role: "owner", status: "active" }], { session });
       await Consent.create(consentDocs(userId, req.ip), { session, ordered: true });
-      await audit(req, { action: "vendor.register", entity: "vendor", entityId: vendorId, after: { kycStatus: "pending", legalName: input.legalName }, userId, role: "vendor" }, session);
+      await audit(req, { action: "vendor.register", entity: "vendor", entityId: vendorId, after: { kycStatus: "pending", legalName: input.legalName, categories: input.categories, referredByCode }, userId, role: "vendor" }, session);
       const s = await startSession(cfg, req, res, userId, session);
       return { user: toSessionUser(user!.toObject()), vendorId, kycStatus: "pending" as const, ...s };
     });
@@ -67,7 +71,7 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
     const docs = await kycDocsFor(v._id);
     res.json({
       data: {
-        vendorId: v._id, legalName: v.legalName, pan: maskPan(v.pan), gstin: v.gstin, city: v.city,
+        vendorId: v._id, legalName: v.legalName, pan: maskPan(v.pan), gstin: v.gstin, city: v.city, categories: v.categories,
         kycStatus: v.kycStatus, kycReason: v.kycReason, approvedAt: v.approvedAt,
         documents: docs,
         missingDocuments: REQUIRED_KYC_DOCS.filter((t) => !docs.some((d) => d.type === t)),
@@ -242,6 +246,7 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
   r.post("/me/kyc/resubmit", requireVendorRole("owner", "manager"), async (req, res) => {
     const v = await currentVendor(req);
     if (v.kycStatus !== "rejected") throw new AppError(409, "INVALID_TRANSITION", `KYC is ${v.kycStatus}; only rejected KYC can be resubmitted`);
+    if (!v.pan) throw badRequest("Add your PAN first", { field: "pan" });
     const docs = await kycDocsFor(v._id);
     const missing = REQUIRED_KYC_DOCS.filter((t) => !docs.some((d) => d.type === t));
     if (missing.length) throw badRequest(`Upload the required documents first: ${missing.join(", ")}`);

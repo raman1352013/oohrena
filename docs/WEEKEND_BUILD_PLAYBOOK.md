@@ -136,7 +136,7 @@ Done when: `npm test -w @oohrena/shared` green, typecheck clean.
 
 ---
 
-### ☐ T2 — Quick sign-up (PAN after login) + referral code capture
+### ☑ T2 — Quick sign-up (PAN after login) + referral code capture
 Branch `feat/onboard-t2-quick-signup` · needs T1
 
 Prompt:

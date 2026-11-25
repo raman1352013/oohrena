@@ -23,6 +23,7 @@ import { audit } from "../lib/audit.js";
 import { AppError, badRequest, forbidden, unauthenticated } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { withTransaction } from "../lib/tx.js";
+import { newReferralCode, resolveReferredBy } from "../lib/referral-code.js";
 import { hashToken, newToken, privilegedIpAllowed, requireAuth } from "../middleware/auth.js";
 import { validateBody } from "../middleware/validate.js";
 import { Client, Consent, Session, TwoFactorChallenge, User } from "../models/foundation.js";
@@ -59,13 +60,15 @@ export function authRoutes(cfg: Config, authLimiter: import("express").RequestHa
     const out = await withTransaction(async (session) => {
       const userId = await nextId("USR", session);
       const clientId = await nextId("CLT", session);
+      const referralCode = await newReferralCode(session);
+      const referredByCode = await resolveReferredBy(input.ref, session);
       const [user] = await User.create(
-        [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "client", status: "active", orgId: clientId }],
+        [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "client", status: "active", orgId: clientId, referralCode, referredByCode }],
         { session },
       );
       await Client.create([{ _id: clientId, userId, companyName: input.companyName, gstin: input.gstin ?? null }], { session });
       await Consent.create(consentDocs(userId, req.ip), { session, ordered: true });
-      await audit(req, { action: "auth.register", entity: "user", entityId: userId, after: { role: "client", email: input.email, clientId }, userId, role: "client" }, session);
+      await audit(req, { action: "auth.register", entity: "user", entityId: userId, after: { role: "client", email: input.email, clientId, referredByCode }, userId, role: "client" }, session);
       const s = await startSession(cfg, req, res, userId, session);
       return { user: toSessionUser(user!.toObject()), ...s };
     });

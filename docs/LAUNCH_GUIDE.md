@@ -49,6 +49,10 @@ Web build variable: `VITE_API_URL=https://api.oohrena.com` (set at **build** tim
 2. Network access: allow only the API hosts' egress IPs (or VPC peering / private endpoint). Never `0.0.0.0/0` in production.
 3. Create a custom role equivalent to `apps/api/scripts/mongo-app-role.js` (insert+find only on `audit_logs`; CRUD on the other collections — update the list as described in REMAINING_WORK E.6), then a DB user `oohrena_app` with only that role. Use a separate admin user (kept by the owner) for maintenance.
 4. On first start the API creates indexes automatically (`syncIndexes` in `src/db.ts`).
+5. For existing databases upgraded to quick vendor sign-up (T2), run the index migration once to ensure the old `pan_1` index is dropped and replaced with the partial unique index:
+   ```sh
+   npm run migrate:pan-index -w @oohrena/api
+   ```
 
 ## 4. Deploy the API
 

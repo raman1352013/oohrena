@@ -15,6 +15,7 @@ import { audit } from "../lib/audit.js";
 import { AppError, badRequest, conflict, forbidden, notFound } from "../lib/errors.js";
 import { nextId } from "../lib/ids.js";
 import { withTransaction } from "../lib/tx.js";
+import { newReferralCode } from "../lib/referral-code.js";
 import { hashToken, newToken, requirePermission, requireRecentAuth } from "../middleware/auth.js";
 import { parseQuery, validateBody } from "../middleware/validate.js";
 import { GrowthPartner, Session, User } from "../models/foundation.js";
@@ -90,6 +91,8 @@ export function adminUserRoutes(cfg: Config) {
             isStaff: isStaffRole(input.role),
             status: "active",
             orgId,
+            // Growth partners share links too (no coins for them yet — plan Q10); staff get no code.
+            ...(input.role === "growth_partner" ? { referralCode: await newReferralCode(session) } : {}),
             createdBy: req.user!.userId,
             passwordResetTokenHash: hashToken(inviteToken),
             passwordResetExpiresAt: new Date(Date.now() + 7 * 86400_000), // 7-day invite validity

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { gstin, mobile, pan } from "./schemas/auth.js";
 import { isoDate } from "./availability.js";
 import { pinCode, stateCode } from "./geo.js";
+import { VENDOR_CATEGORIES } from "./vendor.js";
 
 /**
  * Vendor onboarding wizard — the online version of the Vendor Registration & Inventory Form.
@@ -15,18 +16,6 @@ const count = (max: number) => z.number({ error: "Enter a number" }).int("Use a 
 const hours = z.number({ error: "Enter hours" }).int("Use whole hours").min(1, "At least 1 hour").max(720, "At most 720 hours");
 const uniqueList = <T extends z.ZodType>(item: T, max: number) =>
   z.array(item).max(max).refine((a) => new Set(a).size === a.length, "Remove duplicates");
-
-/* ---------- §B partner category ---------- */
-export const VENDOR_CATEGORIES = ["media_owner", "aggregator", "execution_partner", "agency", "proposed_super_vendor", "other"] as const;
-export type VendorCategory = (typeof VENDOR_CATEGORIES)[number];
-export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
-  media_owner: "Media owner / site owner",
-  aggregator: "Authorised operator / aggregator",
-  execution_partner: "Execution partner",
-  agency: "Agency / media buying",
-  proposed_super_vendor: "Regional network partner / Super Vendor",
-  other: "Other",
-};
 
 /* ---------- §A business ---------- */
 export const BUSINESS_TYPES = ["proprietorship", "partnership", "llp", "pvt_ltd", "individual", "other"] as const;

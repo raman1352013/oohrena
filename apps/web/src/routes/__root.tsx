@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { captureReferralCode } from "@/lib/referral-capture";
 import { AskHost } from "@/components/app/ask";
 import { AppHeader } from "@/components/app/AppHeader";
 import { AuthGate } from "@/components/app/AuthGate";
@@ -131,6 +132,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    captureReferralCode();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

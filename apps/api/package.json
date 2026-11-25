@@ -13,6 +13,7 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "dev:memory": "tsx scripts/dev-memory.ts",
     "create-staff": "tsx scripts/create-staff.ts",
+    "migrate:pan-index": "tsx scripts/migrate-pan-index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

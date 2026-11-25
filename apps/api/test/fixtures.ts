@@ -1,7 +1,8 @@
 import request from "supertest";
 import { expect } from "vitest";
 import type { Express } from "express";
-import { bearer, vendorPayload } from "./helpers.js";
+import { bearer, panFor, vendorPayload } from "./helpers.js";
+import { Vendor } from "../src/models/foundation.js";
 
 export const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
@@ -12,6 +13,8 @@ export async function approvedVendor(app: Express, adminToken: string) {
   const res = await request(app).post("/api/v1/vendors/register").set("x-auth-mode", "token").send(vendorPayload());
   expect(res.status).toBe(201);
   const v = { token: res.body.data.token as string, vendorId: res.body.data.vendorId as string };
+  // PAN is required for KYC approval
+  await Vendor.updateOne({ _id: v.vendorId }, { $set: { pan: panFor() } });
   await request(app).post("/api/v1/vendors/me/documents").set(bearer(v.token)).field("type", "pan").attach("file", PDF, { filename: "pan.pdf", contentType: "application/pdf" });
   expect((await request(app).post(`/api/v1/admin/vendors/${v.vendorId}/kyc-decision`).set(bearer(adminToken)).send({ decision: "approve" })).status).toBe(200);
   return v;

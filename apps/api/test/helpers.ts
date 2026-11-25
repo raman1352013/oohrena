@@ -63,7 +63,7 @@ export const vendorPayload = (o: Record<string, unknown> = {}) => ({
   mobile: mobileFor(),
   password: GOOD_PW,
   legalName: "Test Media Pvt Ltd",
-  pan: panFor(),
+  categories: ["media_owner"],
   city: "Gwalior",
   acceptTerms: true,
   ...o,

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSession } from "@/lib/auth";
 import { useVendorMe } from "@/lib/inventory-api";
 import { KycPill } from "@/components/app/status";
@@ -7,11 +7,18 @@ import { CsvImportCard, InventoryPanel } from "@/components/app/vendor/Inventory
 import { RequestsCard } from "@/components/app/vendor/RequestsCard";
 import { WorkOrdersCard } from "@/components/app/vendor/WorkOrdersCard";
 import { TeamPanel } from "@/components/app/vendor/TeamPanel";
-import { Btn, Loading, Pill } from "@/components/app/kit";
+import { VendorShell, VENDOR_TABS, type VendorTab } from "@/components/app/vendor/VendorShell";
+import { Btn, KCard, Loading, Pill } from "@/components/app/kit";
 import { VendorPayables } from "@/components/app/FinanceCards";
 import { VENDOR_ROLE_LABELS, type VendorRole } from "@oohrena/shared";
 
 export const Route = createFileRoute("/vendor")({
+  validateSearch: (search: Record<string, unknown>): { tab?: VendorTab | undefined } => {
+    const t = search["tab"] as string | undefined;
+    return {
+      tab: t && (VENDOR_TABS as readonly string[]).includes(t) ? (t as VendorTab) : undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "Vendor Space Hub — OOHRENA" },
@@ -34,6 +41,9 @@ export const Route = createFileRoute("/vendor")({
 function VendorHub() {
   const me = useVendorMe();
   const { data: user } = useSession();
+  const search = Route.useSearch();
+  const currentTab: VendorTab = search.tab ?? "overview";
+
   if (me.isPending) return <Loading />;
   if (me.isError)
     return (
@@ -44,6 +54,7 @@ function VendorHub() {
         </Btn>
       </div>
     );
+
   const v = me.data;
   const vRole = (user?.vendorRole ?? "owner") as VendorRole;
   const isOwner = vRole === "owner";
@@ -52,44 +63,84 @@ function VendorHub() {
   const isAccounts = vRole === "accounts";
 
   return (
-    <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-[22px] font-semibold">{v.legalName}</h1>
-        <Pill tone={isOwner ? "navy" : isManager ? "saffron" : isField ? "verified" : "neutral"}>
-          {VENDOR_ROLE_LABELS[vRole] ?? vRole}
-        </Pill>
-        <div className="ml-auto">
+    <VendorShell tab={currentTab} vendorRole={vRole}>
+      <div className="space-y-6">
+        {/* Header bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
+          <div className="flex items-center gap-3">
+            <h1 className="text-[20px] font-semibold">{v.legalName}</h1>
+            <Pill tone={isOwner ? "navy" : isManager ? "saffron" : isField ? "verified" : "neutral"}>
+              {VENDOR_ROLE_LABELS[vRole] ?? vRole}
+            </Pill>
+          </div>
           <KycPill status={v.kycStatus} />
         </div>
+
+        {/* Tab content */}
+        {currentTab === "overview" && (
+          <div className="space-y-6">
+            {/* Quick KYC alert if incomplete */}
+            {v.kycStatus !== "approved" && (
+              <KCard className="border-saffron/40 bg-saffron/5 p-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-ink text-[14px]">KYC Verification Pending</div>
+                  <div className="text-[12px] text-mute">
+                    {v.missingDocuments.length > 0
+                      ? `${v.missingDocuments.length} mandatory document(s) required to verify your profile.`
+                      : "Your documents are submitted and under review by OOHRENA admin."}
+                  </div>
+                </div>
+                <Link to="/vendor" search={{ tab: "kyc" }}>
+                  <Btn size="sm" variant="secondary" type="button">
+                    Complete KYC
+                  </Btn>
+                </Link>
+              </KCard>
+            )}
+
+            {/* Overview dashboard grid */}
+            <div className="grid lg:grid-cols-2 gap-5">
+              {!isAccounts && <WorkOrdersCard />}
+              {(isOwner || isManager) && <RequestsCard />}
+            </div>
+
+            {(isOwner || isAccounts) && <VendorPayables />}
+          </div>
+        )}
+
+        {currentTab === "inventory" && (isOwner || isManager) && (
+          <div className="space-y-6">
+            <InventoryPanel canList={v.kycStatus === "approved"} />
+            <CsvImportCard />
+          </div>
+        )}
+
+        {currentTab === "requests" && (isOwner || isManager) && (
+          <RequestsCard />
+        )}
+
+        {currentTab === "work-orders" && !isAccounts && (
+          <WorkOrdersCard />
+        )}
+
+        {currentTab === "finance" && (isOwner || isAccounts) && (
+          <div className="space-y-6">
+            <VendorPayables />
+            {isOwner && <BankPanel me={v} />}
+          </div>
+        )}
+
+        {currentTab === "kyc" && (isOwner || isManager) && (
+          <div className="grid lg:grid-cols-2 gap-5">
+            <KycPanel me={v} />
+            {isOwner && <BankPanel me={v} />}
+          </div>
+        )}
+
+        {currentTab === "team" && (isOwner || isManager) && (
+          <TeamPanel isOwner={isOwner} />
+        )}
       </div>
-
-      {/* KYC & Bank: KYC visible to owner/manager; Bank visible to owner only */}
-      {(isOwner || isManager) && (
-        <div className="grid lg:grid-cols-2 gap-5">
-          <KycPanel me={v} />
-          {isOwner && <BankPanel me={v} />}
-        </div>
-      )}
-
-      {/* Team management: owner + manager */}
-      {(isOwner || isManager) && <TeamPanel isOwner={isOwner} />}
-
-      {/* Work Orders: owner, manager, and field staff */}
-      {!isAccounts && <WorkOrdersCard />}
-
-      {/* Requests & Quotes: owner and manager */}
-      {(isOwner || isManager) && <RequestsCard />}
-
-      {/* Inventory & Import: owner and manager */}
-      {(isOwner || isManager) && (
-        <>
-          <InventoryPanel canList={v.kycStatus === "approved"} />
-          <CsvImportCard />
-        </>
-      )}
-
-      {/* Financials & Payables: owner and accounts */}
-      {(isOwner || isAccounts) && <VendorPayables />}
-    </div>
+    </VendorShell>
   );
 }

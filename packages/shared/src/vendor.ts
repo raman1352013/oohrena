@@ -10,13 +10,30 @@ export const KYC_TRANSITIONS: Record<KycStatus, readonly KycStatus[]> = {
   rejected: ["pending"],
 };
 
-export const KYC_DOC_TYPES = ["pan", "gst", "authorisation", "address_proof", "other"] as const;
+/** Vendor form §F document checklist. */
+export const KYC_DOC_TYPES = [
+  "pan",
+  "gst",
+  "business_registration",
+  "ownership_proof",
+  "municipal_permission",
+  "authorisation",
+  "address_proof",
+  "rate_card",
+  "cancelled_cheque",
+  "other",
+] as const;
 export type KycDocType = (typeof KYC_DOC_TYPES)[number];
 export const KYC_DOC_LABEL: Record<KycDocType, string> = {
   pan: "PAN card",
   gst: "GST certificate",
-  authorisation: "Site authorisation / permission",
+  business_registration: "Business registration proof",
+  ownership_proof: "Ownership / lease / site-control proof",
+  municipal_permission: "Municipal / authority permission",
+  authorisation: "Authorisation from site owner",
   address_proof: "Business address proof",
+  rate_card: "Rate card",
+  cancelled_cheque: "Cancelled cheque / bank proof",
   other: "Other supporting document",
 };
 /** Documents a vendor must upload before admin can approve KYC. */

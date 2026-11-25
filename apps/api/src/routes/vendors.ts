@@ -22,6 +22,7 @@ import { vendorWorkOrderRoutes } from "./deals.js";
 import { slotView } from "./execution.js";
 import { ownPayables } from "./finance.js";
 import { overdueSlots } from "../services/execution.js";
+import { getOnboardingState, saveOnboardingStep, submitOnboarding } from "../services/onboarding.js";
 
 export const maskPan = (pan: string | null | undefined) => (pan ? `${pan.slice(0, 2)}XXXXX${pan.slice(-3)}` : null);
 export const maskAccount = (last4: string) => `XXXXXX${last4}`;
@@ -99,6 +100,26 @@ export function vendorRoutes(cfg: Config, authLimiter: RequestHandler) {
     const doc = await VendorDocument.create({ vendorId: v._id, type: type.data, fileId: f._id, uploadedBy: req.user!.userId });
     await audit(req, { action: "vendor.document.upload", entity: "vendor", entityId: v._id, after: { type: type.data, fileId: f._id, size: f.size, mime: f.mime } });
     res.status(201).json({ data: { docId: String(doc._id), type: doc.type, fileId: f._id, status: doc.status, uploadedAt: doc.uploadedAt } });
+  });
+
+  /* ---------- Onboarding Wizard (Task T3) ---------- */
+  r.get("/me/onboarding", async (req, res) => {
+    const v = await currentVendor(req);
+    const state = await getOnboardingState(v._id);
+    res.json({ data: state });
+  });
+
+  r.patch("/me/onboarding/:step", requireVendorRole("owner", "manager"), async (req, res) => {
+    const v = await currentVendor(req);
+    const out = await saveOnboardingStep(v._id, String(req.params.step), req.body, req);
+    res.json({ data: out });
+  });
+
+  r.post("/me/onboarding/submit", requireVendorRole("owner"), async (req, res) => {
+    const v = await currentVendor(req);
+    const ip = req.ip || req.socket.remoteAddress || "127.0.0.1";
+    const out = await submitOnboarding(v._id, req.body, ip, req);
+    res.json({ data: out });
   });
 
   /* ---------- Team management (Blueprint §2.1) ---------- */

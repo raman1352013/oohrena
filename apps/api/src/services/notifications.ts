@@ -170,6 +170,13 @@ const DEFAULT_TEMPLATES: Array<{
       body: "Your listing {{inventoryId}} is now {{status}}. Note: {{reason}}.",
     },
     {
+      templateId: "TPL-VENDOR-ONBOARDING-SUBMITTED-EMAIL",
+      event: "vendor.onboarding.submitted",
+      channel: "email",
+      subject: "Vendor Onboarding Submitted: {{legalName}} ({{vendorId}})",
+      body: "Vendor {{legalName}} ({{vendorId}}) has submitted their onboarding wizard for review.",
+    },
+    {
       templateId: "TPL-PROOF-OVERDUE-EMAIL",
       event: "proof.overdue",
       channel: "email",

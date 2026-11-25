@@ -71,6 +71,13 @@ export function adminVendorRoutes() {
         documents: await kycDocsFor(v._id),
         // Admin sees masked bank details only; Finance/Audit handles payouts.
         bank: await maskedBank(v._id),
+        onboarding: v.onboarding ?? null,
+        business: v.business ? { ...v.business, pan: maskPan(v.business.pan) } : null,
+        category: v.category ?? null,
+        territory: v.territory ?? null,
+        execution: v.execution ?? null,
+        sla: v.sla ?? null,
+        declaration: v.declaration ?? null,
       },
     });
   });

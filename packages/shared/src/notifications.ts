@@ -19,6 +19,7 @@ export const NOTIFICATION_EVENTS = [
   "issue.raised",
   "issue.resolved",
   "vendor.kyc.decision",
+  "vendor.onboarding.submitted",
   "inventory.decision",
   "proof.overdue",
   "user.invited",

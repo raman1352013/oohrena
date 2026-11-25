@@ -92,7 +92,7 @@ If something fails, paste the failure back to the same agent: "Fix this without 
 
 ## 4. Tasks
 
-### ☐ T1 — Shared contracts (do first; everything depends on it)
+### ☑ T1 — Shared contracts (do first; everything depends on it)
 Branch `feat/onboard-t1-shared-contracts`
 
 Prompt:

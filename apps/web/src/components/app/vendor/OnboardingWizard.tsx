@@ -1,13 +1,6 @@
 import { useState, useId, type ReactNode } from "react";
 import { toast } from "sonner";
-import {
-  Check,
-  CheckCircle2,
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  ShieldCheck,
-} from "lucide-react";
+import { Check, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react";
 import {
   AVAILABILITY_UPDATE_FREQUENCIES,
   BUSINESS_TYPES,
@@ -36,6 +29,7 @@ import {
   useOnboarding,
   useSaveStep,
   useSubmitOnboarding,
+  type OnboardingSubmitResult,
 } from "@/lib/vendor-onboarding-api";
 import { Btn, KCard, Loading, Pill } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
@@ -46,7 +40,7 @@ import { selectCls } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface OnboardingWizardProps {
-  onSubmitted?: ((result: any) => void) | undefined;
+  onSubmitted?: ((result: OnboardingSubmitResult) => void) | undefined;
 }
 
 export function OnboardingWizard({ onSubmitted }: OnboardingWizardProps) {
@@ -56,13 +50,22 @@ export function OnboardingWizard({ onSubmitted }: OnboardingWizardProps) {
 
   if (meQuery.isPending || onboardingQuery.isPending) return <Loading />;
   if (meQuery.isError) return <div className="p-8 text-destructive">{meQuery.error.message}</div>;
-  if (onboardingQuery.isError) return <div className="p-8 text-destructive">{onboardingQuery.error.message}</div>;
+  if (onboardingQuery.isError)
+    return <div className="p-8 text-destructive">{onboardingQuery.error.message}</div>;
 
   const me = meQuery.data;
   const state = onboardingQuery.data;
 
   // Find prerequisite steps that are missing before declaration
-  const prereqSteps: WizardStep[] = ["business", "category", "territory", "execution", "sla", "documents", "bank"];
+  const prereqSteps: WizardStep[] = [
+    "business",
+    "category",
+    "territory",
+    "execution",
+    "sla",
+    "documents",
+    "bank",
+  ];
   const missingPrereqs = prereqSteps.filter((s) => !state.steps[s]);
 
   const stepIndex = WIZARD_STEPS.indexOf(activeStep);
@@ -183,11 +186,7 @@ export function OnboardingWizard({ onSubmitted }: OnboardingWizardProps) {
           )}
 
           {activeStep === "sla" && (
-            <SlaStepForm
-              defaultValues={state.data.sla}
-              onSaved={goNext}
-              onBack={goBack}
-            />
+            <SlaStepForm defaultValues={state.data.sla} onSaved={goNext} onBack={goBack} />
           )}
 
           {activeStep === "documents" && (
@@ -337,7 +336,12 @@ function BusinessStepForm({
             <select
               id="businessType"
               value={form.businessType}
-              onChange={(e) => setForm({ ...form, businessType: e.target.value as any })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  businessType: e.target.value as OnboardingBusinessInput["businessType"],
+                })
+              }
               className={selectCls}
             >
               {BUSINESS_TYPES.map((bt) => (
@@ -356,7 +360,9 @@ function BusinessStepForm({
             max={new Date().getFullYear()}
             value={form.yearEstablished}
             error={fieldErrors["yearEstablished"]?.[0]}
-            onChange={(e) => setForm({ ...form, yearEstablished: parseInt(e.target.value, 10) || 2020 })}
+            onChange={(e) =>
+              setForm({ ...form, yearEstablished: parseInt(e.target.value, 10) || 2020 })
+            }
             required
           />
 
@@ -463,7 +469,11 @@ function BusinessStepForm({
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      officeAddress: { ...form.officeAddress, stateCode: e.target.value as any },
+                      officeAddress: {
+                        ...form.officeAddress,
+                        stateCode: e.target
+                          .value as OnboardingBusinessInput["officeAddress"]["stateCode"],
+                      },
                     })
                   }
                   className={selectCls}
@@ -517,7 +527,12 @@ function BusinessStepForm({
             <select
               id="language"
               value={form.language}
-              onChange={(e) => setForm({ ...form, language: e.target.value as any })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  language: e.target.value as OnboardingBusinessInput["language"],
+                })
+              }
               className={selectCls}
             >
               {COMMUNICATION_LANGUAGES.map((l) => (
@@ -549,18 +564,18 @@ function CategoryStepForm({
   onBack,
 }: {
   defaultValues?: OnboardingCategoryInput | undefined;
-  categoriesFallback?: string[] | undefined;
+  categoriesFallback?: OnboardingCategoryInput["categories"] | undefined;
   onSaved: () => void;
   onBack: () => void;
 }) {
   const saveMutation = useSaveStep("category");
-  const [selected, setSelected] = useState<string[]>(
+  const [selected, setSelected] = useState<OnboardingCategoryInput["categories"]>(
     defaultValues?.categories ?? categoriesFallback ?? ["media_owner"],
   );
   const [otherCategory, setOtherCategory] = useState(defaultValues?.otherCategory ?? "");
   const [error, setError] = useState<string>();
 
-  function toggle(cat: string) {
+  function toggle(cat: OnboardingCategoryInput["categories"][number]) {
     if (selected.includes(cat)) {
       setSelected(selected.filter((c) => c !== cat));
     } else {
@@ -579,7 +594,7 @@ function CategoryStepForm({
     }
 
     const payload: OnboardingCategoryInput = {
-      categories: selected as any,
+      categories: selected,
       otherCategory: selected.includes("other") ? otherCategory : undefined,
     };
 
@@ -735,7 +750,12 @@ function TerritoryStepForm({
             <select
               id="tStateCode"
               value={form.stateCode}
-              onChange={(e) => setForm({ ...form, stateCode: e.target.value as any })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  stateCode: e.target.value as OnboardingTerritoryInput["stateCode"],
+                })
+              }
               className={selectCls}
             >
               {INDIAN_STATES.map((s) => (
@@ -781,7 +801,9 @@ function TerritoryStepForm({
             min={1}
             max={720}
             value={form.responseTimeH}
-            onChange={(e) => setForm({ ...form, responseTimeH: parseInt(e.target.value, 10) || 24 })}
+            onChange={(e) =>
+              setForm({ ...form, responseTimeH: parseInt(e.target.value, 10) || 24 })
+            }
             required
           />
         </div>
@@ -822,20 +844,24 @@ function ExecutionStepForm({
   onBack: () => void;
 }) {
   const saveMutation = useSaveStep("execution");
-  const [services, setServices] = useState<string[]>(
+  const [services, setServices] = useState<OnboardingExecutionInput["services"]>(
     defaultValues?.services ?? ["printing", "mounting", "gps_proof"],
   );
   const [teamSize, setTeamSize] = useState(defaultValues?.teamSize ?? 10);
   const [dailyCapacity, setDailyCapacity] = useState(defaultValues?.dailyCapacity ?? 15);
-  const [emergencyResponseH, setEmergencyResponseH] = useState(defaultValues?.emergencyResponseH ?? 12);
+  const [emergencyResponseH, setEmergencyResponseH] = useState(
+    defaultValues?.emergencyResponseH ?? 12,
+  );
   const [equipment, setEquipment] = useState(defaultValues?.equipment ?? "");
-  const [usesSubcontractors, setUsesSubcontractors] = useState(defaultValues?.usesSubcontractors ?? false);
+  const [usesSubcontractors, setUsesSubcontractors] = useState(
+    defaultValues?.usesSubcontractors ?? false,
+  );
   const [execContact, setExecContact] = useState(
     defaultValues?.executionContact ?? { name: "", mobile: "" },
   );
   const [error, setError] = useState<string>();
 
-  function toggleService(srv: string) {
+  function toggleService(srv: OnboardingExecutionInput["services"][number]) {
     if (services.includes(srv)) {
       setServices(services.filter((s) => s !== srv));
     } else {
@@ -852,7 +878,7 @@ function ExecutionStepForm({
     }
 
     const payload: OnboardingExecutionInput = {
-      services: services as any,
+      services,
       subcontractedServices: [],
       teamSize,
       citiesCovered: [],
@@ -890,7 +916,9 @@ function ExecutionStepForm({
                   key={srv}
                   className={cn(
                     "flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition text-[13px]",
-                    checked ? "bg-navy/5 border-navy text-ink font-medium" : "border-line text-mute hover:text-ink",
+                    checked
+                      ? "bg-navy/5 border-navy text-ink font-medium"
+                      : "border-line text-mute hover:text-ink",
                   )}
                 >
                   <Checkbox checked={checked} onCheckedChange={() => toggleService(srv)} />
@@ -933,7 +961,9 @@ function ExecutionStepForm({
         </div>
 
         <div className="border-t border-line pt-3">
-          <Label className="text-[13px] text-ink mb-1 block">Plant & Machinery / Equipment Notes</Label>
+          <Label className="text-[13px] text-ink mb-1 block">
+            Plant & Machinery / Equipment Notes
+          </Label>
           <textarea
             rows={2}
             className="w-full rounded-md border border-input bg-card p-2 text-sm text-ink placeholder:text-mute focus:outline-none focus:ring-1 focus:ring-ring"
@@ -944,7 +974,9 @@ function ExecutionStepForm({
         </div>
 
         <div className="border-t border-line pt-3">
-          <h4 className="font-semibold text-[13px] text-ink mb-2">Primary Field Operations Contact</h4>
+          <h4 className="font-semibold text-[13px] text-ink mb-2">
+            Primary Field Operations Contact
+          </h4>
           <div className="grid md:grid-cols-2 gap-4">
             <Field
               id="execContactName"
@@ -990,7 +1022,9 @@ function SlaStepForm({
   onBack: () => void;
 }) {
   const saveMutation = useSaveStep("sla");
-  const [updateFrequency, setUpdateFrequency] = useState(defaultValues?.updateFrequency ?? "daily");
+  const [updateFrequency, setUpdateFrequency] = useState<OnboardingSlaInput["updateFrequency"]>(
+    defaultValues?.updateFrequency ?? "daily",
+  );
   const [canHold, setCanHold] = useState(defaultValues?.canHold ?? true);
   const [maxHoldH, setMaxHoldH] = useState(defaultValues?.maxHoldH ?? 48);
   const [proofWithinSla, setProofWithinSla] = useState(defaultValues?.proofWithinSla ?? true);
@@ -1002,7 +1036,7 @@ function SlaStepForm({
     setError(undefined);
 
     const payload: OnboardingSlaInput = {
-      updateFrequency: updateFrequency as any,
+      updateFrequency,
       blackoutDates: [],
       canHold,
       maxHoldH: canHold ? maxHoldH : undefined,
@@ -1032,12 +1066,18 @@ function SlaStepForm({
             <select
               id="updateFreq"
               value={updateFrequency}
-              onChange={(e) => setUpdateFrequency(e.target.value as any)}
+              onChange={(e) =>
+                setUpdateFrequency(e.target.value as OnboardingSlaInput["updateFrequency"])
+              }
               className={selectCls}
             >
               {AVAILABILITY_UPDATE_FREQUENCIES.map((f) => (
                 <option key={f} value={f}>
-                  {f === "daily" ? "Daily sync" : f === "weekly" ? "Weekly sync" : "On request / Inquiry"}
+                  {f === "daily"
+                    ? "Daily sync"
+                    : f === "weekly"
+                      ? "Weekly sync"
+                      : "On request / Inquiry"}
                 </option>
               ))}
             </select>
@@ -1057,10 +1097,7 @@ function SlaStepForm({
 
         <div className="border-t border-line pt-3 space-y-3">
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <Checkbox
-              checked={canHold}
-              onCheckedChange={(c) => setCanHold(!!c)}
-            />
+            <Checkbox checked={canHold} onCheckedChange={(c) => setCanHold(!!c)} />
             <span className="text-[13px] text-ink font-medium">
               Accept holding requests on prospective client inquiries
             </span>
@@ -1082,10 +1119,7 @@ function SlaStepForm({
           )}
 
           <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1">
-            <Checkbox
-              checked={proofWithinSla}
-              onCheckedChange={(c) => setProofWithinSla(!!c)}
-            />
+            <Checkbox checked={proofWithinSla} onCheckedChange={(c) => setProofWithinSla(!!c)} />
             <span className="text-[13px] text-ink">
               Commit to GPS-stamped photo proof within agreed turnaround hours
             </span>
@@ -1115,20 +1149,11 @@ function DeclarationStepForm({
 }: {
   missingPrereqs: WizardStep[];
   onBack: () => void;
-  onSubmitted?: ((result: any) => void) | undefined;
+  onSubmitted?: ((result: OnboardingSubmitResult) => void) | undefined;
 }) {
   const submitMutation = useSubmitOnboarding();
-  const [accepted, setAccepted] = useState<Record<string, boolean>>({
-    infoTrue: true,
-    ownershipDisclosed: true,
-    permissions: true,
-    promptUpdates: true,
-    noFalseAvailability: true,
-    assetReviewSeparate: true,
-    contactConsent: true,
-    noBookingUntilConfirmed: true,
-    policies: true,
-  });
+  // A legal declaration must be ticked by the signatory, so nothing starts accepted.
+  const [accepted, setAccepted] = useState<Record<string, boolean>>({});
   const [signatoryName, setSignatoryName] = useState("");
   const [designation, setDesignation] = useState("Authorized Signatory");
   const [place, setPlace] = useState("");
@@ -1136,7 +1161,8 @@ function DeclarationStepForm({
 
   const allAccepted = DECLARATION_ITEMS.every((item) => accepted[item.key]);
   const hasPrereqsMissing = missingPrereqs.length > 0;
-  const canSubmit = allAccepted && !hasPrereqsMissing && signatoryName.trim().length > 0 && place.trim().length > 0;
+  const canSubmit =
+    allAccepted && !hasPrereqsMissing && signatoryName.trim().length > 0 && place.trim().length > 0;
 
   function toggleAccept(key: string) {
     setAccepted({ ...accepted, [key]: !accepted[key] });
@@ -1153,7 +1179,9 @@ function DeclarationStepForm({
     }
 
     const payload: OnboardingDeclarationInput = {
-      accepted: accepted as any,
+      accepted: Object.fromEntries(
+        DECLARATION_ITEMS.map((item) => [item.key, accepted[item.key] === true]),
+      ) as OnboardingDeclarationInput["accepted"],
       signatoryName: signatoryName.trim(),
       designation: designation.trim(),
       place: place.trim(),
@@ -1204,7 +1232,9 @@ function DeclarationStepForm({
                   key={item.key}
                   className={cn(
                     "flex items-start gap-3 p-3 rounded-lg border cursor-pointer select-none text-[13px] transition leading-relaxed",
-                    checked ? "bg-card border-line text-ink" : "bg-destructive/5 border-destructive/30 text-destructive",
+                    checked
+                      ? "bg-card border-line text-ink"
+                      : "bg-destructive/5 border-destructive/30 text-destructive",
                   )}
                 >
                   <Checkbox

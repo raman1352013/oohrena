@@ -20,7 +20,9 @@ import { getSavedReferralCode } from "@/lib/referral-capture";
 type Kind = "client" | "vendor";
 
 export const Route = createFileRoute("/register")({
-  validateSearch: (s: Record<string, unknown>): { as?: Kind | undefined; ref?: string | undefined } => ({
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { as?: Kind | undefined; ref?: string | undefined } => ({
     as: s["as"] === "vendor" ? "vendor" : undefined,
     ref: typeof s["ref"] === "string" ? s["ref"].trim().toUpperCase() : undefined,
   }),
@@ -77,9 +79,7 @@ function RegisterPage() {
     setF({ ...f, [k]: e.target.value });
 
   function toggleCategory(cat: VendorCategory) {
-    setCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
-    );
+    setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
 
   function onApiError(err: Error) {
@@ -87,8 +87,7 @@ function RegisterPage() {
       setErrors(firstErrors(err.fieldErrors));
     else if (err instanceof ApiError && err.code === "CONFLICT") {
       const field = (err.details as { field?: string } | undefined)?.field;
-      if (field === "email" || field === "mobile")
-        setErrors({ [field]: err.message });
+      if (field === "email" || field === "mobile") setErrors({ [field]: err.message });
       else setFormError(err.message);
     } else setFormError(err.message);
   }
@@ -263,16 +262,18 @@ function RegisterPage() {
         {/* Partner categories (Vendor only, PDF §B) */}
         {kind === "vendor" && (
           <div className="sm:col-span-2 rounded-lg border border-line p-3.5 bg-canvas">
-            <p className="text-[13px] font-semibold text-ink mb-2">What you do (choose at least one)</p>
+            <p className="text-[13px] font-semibold text-ink mb-2">
+              What you do (choose at least one)
+            </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {VENDOR_CATEGORIES.map((cat) => {
                 const checked = categories.includes(cat);
                 return (
-                  <label key={cat} className="flex items-center gap-2.5 text-[13px] text-ink cursor-pointer">
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={() => toggleCategory(cat)}
-                    />
+                  <label
+                    key={cat}
+                    className="flex items-center gap-2.5 text-[13px] text-ink cursor-pointer"
+                  >
+                    <Checkbox checked={checked} onCheckedChange={() => toggleCategory(cat)} />
                     <span>{VENDOR_CATEGORY_LABEL[cat]}</span>
                   </label>
                 );

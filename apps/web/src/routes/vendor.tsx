@@ -76,7 +76,9 @@ function VendorHub() {
         <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-line">
           <div className="flex items-center gap-3">
             <h1 className="text-[20px] font-semibold">{v.legalName}</h1>
-            <Pill tone={isOwner ? "navy" : isManager ? "saffron" : isField ? "verified" : "neutral"}>
+            <Pill
+              tone={isOwner ? "navy" : isManager ? "saffron" : isField ? "verified" : "neutral"}
+            >
               {VENDOR_ROLE_LABELS[vRole] ?? vRole}
             </Pill>
           </div>
@@ -125,13 +127,9 @@ function VendorHub() {
           </div>
         )}
 
-        {currentTab === "requests" && (isOwner || isManager) && (
-          <RequestsCard />
-        )}
+        {currentTab === "requests" && (isOwner || isManager) && <RequestsCard />}
 
-        {currentTab === "work-orders" && !isAccounts && (
-          <WorkOrdersCard />
-        )}
+        {currentTab === "work-orders" && !isAccounts && <WorkOrdersCard />}
 
         {currentTab === "finance" && (isOwner || isAccounts) && (
           <div className="space-y-6">
@@ -147,9 +145,7 @@ function VendorHub() {
           </div>
         )}
 
-        {currentTab === "team" && (isOwner || isManager) && (
-          <TeamPanel isOwner={isOwner} />
-        )}
+        {currentTab === "team" && (isOwner || isManager) && <TeamPanel isOwner={isOwner} />}
       </div>
     </VendorShell>
   );

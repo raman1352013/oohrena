@@ -18,6 +18,11 @@ export function notFoundHandler(req: Request, res: Response) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   const reqId = getRequestId(req);
+  // A file route may set image/PDF headers before the read fails; the error body is JSON and must
+  // not be cached or offered as a download.
+  if (!res.headersSent) {
+    for (const h of ["Content-Type", "Content-Disposition", "Cache-Control"]) res.removeHeader(h);
+  }
 
   if (err instanceof AppError) {
     return res.status(err.status).json({

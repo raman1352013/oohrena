@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Eye, ShieldCheck } from "lucide-react";
+import { CalendarCheck, Download, Eye, HandCoins, ListChecks, ShieldCheck } from "lucide-react";
 import { MAX_DOC_BYTES, PAYMENT_MODES, todayIST, type PaymentStatus } from "@oohrena/shared";
 import { assetUrl } from "@/lib/api";
 import { useSession } from "@/lib/auth";
@@ -25,12 +25,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Btn, Empty, KCard, Loading, Pill, Row, Stats, Tabs } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Pill, Row, Stats } from "@/components/app/kit";
+import { WorkspaceShell, type NavItem } from "@/components/app/WorkspaceShell";
 import { ask } from "@/components/app/ask";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { cn } from "@/lib/utils";
 
+const FINANCE_TABS = ["queue", "bookings", "payables", "all"] as const;
+type Tab = (typeof FINANCE_TABS)[number];
+
 export const Route = createFileRoute("/finance")({
+  validateSearch: (s: Record<string, unknown>): { tab?: Tab | undefined } =>
+    FINANCE_TABS.includes(s["tab"] as Tab) ? { tab: s["tab"] as Tab } : {},
   head: () => ({
     meta: [
       { title: "Finance & Reconciliation — OOHRENA" },
@@ -44,7 +50,6 @@ export const Route = createFileRoute("/finance")({
   component: FinancePage,
 });
 
-type Tab = "queue" | "bookings" | "payables" | "all";
 const PAY_TONE: Record<PaymentStatus, "hold" | "verified" | "danger"> = {
   unverified: "hold",
   verified: "verified",
@@ -53,8 +58,17 @@ const PAY_TONE: Record<PaymentStatus, "hold" | "verified" | "danger"> = {
 
 function FinancePage() {
   const ov = useFinanceOverview();
-  const [tab, setTab] = useState<Tab>("queue");
+  const { tab = "queue" } = Route.useSearch();
   const o = ov.data;
+  const item = (t: Tab, label: string, icon: NavItem["icon"], n?: number): NavItem => ({
+    id: t,
+    label,
+    icon,
+    n,
+    to: "/finance",
+    search: t === "queue" ? {} : { tab: t },
+    active: tab === t,
+  });
   const kpis = [
     ["Payments to verify", o?.toVerify],
     ["Bookings without invoice", o?.uninvoicedBookings],
@@ -64,24 +78,28 @@ function FinancePage() {
     ["Cancelled bookings to refund", o?.refundsPending],
   ] as const;
   return (
-    <main className="max-w-[1280px] mx-auto p-4 md:p-6 space-y-5">
-      <h1 className="text-[22px] font-semibold">Payments</h1>
-      <Stats items={kpis.map(([label, value]) => ({ label, value: value ?? "—" }))} />
-      <Tabs
-        tabs={[
-          { id: "queue", label: "To verify" },
-          { id: "bookings", label: "Bookings" },
-          { id: "payables", label: "Vendor payables" },
-          { id: "all", label: "All payments" },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-      {tab === "queue" && <PaymentList status="unverified" />}
-      {tab === "bookings" && <Bookings />}
-      {tab === "payables" && <Payables />}
-      {tab === "all" && <PaymentList />}
-    </main>
+    <WorkspaceShell
+      label="Finance"
+      groups={[
+        {
+          items: [
+            item("queue", "To verify", ShieldCheck, o?.toVerify),
+            item("bookings", "Bookings", CalendarCheck, o?.uninvoicedBookings),
+            item("payables", "Vendor payables", HandCoins, o?.payablesDue),
+          ],
+        },
+        { label: "Records", items: [item("all", "All payments", ListChecks)] },
+      ]}
+    >
+      <main className="max-w-[1280px] mx-auto p-4 md:p-6 space-y-5">
+        <h1 className="text-[22px] font-semibold">Payments</h1>
+        <Stats items={kpis.map(([label, value]) => ({ label, value: value ?? "—" }))} />
+        {tab === "queue" && <PaymentList status="unverified" />}
+        {tab === "bookings" && <Bookings />}
+        {tab === "payables" && <Payables />}
+        {tab === "all" && <PaymentList />}
+      </main>
+    </WorkspaceShell>
   );
 }
 

@@ -1,34 +1,44 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   OnboardingDeclarationInput,
+  OnboardingReward,
   OnboardingState,
   OnboardingStep,
 } from "@oohrena/shared";
 import { api } from "./api";
 
-export function useOnboarding() {
-  return useQuery({
-    queryKey: ["vendor", "onboarding"],
-    queryFn: async () => {
-      const res = await api<{ data: OnboardingState }>("/vendors/me/onboarding");
-      return res.data;
-    },
+// `api()` already unwraps the `{ data }` envelope, so every type below is the payload itself.
+
+export type SavedOnboardingStep = { step: OnboardingStep; savedAt: string; data: unknown };
+export type OnboardingSubmitResult = { submittedAt: string; reward: OnboardingReward };
+
+const K = {
+  onboarding: ["vendor", "onboarding"] as const,
+  vendorMe: ["vendor", "me"] as const,
+};
+
+export const fetchOnboarding = () => api<OnboardingState>("/vendors/me/onboarding");
+
+export const saveOnboardingStep = (step: OnboardingStep, data: unknown) =>
+  api<SavedOnboardingStep>(`/vendors/me/onboarding/${step}`, { method: "PATCH", body: data });
+
+export const submitOnboarding = (declaration: OnboardingDeclarationInput) =>
+  api<OnboardingSubmitResult>("/vendors/me/onboarding/submit", {
+    method: "POST",
+    body: declaration,
   });
+
+export function useOnboarding() {
+  return useQuery({ queryKey: K.onboarding, queryFn: fetchOnboarding });
 }
 
 export function useSaveStep(step: OnboardingStep) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: unknown) => {
-      const res = await api<{ data: { step: string; savedAt: string; data: unknown } }>(
-        `/vendors/me/onboarding/${step}`,
-        { method: "PATCH", body: data },
-      );
-      return res.data;
-    },
+    mutationFn: (data: unknown) => saveOnboardingStep(step, data),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["vendor", "onboarding"] });
-      void qc.invalidateQueries({ queryKey: ["vendor", "me"] });
+      void qc.invalidateQueries({ queryKey: K.onboarding });
+      void qc.invalidateQueries({ queryKey: K.vendorMe });
     },
   });
 }
@@ -36,16 +46,10 @@ export function useSaveStep(step: OnboardingStep) {
 export function useSubmitOnboarding() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (declaration: OnboardingDeclarationInput) => {
-      const res = await api<{ data: { submittedAt: string; reward: unknown } }>(
-        "/vendors/me/onboarding/submit",
-        { method: "POST", body: declaration },
-      );
-      return res.data;
-    },
+    mutationFn: submitOnboarding,
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["vendor", "onboarding"] });
-      void qc.invalidateQueries({ queryKey: ["vendor", "me"] });
+      void qc.invalidateQueries({ queryKey: K.onboarding });
+      void qc.invalidateQueries({ queryKey: K.vendorMe });
     },
   });
 }

@@ -46,10 +46,17 @@ import { AvailabilityCalendar } from "@/components/app/AvailabilityCalendar";
 const MapView = lazy(() => import("@/components/app/MapView"));
 
 export const Route = createFileRoute("/marketplace")({
-  validateSearch: (s: Record<string, unknown>): { category?: CategoryId | undefined } =>
-    CATEGORY_IDS.includes(s["category"] as CategoryId)
-      ? { category: s["category"] as CategoryId }
-      : {},
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { category?: CategoryId | undefined; city?: string | undefined } => {
+    const city = typeof s["city"] === "string" ? s["city"].trim().slice(0, 80) : "";
+    return {
+      ...(CATEGORY_IDS.includes(s["category"] as CategoryId)
+        ? { category: s["category"] as CategoryId }
+        : {}),
+      ...(city ? { city } : {}),
+    };
+  },
   head: () => ({
     meta: [
       { title: "Media — OOHRENA" },
@@ -90,8 +97,9 @@ function Marketplace() {
   const { data: user } = useSession();
   const isClient = user?.role === "client";
   const [query, setQuery] = useState("");
-  const [city, setCity] = useState("");
-  const [cat, setCat] = useState<string>(Route.useSearch().category ?? "");
+  const initial = Route.useSearch();
+  const [city, setCity] = useState(initial.city ?? "");
+  const [cat, setCat] = useState<string>(initial.category ?? "");
   const [budget, setBudget] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

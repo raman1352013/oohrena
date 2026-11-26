@@ -14,8 +14,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: NODE_ENV
-        value: production
+      - key: NODE_ENV # staging until SMTP is set up; production refuses to start without SMTP_URL
+        value: staging
       - key: MONGOMS_DISABLE_POSTINSTALL # test-only MongoDB binary; skip the 370 MB download during build
         value: "1"
       - key: TRUST_PROXY # browser → Vercel edge → Render proxy → API

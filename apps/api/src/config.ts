@@ -6,6 +6,29 @@ const envBool = z
   .union([z.boolean(), z.string()])
   .transform((v) => (typeof v === "boolean" ? v : ["true", "1", "yes", "on"].includes(v.trim().toLowerCase())));
 
+function isSmtpUrl(v: string): boolean {
+  try {
+    const u = new URL(v);
+    return (u.protocol === "smtp:" || u.protocol === "smtps:") && u.hostname !== "";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * SMTP_URL holds a password, so the error never echoes the value. A bare provider key pasted here
+ * (e.g. Brevo's "xsmtpsib-…") used to crash nodemailer at startup and print the key in the host's logs.
+ * A blank value counts as unset.
+ */
+const smtpUrl = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  z
+    .string()
+    .trim()
+    .refine(isSmtpUrl, { message: "SMTP_URL must look like smtp://USER:PASS@HOST:PORT or smtps://USER:PASS@HOST:465 (value not shown)" })
+    .optional(),
+);
+
 const Env = z.object({
   NODE_ENV: z.enum(["development", "test", "staging", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -33,7 +56,7 @@ const Env = z.object({
   /** Public web origin used in emailed links (reset password, invites, email verification). Defaults to the first CORS origin. */
   PUBLIC_WEB_URL: z.string().url().optional(),
   /** SMTP connection URL for transactional email, e.g. smtps://USER:PASS@smtp.example.com:465 (keep in the secret store). */
-  SMTP_URL: z.string().optional(),
+  SMTP_URL: smtpUrl,
   /** Sender address for transactional email. */
   EMAIL_FROM: z.string().default("OOHRENA <no-reply@oohrena.com>"),
   /** Partner commission percentage on completed bookings. */

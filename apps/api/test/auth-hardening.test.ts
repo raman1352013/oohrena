@@ -27,6 +27,29 @@ describe("Auth hardening — 2FA enrolment, attempt limits, delivered notificati
     expect(() => loadConfig({ NODE_ENV: "production", MONGODB_URI: "x", DATA_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64") })).toThrow(/SMTP_URL/);
   });
 
+  it("SMTP_URL that is not an smtp(s):// URL is refused at startup without printing the secret", () => {
+    const base = { NODE_ENV: "staging", MONGODB_URI: "x", DATA_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64") };
+    const secret = "xsmtpsib-not-a-real-key-0123456789";
+    for (const bad of [secret, `https://user:${secret}@smtp.example.com`, "smtp://"]) {
+      let message = "";
+      try {
+        loadConfig({ ...base, SMTP_URL: bad });
+      } catch (e) {
+        message = e instanceof Error ? e.message : String(e);
+      }
+      expect(message).toMatch(/SMTP_URL must look like smtp:\/\//);
+      expect(message).not.toContain(secret);
+    }
+  });
+
+  it("SMTP_URL accepts smtp:// and smtps:// URLs; a blank value counts as unset", () => {
+    const base = { NODE_ENV: "test", MONGODB_URI: "x" };
+    expect(loadConfig({ ...base, SMTP_URL: "smtp://login:key@smtp-relay.brevo.com:587" }).SMTP_URL).toBe("smtp://login:key@smtp-relay.brevo.com:587");
+    expect(loadConfig({ ...base, SMTP_URL: " smtps://u:p@smtp.example.com:465 " }).SMTP_URL).toBe("smtps://u:p@smtp.example.com:465");
+    expect(loadConfig({ ...base, SMTP_URL: "  " }).SMTP_URL).toBeUndefined();
+    expect(() => loadConfig({ NODE_ENV: "production", MONGODB_URI: "x", DATA_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"), SMTP_URL: "" })).toThrow(/SMTP_URL is required/);
+  });
+
   it("/2fa/setup is refused once 2FA is enabled (cannot be silently replaced)", async () => {
     const { app, cfg } = testApp();
     const admin = await createStaff(app, cfg, "admin");

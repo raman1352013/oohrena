@@ -5,7 +5,8 @@ import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3
 import mongoose from "mongoose";
 import type { Config, FileStorage } from "../config.js";
 import { StoredFile } from "../models/files.js";
-import { badRequest } from "./errors.js";
+import { badRequest, notFound } from "./errors.js";
+import { logger } from "./logger.js";
 import { decrypt, encrypt } from "./crypto.js";
 
 /** Detects the real file type from its first bytes; the client's declared type and extension are ignored. */
@@ -66,7 +67,29 @@ async function writeBytes(cfg: Config, where: FileStorage, key: string, data: Bu
   }
 }
 
+/** True when the backend says the object doesn't exist (disk wiped, GridFS file or S3 key gone). */
+function isMissing(e: unknown): boolean {
+  const err = e as { code?: unknown; name?: unknown; message?: unknown; $metadata?: { httpStatusCode?: number } };
+  return (
+    err?.code === "ENOENT" ||
+    err?.name === "NoSuchKey" ||
+    err?.$metadata?.httpStatusCode === 404 ||
+    (typeof err?.message === "string" && err.message.startsWith("FileNotFound"))
+  );
+}
+
 async function readBytes(cfg: Config, where: FileStorage, key: string): Promise<Buffer> {
+  try {
+    return await readBytesFrom(cfg, where, key);
+  } catch (e) {
+    if (!isMissing(e)) throw e;
+    // The metadata row outlived its bytes (e.g. files saved to a host disk that a redeploy wiped).
+    logger.warn({ storage: where, key }, "stored file bytes are missing");
+    throw notFound("File not found");
+  }
+}
+
+async function readBytesFrom(cfg: Config, where: FileStorage, key: string): Promise<Buffer> {
   if (where === "s3") {
     const res = await getS3Client(cfg).send(new GetObjectCommand({ Bucket: cfg.S3_BUCKET, Key: key }));
     return Buffer.from((await res.Body?.transformToByteArray()) ?? []);

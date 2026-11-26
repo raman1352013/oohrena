@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { ImageOff } from "lucide-react";
+import { assetUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export function KCard({
@@ -228,5 +230,40 @@ export function PinLogo({ size = 28 }: { size?: number }) {
       <circle cx="16" cy="13" r="5" fill="var(--navy)" />
       <circle cx="16" cy="13" r="2" fill="var(--card)" />
     </svg>
+  );
+}
+
+/**
+ * A listing photo. Shows a neutral placeholder when there is no photo or the bytes can't be loaded
+ * (e.g. a file whose storage was wiped), never the browser's broken-image icon.
+ */
+export function Photo({
+  src,
+  alt,
+  className,
+}: {
+  src: string | undefined;
+  alt: string;
+  className?: string | undefined;
+}) {
+  const [failed, setFailed] = useState<string>();
+  if (!src || failed === src)
+    return (
+      <div
+        className={cn("bg-muted grid place-items-center text-mute", className)}
+        role="img"
+        aria-label={alt || "No photo"}
+      >
+        <ImageOff size={22} aria-hidden />
+      </div>
+    );
+  return (
+    <img
+      src={assetUrl(src)}
+      alt={alt}
+      loading="lazy"
+      onError={() => setFailed(src)}
+      className={cn("object-cover", className)}
+    />
   );
 }

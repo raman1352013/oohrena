@@ -9,7 +9,6 @@ import {
   Check,
   FileCheck2,
   Handshake,
-  ImageOff,
   MapPin,
   Milestone,
   MonitorPlay,
@@ -28,12 +27,11 @@ import {
   SUBJECT_TO_VENDOR,
   type CategoryId,
 } from "@oohrena/shared";
-import { assetUrl } from "@/lib/api";
 import { ROLE_HOME, useSession } from "@/lib/auth";
 import { inr, selectCls } from "@/lib/format";
 import { useSearch, type SearchItem } from "@/lib/marketplace-api";
 import { cn } from "@/lib/utils";
-import { Btn, Pill } from "@/components/app/kit";
+import { Btn, Photo, Pill } from "@/components/app/kit";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/")({
@@ -319,18 +317,11 @@ function LiveCard({ x }: { x: SearchItem }) {
       search={{ category: x.category, city: x.city }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-line bg-canvas transition hover:border-saffron/50 hover:shadow-[0_12px_32px_-16px_rgba(15,23,42,0.25)]"
     >
-      {x.photos[0] ? (
-        <img
-          src={assetUrl(x.photos[0])}
-          alt={x.title}
-          loading="lazy"
-          className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-        />
-      ) : (
-        <div className="grid h-44 place-items-center bg-muted text-mute">
-          <ImageOff size={22} aria-hidden />
-        </div>
-      )}
+      <Photo
+        src={x.photos[0]}
+        alt={x.title}
+        className="h-44 w-full transition-transform duration-500 group-hover:scale-[1.02]"
+      />
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">

@@ -5,7 +5,6 @@ import {
   BadgeCheck,
   CheckCircle2,
   Heart,
-  ImageOff,
   LayoutGrid,
   LocateFixed,
   Map as MapIcon,
@@ -26,7 +25,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { assetUrl } from "@/lib/api";
 import { useSession } from "@/lib/auth";
 import { inr, fmtDate } from "@/lib/format";
 import {
@@ -39,7 +37,7 @@ import {
   type SearchItem,
 } from "@/lib/marketplace-api";
 import { cn } from "@/lib/utils";
-import { Btn, Empty, Pill, Row } from "@/components/app/kit";
+import { Btn, Empty, Photo, Pill, Row } from "@/components/app/kit";
 import { Field, FormError } from "@/components/app/AuthShell";
 import { AvailabilityCalendar } from "@/components/app/AvailabilityCalendar";
 
@@ -380,24 +378,6 @@ function AvailabilityPill({ a }: { a: SearchItem["availability"] }) {
         ? `Available${a.capacity > 1 ? ` · ${a.minFree} ${a.unitLabel}` : ""}`
         : `Available · ${SUBJECT_TO_VENDOR.toLowerCase()}`}
     </Pill>
-  );
-}
-
-function Photo({
-  src,
-  alt,
-  className,
-}: {
-  src: string | undefined;
-  alt: string;
-  className: string;
-}) {
-  return src ? (
-    <img src={assetUrl(src)} alt={alt} loading="lazy" className={cn("object-cover", className)} />
-  ) : (
-    <div className={cn("bg-muted grid place-items-center text-mute", className)}>
-      <ImageOff size={22} />
-    </div>
   );
 }
 

@@ -49,6 +49,8 @@ export async function seedTestAccounts(cfg: Config, password: string, log: (m: s
       await Vendor.create({
         _id: orgId, userId, legalName: `${a.fullName} Media`, pan: a.pan, city: "Gwalior", categories: ["media_owner"],
         kycStatus: a.kyc, approvedBy: approved ? "seed" : null, approvedAt: approved ? new Date() : null,
+        // An approved vendor has finished onboarding; without this the demo vendor lands in the wizard.
+        ...(approved ? { onboarding: { submittedAt: new Date() } } : {}),
       });
       if (approved) {
         for (const type of ["pan", "gst"] as const) {

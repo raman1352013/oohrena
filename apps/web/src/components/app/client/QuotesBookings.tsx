@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { cancellationFor, todayIST } from "@oohrena/shared";
-import { fmtDate, inr } from "@/lib/format";
+import { dayRange, fmtDate, inr } from "@/lib/format";
 import { ApiError } from "@/lib/api";
 import { ask } from "@/components/app/ask";
 import {
@@ -248,7 +248,7 @@ export function MyBookings() {
             <span className="flex-1 min-w-48">
               {x.items.map((i) => i.title).join(", ")}
               <span className="block text-[12px] text-mute">
-                {x.start} → {x.end} · booked {fmtDate(x.createdAt)}
+                {dayRange(x.start, x.end)} · Booked {fmtDate(x.createdAt)}
               </span>
               {x.cancellation && (
                 <span className="block text-[12px] text-destructive">

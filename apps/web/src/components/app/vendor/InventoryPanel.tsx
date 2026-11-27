@@ -11,7 +11,7 @@ import {
   useSubmitListing,
   type Listing,
 } from "@/lib/inventory-api";
-import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
+import { Btn, Empty, KCard, Loading, Photo, Pill } from "@/components/app/kit";
 import { ListingPill } from "@/components/app/status";
 import { fmtDate } from "@/lib/format";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -74,45 +74,57 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px] min-w-[760px]">
+            <table className="w-full text-[13px] min-w-[720px]">
               <thead>
                 <tr className="text-left text-[12px] text-mute border-b border-line">
-                  {["Inventory ID", "Listing", "Your rate", "Photos", "Status", "Updated", ""].map(
-                    (h) => (
-                      <th key={h} className="font-normal px-4 py-2.5">
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {["Listing", "Your rate", "Status", "Updated", ""].map((h) => (
+                    <th key={h} className="font-normal px-4 py-2.5">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {items.map((l) => (
-                  <tr key={l.inventoryId} className="border-b border-line last:border-0 align-top">
-                    <td className="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
-                      {l.inventoryId}
-                    </td>
+                  <tr
+                    key={l.inventoryId}
+                    className="border-b border-line last:border-0 align-top hover:bg-canvas/60 transition-colors"
+                  >
                     <td className="px-4 py-3">
-                      <div className="font-semibold">{l.title}</div>
-                      <div className="text-mute text-[12px]">
-                        {l.categoryName} · {l.locality}, {l.city}
-                      </div>
-                      {l.statusReason && (
-                        <div
-                          className={`text-[12px] mt-1 ${l.status === "rejected" ? "text-destructive" : "text-hold"}`}
-                        >
-                          {l.statusReason}
+                      <div className="flex gap-3">
+                        <Photo
+                          src={l.photos[0]?.url}
+                          alt={l.title}
+                          className="size-14 rounded-lg shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold">{l.title}</div>
+                          <div className="text-mute text-[12px]">
+                            {l.categoryName} · {l.locality}, {l.city}
+                          </div>
+                          <div className="font-mono text-[11px] text-mute mt-0.5">
+                            {l.inventoryId}
+                            {l.photos.length === 0 ? (
+                              <span className="font-sans text-destructive"> · No photo</span>
+                            ) : (
+                              ` · ${l.photos.length} photo${l.photos.length === 1 ? "" : "s"}`
+                            )}
+                          </div>
+                          {l.statusReason && (
+                            <div
+                              className={`text-[12px] mt-1 ${l.status === "rejected" ? "text-destructive" : "text-hold"}`}
+                            >
+                              {l.statusReason}
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {inr(l.rate)}{" "}
                       <span className="text-mute text-[12px]">
                         {PRICING_UNIT_LABEL[l.pricingUnit]}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {l.photos.length || <span className="text-destructive">0</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">

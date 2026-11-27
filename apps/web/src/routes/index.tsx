@@ -114,7 +114,7 @@ function Hero({ signedIn, homeHref }: { signedIn: boolean; homeHref: string | un
       <div
         className={`${wrap} relative py-16 md:py-24 grid gap-12 md:grid-cols-[1.15fr_1fr] items-center`}
       >
-        <div className="space-y-8 min-w-0 animate-in fade-in slide-in-from-bottom-3 duration-700">
+        <div className="space-y-8 min-w-0 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="space-y-4">
             <h1 className="text-[40px] leading-[1.04] md:text-[64px] font-semibold tracking-[-0.035em] text-balance">
               Every Media.

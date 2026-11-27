@@ -9,7 +9,10 @@ import { RequestsCard } from "@/components/app/vendor/RequestsCard";
 import { WorkOrdersCard } from "@/components/app/vendor/WorkOrdersCard";
 import { TeamPanel } from "@/components/app/vendor/TeamPanel";
 import { VendorShell, VENDOR_TABS, type VendorTab } from "@/components/app/vendor/VendorShell";
-import { Btn, KCard, Loading, Pill } from "@/components/app/kit";
+import { Btn, KCard, Loading, Pill, Stats } from "@/components/app/kit";
+import { useVendorRequests } from "@/lib/marketplace-api";
+import { useMyWorkOrders } from "@/lib/deals-api";
+import { useVendorOverdue } from "@/lib/execution-api";
 import { VendorPayables } from "@/components/app/FinanceCards";
 import { VENDOR_ROLE_LABELS, type VendorRole } from "@oohrena/shared";
 import { OnboardingWizard } from "@/components/app/vendor/OnboardingWizard";
@@ -117,10 +120,12 @@ function VendorHub() {
               </KCard>
             )}
 
+            {(isOwner || isManager) && <VendorSummary />}
+
             {(isOwner || isManager) && <FirstSiteCard />}
 
             {/* Overview dashboard grid */}
-            <div className="grid lg:grid-cols-2 gap-5">
+            <div className="grid lg:grid-cols-2 gap-5 items-start">
               {!isAccounts && <WorkOrdersCard />}
               {(isOwner || isManager) && <RequestsCard />}
             </div>
@@ -174,5 +179,45 @@ function FirstSiteCard() {
         </Btn>
       </Link>
     </KCard>
+  );
+}
+
+const OPEN_WO = ["scheduled", "installed", "inspection_due", "issue_raised"];
+
+/** The four numbers an owner checks first. Counts only, straight from the vendor's own lists. */
+function VendorSummary() {
+  const inv = useMyInventory();
+  const reqs = useVendorRequests();
+  const wos = useMyWorkOrders();
+  const overdue = useVendorOverdue();
+  const n = (ready: boolean, v: number) => (ready ? v : "–");
+  const holds = (reqs.data ?? []).filter((r) => r.status === "pending").length;
+  const late = overdue.data?.length ?? 0;
+  return (
+    <Stats
+      items={[
+        {
+          label: "Live sites",
+          value: n(
+            !!inv.data,
+            (inv.data?.items ?? []).filter((l) => l.status === "approved").length,
+          ),
+        },
+        {
+          label: "Holds to confirm",
+          value: n(!!reqs.data, holds),
+          tone: holds ? "hold" : undefined,
+        },
+        {
+          label: "Open work orders",
+          value: n(!!wos.data, (wos.data ?? []).filter((w) => OPEN_WO.includes(w.status)).length),
+        },
+        {
+          label: "Proofs overdue",
+          value: n(!!overdue.data, late),
+          tone: late ? "danger" : undefined,
+        },
+      ]}
+    />
   );
 }

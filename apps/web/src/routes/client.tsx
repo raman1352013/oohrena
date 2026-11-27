@@ -5,6 +5,10 @@ import { MyBookings, MyQuotations } from "@/components/app/client/QuotesBookings
 import { ClientPayments } from "@/components/app/FinanceCards";
 import { ClientProfileCard } from "@/components/app/client/ClientProfileCard";
 import { WorkspaceShell, type NavItem } from "@/components/app/WorkspaceShell";
+import { Stats } from "@/components/app/kit";
+import { useMyLeads } from "@/lib/marketplace-api";
+import { useMyBookings, useMyQuotes } from "@/lib/deals-api";
+import { useMyPayments } from "@/lib/finance-api";
 
 const CLIENT_TABS = ["inquiries", "quotations", "bookings", "payments", "profile"] as const;
 type ClientTab = (typeof CLIENT_TABS)[number];
@@ -60,6 +64,7 @@ function ClientPortal() {
     >
       <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-6 space-y-5">
         <ClientHeading />
+        {tab !== "profile" && <ClientSummary />}
         {tab === "inquiries" && <MyInquiries />}
         {tab === "quotations" && <MyQuotations />}
         {tab === "bookings" && <MyBookings />}
@@ -67,5 +72,50 @@ function ClientPortal() {
         {tab === "profile" && <ClientProfileCard />}
       </div>
     </WorkspaceShell>
+  );
+}
+
+/** Counts only; every amount stays on the server-computed invoice rows. */
+function ClientSummary() {
+  const leads = useMyLeads();
+  const quotes = useMyQuotes();
+  const bookings = useMyBookings();
+  const pay = useMyPayments();
+  const n = (ready: boolean, v: number) => (ready ? v : "–");
+  const toReview = (quotes.data ?? []).filter((q) => q.status === "released").length;
+  return (
+    <Stats
+      items={[
+        {
+          label: "Open inquiries",
+          value: n(
+            !!leads.data,
+            (leads.data ?? []).filter((l) => !["won", "lost", "closed"].includes(l.status)).length,
+          ),
+        },
+        {
+          label: "Quotes to review",
+          value: n(!!quotes.data, toReview),
+          tone: toReview ? "hold" : undefined,
+        },
+        {
+          label: "Active bookings",
+          value: n(
+            !!bookings.data,
+            (bookings.data ?? []).filter((b) => b.status === "confirmed" || b.status === "live")
+              .length,
+          ),
+        },
+        {
+          label: "Invoices to pay",
+          value: n(
+            !!pay.data,
+            (pay.data?.invoices ?? []).filter(
+              (i) => i.status === "issued" || i.status === "partially_paid",
+            ).length,
+          ),
+        },
+      ]}
+    />
   );
 }

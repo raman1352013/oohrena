@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +40,19 @@ export function WorkspaceShell({
 }) {
   const visible = groups.filter((g) => g.items.length > 0);
   const all = visible.flatMap((g) => g.items);
+  const activeId = all.find((x) => x.active)?.id ?? "";
+
+  // Phones: keep the open section visible in the scrolling row (horizontal only, never the page).
+  const row = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = row.current;
+    const el = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !el) return;
+    nav.scrollTo({
+      left: el.offsetLeft - (nav.clientWidth - el.offsetWidth) / 2,
+      behavior: "smooth",
+    });
+  }, [activeId]);
 
   const item = (x: NavItem, compact = false) => (
     <Link
@@ -48,7 +61,7 @@ export function WorkspaceShell({
       search={(x.search ?? {}) as never}
       aria-current={x.active ? "page" : undefined}
       className={cn(
-        "group flex items-center gap-2.5 rounded-lg text-[13px] transition-colors whitespace-nowrap",
+        "group flex items-center gap-2.5 rounded-lg text-[13px] transition-[background-color,color,box-shadow] duration-150 whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-saffron/50",
         compact ? "h-9 px-3 shrink-0" : "h-9 px-2.5",
         x.active
           ? "bg-card text-ink font-semibold shadow-[0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-line"
@@ -100,8 +113,9 @@ export function WorkspaceShell({
 
       <div className="min-w-0">
         <nav
+          ref={row}
           aria-label={label}
-          className="no-print md:hidden flex gap-1 overflow-x-auto px-4 pt-4 pb-1 [scrollbar-width:none]"
+          className="no-print md:hidden relative flex gap-1 overflow-x-auto px-4 pt-4 pb-1 no-scrollbar"
         >
           {action && (
             <button
@@ -115,7 +129,13 @@ export function WorkspaceShell({
           )}
           {all.map((x) => item(x, true))}
         </nav>
-        {padded ? <div className="p-4 md:p-8">{children}</div> : children}
+        {/* Keyed by section, so switching sections fades the new one in instead of snapping. */}
+        <div
+          key={activeId}
+          className="animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out"
+        >
+          {padded ? <div className="p-4 md:p-8">{children}</div> : children}
+        </div>
       </div>
     </div>
   );

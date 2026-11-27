@@ -10,6 +10,7 @@ import {
   Map as MapIcon,
   MapPin,
   Search,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import {
@@ -105,6 +106,9 @@ function Marketplace() {
   const [to, setTo] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [point, setPoint] = useState<{ lat: number; lng: number }>();
+  // Phones show search + a Filters toggle; the other fields would push results off the first screen.
+  const [moreFilters, setMoreFilters] = useState(false);
+  const hideOnPhone = moreFilters ? "" : "hidden md:flex";
   const [radius, setRadius] = useState(10);
   const [view, setView] = useState<"grid" | "map">("grid");
   const [open, setOpen] = useState<SearchItem>();
@@ -165,12 +169,14 @@ function Marketplace() {
             />
           </label>
           <Input
+            className={hideOnPhone}
             aria-label="City"
             placeholder="City"
             value={city}
             onChange={(e) => setCity(e.target.value)}
           />
           <Input
+            className={hideOnPhone}
             aria-label="Maximum price"
             type="number"
             min={0}
@@ -179,6 +185,7 @@ function Marketplace() {
             onChange={(e) => setBudget(e.target.value)}
           />
           <Input
+            className={hideOnPhone}
             aria-label="Campaign start"
             type="date"
             min={plus(0)}
@@ -190,6 +197,7 @@ function Marketplace() {
             }}
           />
           <Input
+            className={hideOnPhone}
             aria-label="Campaign end"
             type="date"
             min={from || plus(0)}
@@ -200,7 +208,18 @@ function Marketplace() {
         <div className="flex flex-wrap items-center gap-2 mb-4 text-[12px]">
           <Btn variant={point ? "dark" : "secondary"} className="h-9 px-3" onClick={locate}>
             <LocateFixed size={14} />
-            {point ? "Near me" : "Near me"}
+            Near me
+          </Btn>
+          <Btn
+            variant={moreFilters ? "dark" : "secondary"}
+            className="h-9 px-3 md:hidden"
+            aria-expanded={moreFilters}
+            onClick={() => setMoreFilters((v) => !v)}
+          >
+            <SlidersHorizontal size={14} />
+            Filters
+            {[city, budget, from].filter(Boolean).length > 0 &&
+              ` · ${[city, budget, from].filter(Boolean).length}`}
           </Btn>
           {point && (
             <>
@@ -284,7 +303,7 @@ function Marketplace() {
             </button>
           </div>
         </div>
-        <div className="flex gap-6 border-b border-line text-[13px] overflow-x-auto">
+        <div className="flex gap-6 border-b border-line text-[13px] overflow-x-auto no-scrollbar">
           {[{ id: "", name: "All media" }, ...CATEGORY_DEFS].map((c) => (
             <button
               key={c.id || "all"}
@@ -509,10 +528,18 @@ function ListingDialog({
   return (
     <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl p-0 overflow-hidden max-h-[92vh] overflow-y-auto">
-        <div className="flex gap-1 overflow-x-auto bg-muted">
+        <div className="flex gap-1 overflow-x-auto bg-muted snap-x snap-mandatory no-scrollbar">
           {item.photos.length ? (
             item.photos.map((p) => (
-              <Photo key={p} src={p} alt={item.title} className="h-56 min-w-[70%] sm:min-w-[50%]" />
+              <Photo
+                key={p}
+                src={p}
+                alt={item.title}
+                className={cn(
+                  "h-60 sm:h-72 snap-start",
+                  item.photos.length === 1 ? "w-full" : "min-w-[85%] sm:min-w-[60%]",
+                )}
+              />
             ))
           ) : (
             <Photo src={undefined} alt="" className="h-40 w-full" />
@@ -562,7 +589,20 @@ function ListingDialog({
             </div>
             <div>
               <Row k="Indicative price" v={priceText(item)} />
-              <Row k="Location" v={`${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`} />
+              <Row
+                k="Location"
+                v={
+                  <a
+                    href={`https://www.google.com/maps?q=${item.lat},${item.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-saffron-deep hover:underline"
+                  >
+                    <MapPin size={13} />
+                    Open map
+                  </a>
+                }
+              />
               <Row k="Last updated" v={fmtDate(item.updatedAt)} />
             </div>
           </div>
@@ -602,7 +642,7 @@ function ListingDialog({
           {ask ? (
             <QuickQuote sites={[toCartSite(item)]} defaultFrom={from} onDone={onClose} />
           ) : (
-            <div className="flex gap-2">
+            <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-4 flex gap-2 bg-card/95 backdrop-blur border-t border-line">
               <Btn className="flex-1" disabled={!item.bookable} onClick={() => setAsk(true)}>
                 {item.bookable ? "Request quotation" : "Not bookable"}
               </Btn>

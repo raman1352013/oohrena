@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { LeadStatus } from "@oohrena/shared";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/auth";
-import { fmtDate, inr } from "@/lib/format";
+import { dayRange, fmtDate, inr } from "@/lib/format";
 import { useMyLeads } from "@/lib/marketplace-api";
 import { Btn, Empty, KCard, Loading, Pill } from "@/components/app/kit";
 
@@ -65,13 +65,19 @@ export function MyInquiries() {
         <Empty title="No inquiries" />
       ) : (
         leads.data.map((l) => (
-          <div key={l.leadId} className="px-5 py-3 flex flex-wrap items-center gap-3 text-[13px]">
+          <div
+            key={l.leadId}
+            className="px-5 py-3.5 flex flex-wrap items-center gap-3 text-[13px] hover:bg-canvas/60 transition-colors"
+          >
             <span className="font-mono text-[12px] w-36">{l.leadId}</span>
             <div className="flex-1 min-w-48">
               <div className="font-medium line-clamp-1">{l.requirement}</div>
               <div className="text-mute text-[12px]">
-                {l.inventoryIds.join(", ") || l.city} · {l.from} → {l.to}
-                {l.budget ? ` · budget ${inr(l.budget)}` : ""}
+                {l.inventoryIds.length
+                  ? `${l.inventoryIds.length} ${l.inventoryIds.length === 1 ? "site" : "sites"}`
+                  : l.city}{" "}
+                · {dayRange(l.from, l.to)}
+                {l.budget ? ` · Budget ${inr(l.budget)}` : ""}
               </div>
             </div>
             <span className="text-mute text-[12px]">{fmtDate(l.createdAt)}</span>

@@ -33,3 +33,19 @@ export const fmtDate = (d: string | null | undefined) =>
 
 export const selectCls =
   "h-11 w-full rounded-md border border-input bg-card px-3 text-[13px] focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60";
+
+/** Calendar days (YYYY-MM-DD, stored as UTC midnight) as "11 Dec – 9 Jan 2027". */
+export function dayRange(from: string, to: string) {
+  const d = (s: string) => new Date(`${s.slice(0, 10)}T00:00:00Z`);
+  const a = d(from);
+  const b = d(to);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return `${from} → ${to}`;
+  const f = (x: Date, year: boolean) =>
+    x.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      ...(year ? { year: "numeric" } : {}),
+      timeZone: "UTC",
+    });
+  return `${f(a, a.getUTCFullYear() !== b.getUTCFullYear())} – ${f(b, true)}`;
+}

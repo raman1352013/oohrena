@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ImageOff } from "lucide-react";
+import { ImageOff, Inbox, LoaderCircle } from "lucide-react";
 import { assetUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,12 @@ export function KCard({
   bodyClass?: string;
 }) {
   return (
-    <section className={cn("bg-card border border-line rounded-xl", className)}>
+    <section
+      className={cn(
+        "bg-card border border-line rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+        className,
+      )}
+    >
       {title && (
         <div className="px-5 min-h-14 py-2 flex flex-wrap items-center gap-2 border-b border-line">
           <h2 className="font-semibold text-[15px] text-ink mr-auto">{title}</h2>
@@ -38,6 +43,13 @@ const tones: Record<Tone, string> = {
   navy: "bg-navy text-navy-foreground",
   danger: "bg-destructive/10 text-destructive",
 };
+/** "partially_paid" → "Partially paid". Only all-lowercase strings change, so labels and codes
+ * ("DEMO", "KYC approved") stay as written. */
+const tidy = (x: ReactNode) =>
+  typeof x === "string" && /^[a-z][a-z_ ]*$/.test(x)
+    ? x.charAt(0).toUpperCase() + x.slice(1).replace(/_/g, " ")
+    : x;
+
 export function Pill({
   tone = "neutral",
   children,
@@ -47,6 +59,7 @@ export function Pill({
   children: ReactNode;
   className?: string;
 }) {
+  children = tidy(children);
   return (
     <span
       className={cn(
@@ -63,15 +76,21 @@ export function Pill({
 export function Btn({
   variant = "primary",
   size = "md",
+  loading = false,
   className,
+  children,
+  disabled,
   ...p
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "dark" | "ghost" | "danger";
   size?: "md" | "sm";
+  /** Shows a spinner and blocks clicks while a request is in flight. The width stays the same. */
+  loading?: boolean | undefined;
 }) {
   const v = {
-    primary: "bg-saffron text-primary-foreground hover:bg-saffron-deep",
-    secondary: "border border-line bg-card text-ink hover:bg-canvas",
+    primary:
+      "bg-saffron text-primary-foreground hover:bg-saffron-deep shadow-[0_1px_2px_rgba(234,88,12,0.25)]",
+    secondary: "border border-line bg-card text-ink hover:bg-canvas hover:border-ink/15",
     dark: "bg-navy text-navy-foreground hover:bg-navy/90",
     ghost: "text-mute hover:text-ink",
     danger: "border border-destructive/30 bg-card text-destructive hover:bg-destructive/5",
@@ -79,28 +98,58 @@ export function Btn({
   return (
     <button
       {...p}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
-        "rounded-lg text-[13px] font-semibold transition disabled:opacity-40 disabled:pointer-events-none inline-flex items-center justify-center gap-2",
+        "relative rounded-lg text-[13px] font-semibold transition-[background-color,border-color,transform,box-shadow] duration-150 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none inline-flex items-center justify-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-saffron/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         size === "sm" ? "h-9 px-3" : "h-11 px-5",
+        loading && "disabled:opacity-80",
         v,
         className,
       )}
-    />
+    >
+      {loading ? (
+        <>
+          <span className="invisible inline-flex items-center gap-2">{children}</span>
+          <LoaderCircle size={16} className="absolute animate-spin" aria-hidden />
+        </>
+      ) : (
+        children
+      )}
+    </button>
   );
 }
 
 export function Empty({ title }: { title: string }) {
   return (
-    <div className="py-10 text-center">
-      <div className="font-medium text-ink text-[13px]">{title}</div>
+    <div className="py-12 flex flex-col items-center gap-3 text-center animate-in fade-in duration-300">
+      <div className="size-10 rounded-full bg-muted grid place-items-center text-mute" aria-hidden>
+        <Inbox size={18} strokeWidth={1.75} />
+      </div>
+      <div className="font-medium text-mute text-[13px]">{title}</div>
     </div>
   );
 }
 
-export function Loading() {
+/** A grey block that pulses while data loads. */
+export function Skeleton({ className }: { className?: string | undefined }) {
+  return <div aria-hidden className={cn("skeleton rounded-md", className)} />;
+}
+
+/** Placeholder rows in the shape of a list, so the page doesn't jump when data arrives. */
+export function Loading({ rows = 3 }: { rows?: number | undefined }) {
   return (
-    <div role="status" className="py-10 text-center text-[13px] text-mute">
-      Loading…
+    <div role="status" aria-label="Loading" className="py-4 space-y-3">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-4" style={{ opacity: 1 - i * 0.22 }}>
+          <Skeleton className="h-4 w-24 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-3/5" />
+            <Skeleton className="h-3 w-2/5" />
+          </div>
+          <Skeleton className="h-6 w-16 rounded-md shrink-0" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -133,7 +182,12 @@ export function Stats({ items }: { items: StatItem[] }) {
       {items.map((x) => (
         <div key={x.label} className="p-4 border-line border-b border-r -mb-px -mr-px">
           <div className="text-[12px] text-mute">{x.label}</div>
-          <div className={cn("text-2xl font-semibold mt-1 tabular-nums", x.tone && tone[x.tone])}>
+          <div
+            className={cn(
+              "text-2xl font-semibold mt-1 tabular-nums tracking-tight animate-in fade-in duration-300",
+              x.tone && tone[x.tone],
+            )}
+          >
             {x.value}
           </div>
           {x.alert && <div className="text-[11px] text-saffron-deep mt-1">{x.alert}</div>}
@@ -153,7 +207,10 @@ export function Tabs<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <nav role="tablist" className="flex gap-6 border-b border-line text-[13px] overflow-x-auto">
+    <nav
+      role="tablist"
+      className="flex gap-6 border-b border-line text-[13px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -161,7 +218,7 @@ export function Tabs<T extends string>({
           aria-selected={value === t.id}
           onClick={() => onChange(t.id)}
           className={cn(
-            "pt-1 pb-2.5 border-b-2 whitespace-nowrap flex items-center gap-1.5",
+            "pt-1 pb-2.5 border-b-2 whitespace-nowrap flex items-center gap-1.5 transition-colors",
             value === t.id
               ? "border-navy text-ink font-semibold"
               : "border-transparent text-mute hover:text-ink",
@@ -263,7 +320,7 @@ export function Photo({
       alt={alt}
       loading="lazy"
       onError={() => setFailed(src)}
-      className={cn("object-cover", className)}
+      className={cn("object-cover bg-muted", className)}
     />
   );
 }

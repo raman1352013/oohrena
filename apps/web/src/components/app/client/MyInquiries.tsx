@@ -30,11 +30,13 @@ export function ClientHeading() {
   const { data: user } = useSession();
   const me = useQuery({
     queryKey: ["client", "me"],
-    queryFn: () => api<{ clientId: string; companyName: string }>("/clients/me"),
+    queryFn: () => api<{ clientId: string; companyName: string | null }>("/clients/me"),
   });
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <h1 className="text-[24px] font-semibold">{me.data?.companyName ?? "…"}</h1>
+      <h1 className="text-[24px] font-semibold">
+        {me.data ? (me.data.companyName ?? user?.fullName ?? "") : "…"}
+      </h1>
       <Link to="/marketplace" className="ml-auto">
         <Btn variant="secondary">Browse media</Btn>
       </Link>

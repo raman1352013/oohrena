@@ -59,7 +59,8 @@ export const registerClientInput = z.object({
   email,
   mobile,
   password,
-  companyName: trimmed(160),
+  /** Optional at sign-up: asked when it is needed (quote approval / invoice), not before the first quote. */
+  companyName: trimmed(160).optional(),
   gstin: gstin.optional(),
   ref: signupRef,
   acceptTerms,

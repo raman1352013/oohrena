@@ -16,7 +16,7 @@ const leadSchema = new Schema(
     to: { type: Date, required: true },
     qty: { type: Number, default: 1 },
     budget: { type: Number, default: null },
-    requirement: { type: String, required: true },
+    requirement: { type: String, default: "" },
     status: { type: String, enum: LEAD_STATUSES, default: "new", index: true },
     contact: { name: String, email: String, mobile: String, company: String },
   },

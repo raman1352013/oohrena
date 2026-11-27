@@ -103,7 +103,8 @@ const clientSchema = new Schema(
   {
     _id: { type: String, required: true }, // CLT-000001
     userId: { type: String, required: true, unique: true },
-    companyName: { type: String, required: true },
+    // Asked when needed (quote approval / invoice); null until then. Show the contact name as a fallback.
+    companyName: { type: String, default: null },
     gstin: { type: String, default: null },
     billingAddress: { type: addressSchema, default: null },
     contacts: { type: [contactSchema], default: [] },

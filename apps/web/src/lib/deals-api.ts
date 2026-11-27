@@ -341,7 +341,8 @@ export function useAcknowledge() {
 
 export type ClientProfileData = {
   clientId: string;
-  companyName: string;
+  /** null until the client adds it (asked at quote approval). */
+  companyName: string | null;
   gstin: string | null;
   billingAddress: {
     line1: string;
@@ -372,6 +373,7 @@ export function useUpdateClientProfile() {
       api<ClientProfileData>("/clients/me", { method: "PUT", body }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["client", "profile"] });
+      void qc.invalidateQueries({ queryKey: ["client", "me"] });
     },
   });
 }

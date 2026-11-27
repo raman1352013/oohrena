@@ -189,7 +189,7 @@ export function ClientProfileCard() {
         </form>
       ) : (
         <div className="divide-y divide-line">
-          <Row k="Legal name" v={profile.companyName} />
+          <Row k="Legal name" v={profile.companyName ?? "—"} />
           <Row k="Client ID" v={<span className="font-mono">{profile.clientId}</span>} />
           <Row k="GSTIN" v={<span className="font-mono">{profile.gstin ?? "—"}</span>} />
           <Row

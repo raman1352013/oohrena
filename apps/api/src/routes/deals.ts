@@ -83,6 +83,11 @@ export function dealRoutes() {
   });
   r.post("/quotes/:id/decision", requirePermission("quotes.decide"), validateBody(quoteDecisionInput), async (req, res) => {
     const { decision, comment } = req.body as z.infer<typeof quoteDecisionInput>;
+    // Company name is asked at the first point it is needed: the invoice that follows an approved quote.
+    if (decision === "approve" && req.user!.role === "client") {
+      const c = await Client.findById(req.user!.orgId).select("companyName").lean();
+      if (!c?.companyName) throw badRequest("Add your company name for the invoice first", { field: "companyName" });
+    }
     res.json({ data: quoteView(await clientDecision(req, String(req.params.id), decision, comment), "client") });
   });
 

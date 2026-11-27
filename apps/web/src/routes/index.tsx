@@ -347,7 +347,11 @@ function LiveCard({ x }: { x: SearchItem }) {
             </span>
           )}
         </div>
-        <div className="text-[12px] text-mute">{SUBJECT_TO_VENDOR}</div>
+        {/* Only when the card makes an availability claim the vendor hasn't confirmed (AGENTS.md §4.8).
+            Without dates there is no availability on the card, so no label. */}
+        {x.availability && !x.availability.confirmed && (
+          <div className="text-[12px] text-mute">{SUBJECT_TO_VENDOR}</div>
+        )}
       </div>
     </Link>
   );

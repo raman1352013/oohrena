@@ -19,7 +19,7 @@ Status on branch `feat/mvp-api-monorepo` (commit 19e1583): Modules 1–8 and 10 
 | T-06 Inquiry submission & unique Lead ID | `availability-search.test.ts`, `quotes-bookings.test.ts` | Done |
 | T-07 Admin vendor assignment | `quotes-bookings.test.ts` | Done |
 | T-08 Quotation creation & client approval | `quotes-bookings.test.ts` | Done |
-| T-09 Booking & Work Order generation | `quotes-bookings.test.ts` | Done |
+| T-09 Booking & Work Order generation | `quotes-bookings.test.ts`, `booking-vendor-confirmation.test.ts` | Done |
 | T-10 Campaign proof upload & verification | `execution.test.ts` | Done |
 | T-11 Client payment & vendor payable reconciliation | `finance.test.ts` | Done |
 | T-12 Client campaign report generation (PDF/CSV) | `reports-notifications.test.ts` | Done |

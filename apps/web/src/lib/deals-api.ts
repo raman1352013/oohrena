@@ -140,7 +140,7 @@ export type InboxLead = {
   possibleDuplicates: string[];
 };
 export type LeadDetail = Omit<InboxLead, "possibleDuplicates" | "clientId" | "inventoryIds"> & {
-  client: { clientId: string; companyName: string; gstin: string | null } | null;
+  client: { clientId: string; companyName: string | null; gstin: string | null } | null;
   items: (PublicListing & { vendorId: string; vendorRate: number; availabilityMode: string })[];
   vendors: { vendorId: string; legalName: string; kycStatus: string; city: string }[];
   assignments: {
@@ -151,6 +151,13 @@ export type LeadDetail = Omit<InboxLead, "possibleDuplicates" | "clientId" | "in
     reason: string | null;
   }[];
   quotes: QuoteView[];
+  /** Holds of the latest quote: "held" = confirmed (or managed); "pending_vendor" = waiting for the vendor. */
+  latestQuoteHolds: {
+    holdId: string;
+    inventoryId: string;
+    status: string;
+    expiresAt: string | null;
+  }[];
   booking: BookingView | null;
   workOrders: WorkOrderView[];
   possibleDuplicates: string[];

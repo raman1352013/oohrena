@@ -104,6 +104,7 @@ npm run build -w @oohrena/web
 - **Transactions need a replica set.** MongoDB Atlas is one; a plain local `mongod` is not. Tests use `MongoMemoryReplSet`.
 - **mongodb-memory-server** downloads a ~370 MB binary once into `node_modules/.cache/mongodb-memory-server` (pinned in `apps/api/vitest.config.ts`). If a download is interrupted, delete `~/.cache/mongodb-binaries/*.lock` and `*.downloading`.
 - **Web TypeScript uses `exactOptionalPropertyTypes`**: optional props must be typed `x?: T | undefined` when you pass `undefined`.
+- **A booking needs every site confirmed** (`assertHoldsConfirmed` in `services/availability.ts`). A quote on an "on request" listing leaves holds `pending_vendor`; `POST /admin/bookings` returns 409 until the vendor confirms via `POST /availability-requests/:id/vendor-response`. In tests and seeds, either set the listing to `managed` or confirm as the vendor (see `test/booking-vendor-confirmation.test.ts`).
 - **`src/routeTree.gen.ts` is regenerated** by `npm run build -w @oohrena/web` (or `dev`). New route files show type errors until you build once.
 - **Dates** are plain calendar days `YYYY-MM-DD` stored as UTC midnight; "today" is `todayIST()`. Ranges are inclusive.
 - **Cookies + CSRF**: the browser uses the HttpOnly `oohrena_sid` cookie; state-changing requests must come from an origin listed in `CORS_ORIGINS`. Scripts/tests use `Authorization: Bearer` (send `X-Auth-Mode: token` on login).

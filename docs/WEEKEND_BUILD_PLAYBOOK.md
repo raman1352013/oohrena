@@ -3,7 +3,7 @@
 Written 25 Nov 2026. **One file to run the whole build with an AI coding agent (Claude Code, Antigravity, Cursor…).**
 What and why: `docs/VENDOR_ONBOARDING_REFERRAL_PLAN.md`. Design (data model, API, coin ledger, security): `docs/VENDOR_ONBOARDING_ARCHITECTURE.md` — **it wins if this file disagrees**. Screens and UX: `docs/VENDOR_ONBOARDING_UX.md` — every UI task follows it. Rules: `AGENTS.md`. This file = **how**, task by task, with a prompt to paste.
 
-**Using Antigravity?** See section 7 at the end.
+**Using Antigravity?** See section 7 at the end, and `docs/ANTIGRAVITY_NEXT_STEPS_HINGLISH.md` for the current order of the remaining tasks.
 
 ---
 

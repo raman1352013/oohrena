@@ -10,7 +10,8 @@ import {
   EXECUTION_SERVICES,
   EXECUTION_SERVICE_LABEL,
   INDIAN_STATES,
-  VENDOR_CATEGORIES,
+  SELECTABLE_VENDOR_CATEGORIES,
+  isSelectableVendorCategory,
   VENDOR_CATEGORY_LABEL,
   WIZARD_STEPS,
   WIZARD_STEP_LABEL,
@@ -564,14 +565,18 @@ function CategoryStepForm({
   onBack,
 }: {
   defaultValues?: OnboardingCategoryInput | undefined;
-  categoriesFallback?: OnboardingCategoryInput["categories"] | undefined;
+  categoriesFallback?: readonly string[] | undefined;
   onSaved: () => void;
   onBack: () => void;
 }) {
   const saveMutation = useSaveStep("category");
-  const [selected, setSelected] = useState<OnboardingCategoryInput["categories"]>(
-    defaultValues?.categories ?? categoriesFallback ?? ["media_owner"],
-  );
+  const [selected, setSelected] = useState<OnboardingCategoryInput["categories"]>(() => {
+    // Older sign-ups may hold "proposed_super_vendor"; it is no longer selectable, so drop it here.
+    const saved = (defaultValues?.categories ?? categoriesFallback ?? []).filter(
+      isSelectableVendorCategory,
+    );
+    return saved.length ? saved : ["media_owner"];
+  });
   const [otherCategory, setOtherCategory] = useState(defaultValues?.otherCategory ?? "");
   const [error, setError] = useState<string>();
 
@@ -616,7 +621,7 @@ function CategoryStepForm({
         </p>
 
         <div className="grid sm:grid-cols-2 gap-3">
-          {VENDOR_CATEGORIES.map((cat) => {
+          {SELECTABLE_VENDOR_CATEGORIES.map((cat) => {
             const checked = selected.includes(cat);
             return (
               <label

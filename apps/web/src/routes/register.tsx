@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import {
   registerClientInput,
   registerVendorInput,
-  VENDOR_CATEGORIES,
+  SELECTABLE_VENDOR_CATEGORIES,
   VENDOR_CATEGORY_LABEL,
-  type VendorCategory,
+  type SelectableVendorCategory,
 } from "@oohrena/shared";
 import type { ZodError } from "zod";
 import { ApiError } from "@/lib/api";
@@ -61,7 +61,7 @@ function RegisterPage() {
   const regClient = useRegisterClient();
   const regVendor = useRegisterVendor();
   const [f, setF] = useState(EMPTY);
-  const [categories, setCategories] = useState<VendorCategory[]>([]);
+  const [categories, setCategories] = useState<SelectableVendorCategory[]>([]);
   const [refCode, setRefCode] = useState(searchRef || "");
   const [accept, setAccept] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,7 +78,7 @@ function RegisterPage() {
   const set = (k: keyof typeof EMPTY) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF({ ...f, [k]: e.target.value });
 
-  function toggleCategory(cat: VendorCategory) {
+  function toggleCategory(cat: SelectableVendorCategory) {
     setCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
   }
 
@@ -266,7 +266,7 @@ function RegisterPage() {
               What you do (choose at least one)
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {VENDOR_CATEGORIES.map((cat) => {
+              {SELECTABLE_VENDOR_CATEGORIES.map((cat) => {
                 const checked = categories.includes(cat);
                 return (
                   <label

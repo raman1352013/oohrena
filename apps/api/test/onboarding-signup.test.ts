@@ -26,6 +26,23 @@ describe("T2: Quick vendor sign-up & referral code capture", () => {
     await stopTestDb();
   });
 
+  it("a vendor cannot make themselves a Super Vendor at sign-up (admin assigns it)", async () => {
+    const { app } = testApp();
+    const res = await request(app).post("/api/v1/vendors/register").set("x-auth-mode", "token").send(vendorPayload({ categories: ["media_owner", "proposed_super_vendor"] }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("an older vendor whose stored categories include proposed_super_vendor still loads", async () => {
+    const { app } = testApp();
+    const res = await request(app).post("/api/v1/vendors/register").set("x-auth-mode", "token").send(vendorPayload({ categories: ["media_owner"] }));
+    expect(res.status).toBe(201);
+    await Vendor.updateOne({ _id: res.body.data.vendorId }, { $set: { categories: ["media_owner", "proposed_super_vendor"] } });
+    const me = await request(app).get("/api/v1/vendors/me").set("Authorization", `Bearer ${res.body.data.token}`);
+    expect(me.status).toBe(200);
+    expect(me.body.data.categories).toContain("proposed_super_vendor");
+  });
+
   it("vendor sign-up succeeds without PAN, categories stored, user receives referralCode", async () => {
     const { app } = testApp();
     const payload = vendorPayload({

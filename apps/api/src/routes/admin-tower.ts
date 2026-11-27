@@ -74,6 +74,11 @@ export function adminTowerRoutes(cfg: Config) {
     const vendorIds = [...new Set([...items.map((i) => i.vendorId), ...assignments.map((a) => a.vendorId)])];
     const vendors = await Vendor.find({ _id: { $in: vendorIds } }).select("_id legalName kycStatus city").lean();
     const wos = booking ? await WorkOrder.find({ bookingId: booking._id }).lean() : [];
+    // Live state of the latest quote's holds, so the screen can say which sites still wait for the vendor.
+    const latestHoldIds = quotes[0]?.holdIds ?? [];
+    const holds = latestHoldIds.length
+      ? await AvailabilityBlock.find({ _id: { $in: latestHoldIds } }).select("_id inventoryId status expiresAt").lean()
+      : [];
     res.json({
       data: {
         leadId: l._id, source: l.source, status: l.status, requirement: l.requirement, from: fromDay(l.from.getTime()), to: fromDay(l.to.getTime()), qty: l.qty,
@@ -83,6 +88,7 @@ export function adminTowerRoutes(cfg: Config) {
         vendors: vendors.map((v) => ({ vendorId: v._id, legalName: v.legalName, kycStatus: v.kycStatus, city: v.city })),
         assignments: assignments.map((a) => ({ vendorId: a.vendorId, status: a.status, assignedBy: a.assignedBy, assignedAt: a.assignedAt, reason: a.reason })),
         quotes: quotes.map((q) => quoteView(q, "admin")),
+        latestQuoteHolds: holds.map((h) => ({ holdId: String(h._id), inventoryId: h.inventoryId, status: h.status, expiresAt: h.expiresAt ?? null })),
         booking: booking ? bookingView(booking, "admin") : null,
         workOrders: wos.map((w) => workOrderView(w as never, "admin")),
         possibleDuplicates: dups.map((d) => (d.entityA === l._id ? d.entityB : d.entityA)),

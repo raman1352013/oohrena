@@ -199,9 +199,10 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
               The client approved <b className="font-mono">{latest.quoteId}</b> ({inr(latest.total)}
               ). Creating the booking turns the hold into booked dates.
             </p>
+            <SiteConfirmations holds={l.latestQuoteHolds} />
             <Btn
               onClick={() => void run(act.book.mutateAsync(latest.quoteId), "Booking created")}
-              disabled={act.book.isPending}
+              disabled={act.book.isPending || !allConfirmed(l.latestQuoteHolds)}
             >
               Create booking
             </Btn>
@@ -209,6 +210,41 @@ function LeadWorkspace({ l }: { l: LeadDetail }) {
         )
       )}
     </div>
+  );
+}
+
+/** A booking waits until every site is confirmed (managed listing or vendor said yes) and no hold has lapsed. */
+const holdState = (h: LeadDetail["latestQuoteHolds"][number]) =>
+  h.status === "held" && (!h.expiresAt || Date.parse(h.expiresAt) > Date.now())
+    ? "confirmed"
+    : h.status === "pending_vendor"
+      ? "waiting"
+      : h.status === "declined"
+        ? "declined"
+        : "lapsed";
+const allConfirmed = (holds: LeadDetail["latestQuoteHolds"]) =>
+  holds.every((h) => holdState(h) === "confirmed");
+const HOLD_PILL = {
+  confirmed: ["verified", "Vendor confirmed"],
+  waiting: ["hold", "Waiting for vendor"],
+  declined: ["danger", "Vendor declined"],
+  lapsed: ["neutral", "Hold lapsed — release a new version"],
+} as const;
+
+function SiteConfirmations({ holds }: { holds: LeadDetail["latestQuoteHolds"] }) {
+  if (!holds.length) return null;
+  return (
+    <ul className="mb-3 divide-y divide-line rounded-lg border border-line text-[13px]">
+      {holds.map((h) => {
+        const [tone, label] = HOLD_PILL[holdState(h)];
+        return (
+          <li key={h.holdId} className="flex items-center justify-between gap-3 px-3 py-2">
+            <span className="font-mono text-[12px]">{h.inventoryId}</span>
+            <Pill tone={tone}>{label}</Pill>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

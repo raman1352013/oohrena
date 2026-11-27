@@ -210,11 +210,31 @@ export async function removeBlock(req: Request, inventoryId: string, blockId: st
 
 type BookItem = { inventoryId: string; from: Date; to: Date; qty: number };
 
+/** Refuses a booking while any of the quote's holds waits for the vendor, was declined, or has lapsed. */
+export async function assertHoldsConfirmed(holdIds: string[], session?: ClientSession) {
+  if (!holdIds.length) return;
+  const holds = await AvailabilityBlock.find({ _id: { $in: holdIds } }).session(session ?? null).select("_id inventoryId status expiresAt").lean();
+  const now = Date.now();
+  const problems: string[] = [];
+  for (const id of holdIds) {
+    const h = holds.find((x) => String(x._id) === String(id));
+    if (!h) { problems.push(`Hold ${id} no longer exists; release a new quote version`); continue; }
+    if (h.status === "pending_vendor") problems.push(`${h.inventoryId}: waiting for the vendor to confirm these dates`);
+    else if (h.status === "declined") problems.push(`${h.inventoryId}: the vendor declined these dates`);
+    else if (h.status !== "held" || (h.expiresAt && h.expiresAt.getTime() <= now)) problems.push(`${h.inventoryId}: the hold has lapsed; release a new quote version`);
+  }
+  if (problems.length) throw new AppError(409, "CONFLICT", "Every site must be confirmed before booking", { problems });
+}
+
+
 /**
  * Module 6: turns a quote's holds into booking blocks inside ONE transaction.
- * Own holds are ended first, then each item's capacity is re-checked (a hold may have expired and the dates been taken).
+ * A booking is confirmed only when every site is confirmed (founder blueprint §6.1): each of the quote's
+ * holds must be live and "held" — a managed listing's hold, or an on-request one the vendor confirmed.
+ * Then own holds are ended and each item's capacity is re-checked.
  */
 export async function bookItems(req: Request, bookingId: string, items: BookItem[], ownHoldIds: string[], session: ClientSession) {
+  await assertHoldsConfirmed(ownHoldIds, session);
   if (ownHoldIds.length) {
     await AvailabilityBlock.updateMany(
       { _id: { $in: ownHoldIds }, status: { $in: ["held", "pending_vendor"] } },

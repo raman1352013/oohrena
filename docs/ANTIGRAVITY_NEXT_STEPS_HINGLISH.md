@@ -55,8 +55,8 @@ Updated: 27 Nov 2026. Ye file **aapke liye** hai (owner / jo Antigravity chala r
 | 6 | Client: **Campaign timeline** | `feat/client-campaign-timeline` | Neeche §4 | Spec pehle |
 | 7 | Client: **Proof + PDF report** screen | `feat/client-proof-report` | Neeche §4 | Nahi (API already hai: `/reports/client-campaign`) |
 | 8 | **Email / WhatsApp updates** | `feat/notify-whatsapp` | Neeche §4 | WhatsApp provider account (owner) |
-| 9 | Sprint 1: V1.8 → V1.9 → V1.11 → … | `docs/NEXT_TASKS.md` ke naam | `docs/VENDOR_BLUEPRINT_BUILD_PLAN.md` | V1.7 ruka hai D3 pe |
-| — | Super Vendor network (T11) | — | **Abhi mat shuru karo** | Owner ke jawab Q5, Q6 + blueprint "relational DB" vs MongoDB |
+| 9 | **Founder ka Phase 1** (Sprint 1 ki jagah) | `docs/PHASE1_PLAN_HINGLISH.md` §3 | `docs/PHASE1_PLAN_HINGLISH.md` | Database faisla, D3, D6 |
+| — | Super Vendor network (T11) | — | Sirf data foundation: `PHASE1_PLAN_HINGLISH.md` P1-C. Dashboards **abhi mat shuru karo** | Owner ke jawab Q5, Q6 + blueprint "relational DB" vs MongoDB |
 
 ---
 

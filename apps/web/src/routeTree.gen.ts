@@ -27,6 +27,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as VendorRouteImport } from './routes/vendor'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminLeadsLeadIdRouteImport } from './routes/admin.leads.$leadId'
+import { Route as AdminVendorsVendorIdRouteImport } from './routes/admin.vendors.$vendorId'
 import { Route as PrintDossierCampaignIdRouteImport } from './routes/print.dossier.$campaignId'
 import { Route as PrintQuoteQuoteIdRouteImport } from './routes/print.quote.$quoteId'
 
@@ -120,6 +121,11 @@ const AdminLeadsLeadIdRoute = AdminLeadsLeadIdRouteImport.update({
   path: '/leads/$leadId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminVendorsVendorIdRoute = AdminVendorsVendorIdRouteImport.update({
+  id: '/vendors/$vendorId',
+  path: '/vendors/$vendorId',
+  getParentRoute: () => AdminRoute,
+} as any)
 const PrintDossierCampaignIdRoute = PrintDossierCampaignIdRouteImport.update({
   id: '/print/dossier/$campaignId',
   path: '/print/dossier/$campaignId',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/leads/$leadId': typeof AdminLeadsLeadIdRoute
+  '/admin/vendors/$vendorId': typeof AdminVendorsVendorIdRoute
   '/print/dossier/$campaignId': typeof PrintDossierCampaignIdRoute
   '/print/quote/$quoteId': typeof PrintQuoteQuoteIdRoute
 }
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/vendor': typeof VendorRoute
   '/admin': typeof AdminIndexRoute
   '/admin/leads/$leadId': typeof AdminLeadsLeadIdRoute
+  '/admin/vendors/$vendorId': typeof AdminVendorsVendorIdRoute
   '/print/dossier/$campaignId': typeof PrintDossierCampaignIdRoute
   '/print/quote/$quoteId': typeof PrintQuoteQuoteIdRoute
 }
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/vendor': typeof VendorRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/leads/$leadId': typeof AdminLeadsLeadIdRoute
+  '/admin/vendors/$vendorId': typeof AdminVendorsVendorIdRoute
   '/print/dossier/$campaignId': typeof PrintDossierCampaignIdRoute
   '/print/quote/$quoteId': typeof PrintQuoteQuoteIdRoute
 }
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/vendor'
     | '/admin/'
     | '/admin/leads/$leadId'
+    | '/admin/vendors/$vendorId'
     | '/print/dossier/$campaignId'
     | '/print/quote/$quoteId'
   fileRoutesByTo: FileRoutesByTo
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/vendor'
     | '/admin'
     | '/admin/leads/$leadId'
+    | '/admin/vendors/$vendorId'
     | '/print/dossier/$campaignId'
     | '/print/quote/$quoteId'
   id:
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/vendor'
     | '/admin/'
     | '/admin/leads/$leadId'
+    | '/admin/vendors/$vendorId'
     | '/print/dossier/$campaignId'
     | '/print/quote/$quoteId'
   fileRoutesById: FileRoutesById
@@ -414,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLeadsLeadIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/vendors/$vendorId': {
+      id: '/admin/vendors/$vendorId'
+      path: '/vendors/$vendorId'
+      fullPath: '/admin/vendors/$vendorId'
+      preLoaderRoute: typeof AdminVendorsVendorIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/print/dossier/$campaignId': {
       id: '/print/dossier/$campaignId'
       path: '/print/dossier/$campaignId'
@@ -434,11 +453,13 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminLeadsLeadIdRoute: typeof AdminLeadsLeadIdRoute
+  AdminVendorsVendorIdRoute: typeof AdminVendorsVendorIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminLeadsLeadIdRoute: AdminLeadsLeadIdRoute,
+  AdminVendorsVendorIdRoute: AdminVendorsVendorIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

@@ -3,6 +3,7 @@ import {
   DECLARATION_ITEMS,
   ONBOARDING_STEPS,
   ONBOARDING_STEP_SCHEMAS,
+  vendorReviewInput,
   WIZARD_STEPS,
   isOnboardingStep,
   onboardingBusinessInput,
@@ -146,5 +147,32 @@ describe("states and documents", () => {
   it("labels every KYC document type and still requires PAN", () => {
     for (const t of KYC_DOC_TYPES) expect(KYC_DOC_LABEL[t]).toBeTruthy();
     expect(REQUIRED_KYC_DOCS).toContain("pan");
+  });
+});
+
+describe("vendor review (§L office use)", () => {
+  const ok = {
+    identity: "verified",
+    ownership: "verified",
+    assets: "partial",
+    permission: "pending",
+    rateCard: "clarification",
+    siteVisitRequired: false,
+  } as const;
+
+  it("accepts a checklist with no rejection and fills defaults", () => {
+    const r = vendorReviewInput.parse(ok);
+    expect(r).toMatchObject({ territoryNote: "", remarks: "", nextReviewDate: null });
+  });
+
+  it("needs a reason when any item is rejected", () => {
+    expect(vendorReviewInput.safeParse({ ...ok, ownership: "rejected" }).success).toBe(false);
+    expect(vendorReviewInput.safeParse({ ...ok, assets: "rejected", reason: "No lease" }).success).toBe(true);
+  });
+
+  it("rejects unknown fields and bad values", () => {
+    expect(vendorReviewInput.safeParse({ ...ok, kycStatus: "approved" }).success).toBe(false);
+    expect(vendorReviewInput.safeParse({ ...ok, rateCard: "rejected" }).success).toBe(false);
+    expect(vendorReviewInput.safeParse({ ...ok, nextReviewDate: "next week" }).success).toBe(false);
   });
 });

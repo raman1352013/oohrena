@@ -259,7 +259,7 @@ Money stays computed by computeQuoteTotals; do not change quote maths in this ta
 
 ---
 
-### ☐ T8 — Admin review screen (PDF section L)
+### ☑ T8 — Admin review screen (PDF section L)
 Branch `feat/onboard-t8-admin-review` · needs T3
 
 Prompt:

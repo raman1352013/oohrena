@@ -134,6 +134,8 @@ const vendorSchema = new Schema(
     execution: { type: Schema.Types.Mixed, default: null },
     sla: { type: Schema.Types.Mixed, default: null },
     declaration: { type: Schema.Types.Mixed, default: null },
+    // Admin review = vendor form §L "Office use" (T8). Validated by vendorReviewInput; latest only, history is in the audit log.
+    review: { type: Schema.Types.Mixed, default: null },
     onboarding: {
       savedSteps: { type: Map, of: Date, default: () => new Map() },
       submittedAt: { type: Date, default: null },
@@ -144,6 +146,8 @@ const vendorSchema = new Schema(
 // PAN is optional until onboarding, so uniqueness applies only to vendors that have one.
 // connectDb() runs syncIndexes on start, which drops the old pan_1 index and builds this one.
 vendorSchema.index({ pan: 1 }, { name: "pan_unique_when_set", unique: true, partialFilterExpression: { pan: { $type: "string" } } });
+// Admin review queue: pending vendors that submitted onboarding, oldest first.
+vendorSchema.index({ kycStatus: 1, "onboarding.submittedAt": 1 });
 export const Vendor = mongoose.model("Vendor", vendorSchema, "vendors");
 
 /* ---------- Vendor Users (team members with sub-roles) ---------- */

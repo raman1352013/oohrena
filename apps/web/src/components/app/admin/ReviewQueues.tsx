@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, ChevronDown, ChevronRight, FileText } from "lucide-react";
@@ -134,7 +135,8 @@ function DecisionDialog({
   );
 }
 
-const KYC_FILTERS: { id: KycStatus | undefined; label: string }[] = [
+const KYC_FILTERS: { id: KycStatus | "submitted" | undefined; label: string }[] = [
+  { id: "submitted", label: "Submitted" },
   { id: "pending", label: "Pending" },
   { id: "approved", label: "Approved" },
   { id: "rejected", label: "Rejected" },
@@ -142,8 +144,14 @@ const KYC_FILTERS: { id: KycStatus | undefined; label: string }[] = [
   { id: undefined, label: "All" },
 ];
 
+/** "today", "1 day ago", "3 days ago" — how long a vendor has waited for review. */
+function ageText(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  return days <= 0 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`;
+}
+
 export function VendorKycQueue() {
-  const [filter, setFilter] = useState<KycStatus | undefined>("pending");
+  const [filter, setFilter] = useState<KycStatus | "submitted" | undefined>("submitted");
   const list = useAdminVendors(filter);
   const decide = useKycDecision();
   const [open, setOpen] = useState<string>();
@@ -179,7 +187,9 @@ export function VendorKycQueue() {
       ) : !list.data.items.length ? (
         <Empty
           title={
-            filter === "pending" ? "No vendors waiting for KYC review" : "No vendors in this view"
+            filter === "pending" || filter === "submitted"
+              ? "No vendors waiting for KYC review"
+              : "No vendors in this view"
           }
         />
       ) : (
@@ -209,12 +219,27 @@ export function VendorKycQueue() {
                       Missing: {v.missingDocuments.map((t) => KYC_DOC_LABEL[t]).join(", ")}
                     </div>
                   )}
+                  {v.submittedAt && v.kycStatus === "pending" && (
+                    <div className="text-[12px] text-mute">
+                      Submitted {ageText(v.submittedAt)}
+                      {v.reviewedAt ? ` · reviewed ${fmtDate(v.reviewedAt)}` : ""}
+                    </div>
+                  )}
                   {v.kycReason && (
                     <div className="text-[12px] text-destructive">Reason: {v.kycReason}</div>
                   )}
                 </div>
                 <KycPill status={v.kycStatus} />
                 <div className="flex gap-2">
+                  <Link
+                    to="/admin/vendors/$vendorId"
+                    params={{ vendorId: v.vendorId }}
+                    search={{ tab: "vendors" }}
+                  >
+                    <Btn variant="secondary" className="h-8 px-3 text-[12px]" tabIndex={-1}>
+                      Review
+                    </Btn>
+                  </Link>
                   {v.kycStatus === "pending" && (
                     <>
                       <Btn

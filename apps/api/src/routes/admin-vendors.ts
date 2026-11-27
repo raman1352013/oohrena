@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { KYC_STATUSES, KYC_TRANSITIONS, REQUIRED_KYC_DOCS, kycDecisionInput, type KycStatus } from "@oohrena/shared";
+import { KYC_STATUSES, KYC_TRANSITIONS, REQUIRED_KYC_DOCS, kycDecisionInput, vendorReviewInput, type KycStatus, type VendorReview, type VendorReviewInput } from "@oohrena/shared";
 import { audit } from "../lib/audit.js";
 import { AppError, badRequest, notFound } from "../lib/errors.js";
 import { withTransaction } from "../lib/tx.js";
@@ -15,6 +15,8 @@ import { onVendorRejected, tryQualify } from "../services/referrals.js";
 
 const listQuery = z.object({
   kycStatus: z.enum(KYC_STATUSES).optional(),
+  /** "submitted": pending vendors who finished onboarding, oldest first (the review queue). */
+  queue: z.enum(["submitted"]).optional(),
   q: z.string().trim().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
@@ -31,9 +33,10 @@ export function adminVendorRoutes() {
     const q = parseQuery(listQuery, req);
     const filter: Record<string, unknown> = {};
     if (q.kycStatus) filter.kycStatus = q.kycStatus;
+    if (q.queue === "submitted") Object.assign(filter, { kycStatus: "pending", "onboarding.submittedAt": { $ne: null } });
     if (q.q) filter.$or = [{ legalName: new RegExp(escapeRe(q.q), "i") }, { _id: q.q.toUpperCase() }, { city: new RegExp(escapeRe(q.q), "i") }];
     const [items, total] = await Promise.all([
-      Vendor.find(filter).sort({ kycStatus: 1, createdAt: -1 }).skip((q.page - 1) * q.pageSize).limit(q.pageSize).lean(),
+      Vendor.find(filter).sort(q.queue === "submitted" ? { "onboarding.submittedAt": 1 } : { kycStatus: 1, createdAt: -1 }).skip((q.page - 1) * q.pageSize).limit(q.pageSize).lean(),
       Vendor.countDocuments(filter),
     ]);
     const ids = items.map((v) => v._id);
@@ -52,6 +55,7 @@ export function adminVendorRoutes() {
             contactName: u?.fullName ?? null, documentCount: d?.n ?? 0,
             missingDocuments: REQUIRED_KYC_DOCS.filter((t) => !d?.types.includes(t)),
             listingCount: invCounts.find((x) => x._id === v._id)?.n ?? 0, createdAt: v.createdAt, approvedAt: v.approvedAt,
+            submittedAt: v.onboarding?.submittedAt ?? null, reviewedAt: (v.review as VendorReview | null)?.reviewedAt ?? null,
           };
         }),
         total, page: q.page, pageSize: q.pageSize,
@@ -79,8 +83,25 @@ export function adminVendorRoutes() {
         execution: v.execution ?? null,
         sla: v.sla ?? null,
         declaration: v.declaration ?? null,
+        review: (v.review as VendorReview | null) ?? null,
       },
     });
+  });
+
+  /**
+   * Vendor form §L "Office use" checklist (T8). Saving it never changes kycStatus: approval stays the
+   * kyc-decision endpoint. Any rejected item needs a reason (validated by the shared schema).
+   */
+  r.patch("/:id/review", requirePermission("vendor.review"), validateBody(vendorReviewInput), async (req, res) => {
+    const { reason, ...checks } = req.body as VendorReviewInput;
+    const review: VendorReview = { ...checks, reason: reason ?? null, reviewedBy: req.user!.userId, reviewedAt: new Date().toISOString() };
+    await withTransaction(async (session) => {
+      const v = await Vendor.findById(String(req.params.id)).session(session).select("_id review").lean();
+      if (!v) throw notFound("Vendor not found");
+      await Vendor.updateOne({ _id: v._id }, { $set: { review } }, { session });
+      await audit(req, { action: "vendor.review", entity: "vendor", entityId: v._id, before: { review: v.review ?? null }, after: { review }, reason: reason ?? null }, session);
+    });
+    res.json({ data: review });
   });
 
   /** Approve / reject / suspend / reinstate with reason. Approval requires the mandatory documents. */

@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import { useSession } from "@/lib/auth";
-import { useVendorMe } from "@/lib/inventory-api";
+import { useMyInventory, useVendorMe } from "@/lib/inventory-api";
 import { KycPill } from "@/components/app/status";
 import { BankPanel, KycPanel } from "@/components/app/vendor/KycPanel";
 import { CsvImportCard, InventoryPanel } from "@/components/app/vendor/InventoryPanel";
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/vendor")({
 function VendorHub() {
   const me = useVendorMe();
   const { data: user } = useSession();
+  const nav = useNavigate();
   const search = Route.useSearch();
   const currentTab: VendorTab = search.tab ?? "overview";
 
@@ -60,7 +62,12 @@ function VendorHub() {
   const isSubmitted = !!v.onboarding?.submittedAt;
 
   if (!isSubmitted) {
-    return <OnboardingWizard />;
+    // Next step after the profile is the vendor's sites, so open Inventory straight away.
+    return (
+      <OnboardingWizard
+        onSubmitted={() => void nav({ to: "/vendor", search: { tab: "inventory" } })}
+      />
+    );
   }
 
   const vRole = (user?.vendorRole ?? "owner") as VendorRole;
@@ -110,6 +117,8 @@ function VendorHub() {
               </KCard>
             )}
 
+            {(isOwner || isManager) && <FirstSiteCard />}
+
             {/* Overview dashboard grid */}
             <div className="grid lg:grid-cols-2 gap-5">
               {!isAccounts && <WorkOrdersCard />}
@@ -148,5 +157,22 @@ function VendorHub() {
         {currentTab === "team" && (isOwner || isManager) && <TeamPanel isOwner={isOwner} />}
       </div>
     </VendorShell>
+  );
+}
+
+/** Shown on Overview until the vendor has at least one site, so the next step is never hidden. */
+function FirstSiteCard() {
+  const inv = useMyInventory();
+  if (inv.isPending || inv.isError || (inv.data?.items.length ?? 0) > 0) return null;
+  return (
+    <KCard className="p-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="font-semibold text-ink text-[15px]">Add your first site</div>
+      <Link to="/vendor" search={{ tab: "inventory" }}>
+        <Btn type="button" tabIndex={-1}>
+          <Plus size={16} />
+          Add site
+        </Btn>
+      </Link>
+    </KCard>
   );
 }

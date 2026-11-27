@@ -67,7 +67,7 @@ export function authRoutes(cfg: Config, authLimiter: import("express").RequestHa
         [{ _id: userId, email: input.email, mobile: input.mobile, fullName: input.fullName, passwordHash, role: "client", status: "active", orgId: clientId, referralCode, referredByCode }],
         { session },
       );
-      await Client.create([{ _id: clientId, userId, companyName: input.companyName, gstin: input.gstin ?? null }], { session });
+      await Client.create([{ _id: clientId, userId, companyName: input.companyName ?? null, gstin: input.gstin ?? null }], { session });
       await Consent.create(consentDocs(userId, req.ip), { session, ordered: true });
       await onUserRegistered(user!, session);
       await audit(req, { action: "auth.register", entity: "user", entityId: userId, after: { role: "client", email: input.email, clientId, referredByCode }, userId, role: "client" }, session);

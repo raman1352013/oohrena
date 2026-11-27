@@ -26,6 +26,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSession } from "@/lib/auth";
+import { CART_MAX, toCartSite, useQuoteCart } from "@/lib/quote-cart";
+import { QuickQuote } from "@/components/app/client/QuickQuote";
 import { inr, fmtDate } from "@/lib/format";
 import {
   useCalendar,
@@ -123,18 +125,20 @@ function Marketplace() {
     radiusKm: point ? radius : undefined,
   });
   const search = useSearch(params);
-  const shortlist = useShortlist(isClient);
-  const toggle = useToggleShortlist();
-  const savedIds = useMemo(
-    () => new Set((shortlist.data ?? []).map((s) => s.inventoryId)),
-    [shortlist.data],
-  );
+  const cart = useQuoteCart(isClient);
+  const savedIds = useMemo(() => new Set(cart.sites.map((s) => s.inventoryId)), [cart.sites]);
+  const quotable = cart.sites.filter((s) => s.bookable);
+  const [quoting, setQuoting] = useState(false);
   const items = (search.data?.items ?? []).filter((x) => !savedOnly || savedIds.has(x.inventoryId));
 
-  function save(id: string) {
-    if (!isClient) return toast.message("Sign in with a client account to keep a shortlist");
-    toggle.mutate({ id, on: !savedIds.has(id) }, { onError: (e) => toast.error(e.message) });
-    return undefined;
+  /** Anyone can build a shortlist; visitors keep it in this browser, clients on their account. */
+  function save(item: SearchItem) {
+    cart
+      .toggle(toCartSite(item))
+      .then((ok) => {
+        if (!ok) toast.message(`Up to ${CART_MAX} sites per quote`);
+      })
+      .catch((e: Error) => toast.error(e.message));
   }
   function locate() {
     if (!navigator.geolocation) return toast.error("Location isn't available on this device");
@@ -231,7 +235,7 @@ function Marketplace() {
               Only free for my dates
             </label>
           )}
-          {isClient && (
+          {savedIds.size > 0 && (
             <>
               <Btn
                 variant={savedOnly ? "dark" : "secondary"}
@@ -332,7 +336,7 @@ function Marketplace() {
                   key={x.inventoryId}
                   x={x}
                   saved={savedIds.has(x.inventoryId)}
-                  onSave={() => save(x.inventoryId)}
+                  onSave={() => save(x)}
                   onOpen={() => setOpen(x)}
                 />
               ))}
@@ -350,13 +354,47 @@ function Marketplace() {
         from={datesOk ? from : undefined}
         to={datesOk ? to : undefined}
         saved={!!open && savedIds.has(open.inventoryId)}
-        onSave={() => open && save(open.inventoryId)}
+        onSave={() => open && save(open)}
       />
       <CompareDialog
         open={compare}
         onClose={() => setCompare(false)}
         ids={[...savedIds].slice(0, 4)}
       />
+
+      {quotable.length > 0 && (
+        <>
+          {/* Keeps the last results clear of the bar. */}
+          <div className="h-20" aria-hidden />
+          <div className="no-print fixed bottom-0 inset-x-0 z-30 border-t border-line bg-card/95 backdrop-blur">
+            <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
+              <Heart size={16} className="text-saffron-deep" aria-hidden />
+              <span className="text-[13px]">
+                <span className="font-semibold">{quotable.length}</span>{" "}
+                {quotable.length === 1 ? "site" : "sites"} selected
+              </span>
+              <Btn className="ml-auto" onClick={() => setQuoting(true)}>
+                Get quote
+              </Btn>
+            </div>
+          </div>
+        </>
+      )}
+      <Dialog open={quoting} onOpenChange={setQuoting}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Get a quote</DialogTitle>
+          </DialogHeader>
+          {quoting && (
+            <QuickQuote
+              sites={quotable}
+              defaultFrom={datesOk ? from : undefined}
+              onDone={() => setQuoting(false)}
+              onSubmitted={cart.clearLocal}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -562,7 +600,7 @@ function ListingDialog({
           </section>
 
           {ask ? (
-            <InquiryForm item={item} from={from} to={to} onDone={onClose} />
+            <QuickQuote sites={[toCartSite(item)]} defaultFrom={from} onDone={onClose} />
           ) : (
             <div className="flex gap-2">
               <Btn className="flex-1" disabled={!item.bookable} onClick={() => setAsk(true)}>
@@ -577,164 +615,6 @@ function ListingDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function InquiryForm({
-  item,
-  from,
-  to,
-  onDone,
-}: {
-  item: SearchItem;
-  from?: string | undefined;
-  to?: string | undefined;
-  onDone: () => void;
-}) {
-  const { data: user } = useSession();
-  const create = useCreateLead();
-  const [f, setF] = useState({
-    from: from ?? plus(7),
-    to: to ?? plus(36),
-    qty: "1",
-    budget: "",
-    requirement: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string>();
-  const [done, setDone] = useState<string>();
-
-  if (!user) {
-    return (
-      <div className="rounded-lg border border-line p-4 text-[13px] flex flex-wrap items-center gap-3">
-        <span className="flex-1">
-          Sign in with your advertiser account to request a quotation. You'll get a Lead ID to track
-          it.
-        </span>
-        <Link to="/login" search={{ redirect: "/marketplace" }}>
-          <Btn variant="secondary" className="h-9">
-            Sign in
-          </Btn>
-        </Link>
-        <Link to="/register">
-          <Btn className="h-9">Create account</Btn>
-        </Link>
-      </div>
-    );
-  }
-  if (user.role !== "client")
-    return (
-      <p className="text-[13px] text-mute">Sign in with a client account to request a quote.</p>
-    );
-  if (done) {
-    return (
-      <div className="rounded-lg border border-verified/30 bg-verified-soft p-4 text-center">
-        <CheckCircle2 className="mx-auto text-verified" size={32} />
-        <div className="font-semibold mt-2">Inquiry received</div>
-        <p className="font-mono text-[15px] mt-1">{done}</p>
-        <div className="flex justify-center gap-2 mt-3">
-          <Btn variant="secondary" className="h-9" onClick={onDone}>
-            Keep browsing
-          </Btn>
-          <Link to="/client">
-            <Btn className="h-9">Track it</Btn>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setFormError(undefined);
-    const p = leadCreateInput.safeParse({
-      inventoryIds: [item.inventoryId],
-      from: f.from,
-      to: f.to,
-      qty: f.qty,
-      budget: f.budget || undefined,
-      requirement: f.requirement,
-    });
-    if (!p.success) {
-      setErrors(Object.fromEntries(p.error.issues.map((i) => [i.path.join("."), i.message])));
-      return;
-    }
-    setErrors({});
-    create.mutate(p.data, {
-      onSuccess: (l) => {
-        setDone(l.leadId);
-        toast.success(`Inquiry ${l.leadId} submitted`);
-      },
-      onError: (err) => setFormError(err.message),
-    });
-  }
-
-  return (
-    <form
-      onSubmit={submit}
-      noValidate
-      className="border-t border-line pt-4 grid sm:grid-cols-2 gap-3 text-[13px]"
-    >
-      <div className="sm:col-span-2 font-semibold text-[14px]">Request a quotation</div>
-      {formError && (
-        <div className="sm:col-span-2">
-          <FormError message={formError} />
-        </div>
-      )}
-      <Field
-        id="lf"
-        label="Start date"
-        type="date"
-        min={plus(0)}
-        value={f.from}
-        error={errors["from"]}
-        onChange={(e) => setF({ ...f, from: e.target.value })}
-      />
-      <Field
-        id="lt"
-        label="End date"
-        type="date"
-        min={f.from}
-        value={f.to}
-        error={errors["to"]}
-        onChange={(e) => setF({ ...f, to: e.target.value })}
-      />
-      {item.quantity > 1 && (
-        <Field
-          id="lq"
-          label={`Quantity (of ${item.quantity})`}
-          inputMode="numeric"
-          value={f.qty}
-          error={errors["qty"]}
-          onChange={(e) => setF({ ...f, qty: e.target.value })}
-        />
-      )}
-      <Field
-        id="lb"
-        label="Budget (₹)"
-        inputMode="numeric"
-        value={f.budget}
-        error={errors["budget"]}
-        onChange={(e) => setF({ ...f, budget: e.target.value })}
-      />
-      <div className="sm:col-span-2 space-y-1.5">
-        <label htmlFor="lr" className="font-medium">
-          What do you need?
-        </label>
-        <Textarea
-          id="lr"
-          rows={3}
-          value={f.requirement}
-          onChange={(e) => setF({ ...f, requirement: e.target.value })}
-        />
-        {errors["requirement"] && (
-          <p className="text-[12px] text-destructive">{errors["requirement"]}</p>
-        )}
-      </div>
-      <Btn type="submit" className="sm:col-span-2" disabled={create.isPending}>
-        {create.isPending ? "Submitting…" : "Submit inquiry"}
-      </Btn>
-    </form>
   );
 }
 

@@ -107,7 +107,7 @@ function RegisterPage() {
     if (kind === "client") {
       const p = registerClientInput.safeParse({
         ...common,
-        companyName: f.companyName,
+        ...(f.companyName.trim() ? { companyName: f.companyName } : {}),
         ...(f.gstin.trim() ? { gstin: f.gstin } : {}),
       });
       if (!p.success) return setErrors(firstErrors((p.error as ZodError).flatten().fieldErrors));
@@ -192,7 +192,7 @@ function RegisterPage() {
         {kind === "client" ? (
           <Field
             id="companyName"
-            label="Company name"
+            label="Company name (optional)"
             autoComplete="organization"
             value={f.companyName}
             error={errors["companyName"]}

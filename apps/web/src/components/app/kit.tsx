@@ -267,3 +267,43 @@ export function Photo({
     />
   );
 }
+
+/** A single choice from a few options, as tappable chips (radio semantics). Use instead of a select
+ * when there are 2–6 short options; it saves typing on phones. */
+export function ChipGroup<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: readonly { id: T; label: string; disabled?: boolean | undefined }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-[13px] font-medium text-ink">{label}</div>
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-2">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={value === o.id}
+            disabled={o.disabled}
+            onClick={() => onChange(o.id)}
+            className={cn(
+              "h-9 px-3.5 rounded-full border text-[13px] transition-colors disabled:opacity-40",
+              value === o.id
+                ? "border-navy bg-navy text-navy-foreground font-semibold"
+                : "border-line bg-card text-ink hover:border-saffron/50",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

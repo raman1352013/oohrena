@@ -112,9 +112,11 @@ export const leadCreateInput = z.object({
   from: isoDate, to: isoDate,
   qty: z.coerce.number().int().min(1).max(10000).default(1),
   budget: z.coerce.number().positive("Budget must be more than 0").max(1e10).optional(),
-  requirement: z.string().trim().min(10, "Describe your requirement (at least 10 characters)").max(3000),
+  /** Optional when sites are chosen (they say what is wanted); needed for an open brief with no sites. */
+  requirement: z.string().trim().max(3000).default(""),
 }).superRefine((v, ctx) => {
   const r = range.safeParse(v); if (!r.success) for (const i of r.error.issues) ctx.addIssue(i as never);
   if (!v.inventoryIds.length && !v.city) ctx.addIssue({ code: "custom", path: ["city"], message: "Choose media items or tell us the city" });
+  if (!v.inventoryIds.length && v.requirement.length < 10) ctx.addIssue({ code: "custom", path: ["requirement"], message: "Describe your requirement (at least 10 characters)" });
 });
 export type LeadCreateInput = z.infer<typeof leadCreateInput>;

@@ -2,7 +2,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { cancellationFor, todayIST } from "@oohrena/shared";
 import { fmtDate, inr } from "@/lib/format";
+import { ApiError } from "@/lib/api";
+import { ask } from "@/components/app/ask";
 import {
+  useUpdateClientProfile,
   useClientActions,
   useMyBookings,
   useMyQuotes,
@@ -80,6 +83,7 @@ function QuoteDialog({
 }) {
   const q = useQuoteDetail(id);
   const { decide } = useClientActions();
+  const profile = useUpdateClientProfile();
   const [mode, setMode] = useState<"reject" | "revise">();
   const [comment, setComment] = useState("");
   const send = (decision: "approve" | "reject" | "revise") => {
@@ -100,11 +104,33 @@ function QuoteDialog({
           setMode(undefined);
           setComment("");
         },
-        onError: (e) => toast.error(e.message),
+        onError: (e) => {
+          // The invoice needs a company name; ask for it once, here, then approve.
+          const field =
+            e instanceof ApiError
+              ? (e.details as { field?: string } | undefined)?.field
+              : undefined;
+          if (decision === "approve" && field === "companyName") void addCompanyThenApprove();
+          else toast.error(e.message);
+        },
       },
     );
     return undefined;
   };
+  async function addCompanyThenApprove() {
+    const r = await ask({
+      title: "Company name",
+      label: "Company name (on the invoice)",
+      action: "Save and approve",
+    });
+    if (!r) return;
+    try {
+      await profile.mutateAsync({ companyName: r.reason.trim() });
+      send("approve");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  }
   return (
     <Dialog
       open={!!id}

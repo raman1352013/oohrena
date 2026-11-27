@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ROLES } from "../roles.js";
 import { REFERRAL_CODE_RE } from "../referral.js";
-import { VENDOR_CATEGORIES } from "../vendor.js";
+import { SELECTABLE_VENDOR_CATEGORIES } from "../vendor.js";
 
 /** Indian formats; validated server-side, mirrored in forms. */
 export const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -77,9 +77,9 @@ export const registerVendorInput = z.object({
   legalName: trimmed(160),
   city: trimmed(80),
   categories: z
-    .array(z.enum(VENDOR_CATEGORIES))
+    .array(z.enum(SELECTABLE_VENDOR_CATEGORIES, { error: "Choose from the listed options" }))
     .min(1, "Choose what you do")
-    .max(VENDOR_CATEGORIES.length)
+    .max(SELECTABLE_VENDOR_CATEGORIES.length)
     .refine((a) => new Set(a).size === a.length, "Remove duplicates"),
   ref: signupRef,
   acceptTerms,

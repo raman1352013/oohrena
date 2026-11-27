@@ -2,7 +2,7 @@ import { z } from "zod";
 import { gstin, mobile, pan } from "./schemas/auth.js";
 import { isoDate } from "./availability.js";
 import { pinCode, stateCode } from "./geo.js";
-import { VENDOR_CATEGORIES } from "./vendor.js";
+import { SELECTABLE_VENDOR_CATEGORIES } from "./vendor.js";
 
 /**
  * Vendor onboarding wizard — the online version of the Vendor Registration & Inventory Form.
@@ -68,7 +68,7 @@ export const onboardingBusinessInput = z
 
 export const onboardingCategoryInput = z
   .object({
-    categories: uniqueList(z.enum(VENDOR_CATEGORIES), VENDOR_CATEGORIES.length).refine((a) => a.length > 0, "Choose at least one"),
+    categories: uniqueList(z.enum(SELECTABLE_VENDOR_CATEGORIES, { error: "Choose from the listed options" }), SELECTABLE_VENDOR_CATEGORIES.length).refine((a) => a.length > 0, "Choose at least one"),
     otherCategory: optionalText(120),
   })
   .strict()

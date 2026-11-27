@@ -59,14 +59,24 @@ export const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_PHOTOS_PER_LISTING = 10;
 
 /** Vendor form §B partner category (asked at sign-up). */
+/** Every value that may be stored. "proposed_super_vendor" stays only so older sign-ups still load. */
 export const VENDOR_CATEGORIES = ["media_owner", "aggregator", "execution_partner", "agency", "proposed_super_vendor", "other"] as const;
+/**
+ * What a vendor may pick at sign-up and in onboarding. Super Vendor is never self-selected: Admin invites,
+ * the vendor accepts, a second admin approves (founder blueprint §5.3, "no self-assigned elevation").
+ */
+export const SELECTABLE_VENDOR_CATEGORIES = ["media_owner", "aggregator", "execution_partner", "agency", "other"] as const;
+export type SelectableVendorCategory = (typeof SELECTABLE_VENDOR_CATEGORIES)[number];
+export const isSelectableVendorCategory = (c: string): c is SelectableVendorCategory =>
+  (SELECTABLE_VENDOR_CATEGORIES as readonly string[]).includes(c);
 export type VendorCategory = (typeof VENDOR_CATEGORIES)[number];
 export const VENDOR_CATEGORY_LABEL: Record<VendorCategory, string> = {
   media_owner: "Media owner / site owner",
   aggregator: "Authorised operator / aggregator",
   execution_partner: "Execution partner",
   agency: "Agency / media buying",
-  proposed_super_vendor: "Regional network partner / Super Vendor",
+  // Old sign-ups only; shown to Admin as a lead for a future invite, never as a role.
+  proposed_super_vendor: "Interested in regional partnership",
   other: "Other",
 };
 

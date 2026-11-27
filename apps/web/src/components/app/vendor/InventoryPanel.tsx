@@ -63,7 +63,15 @@ export function InventoryPanel({ canList }: { canList: boolean }) {
             </Btn>
           </div>
         ) : !items.length ? (
-          <Empty title="No listings" />
+          <div className="pb-8">
+            <Empty title="No sites yet" />
+            <div className="flex justify-center -mt-2">
+              <Btn onClick={() => setEditing({ open: true })}>
+                <Plus size={16} />
+                Add your first site
+              </Btn>
+            </div>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px] min-w-[760px]">

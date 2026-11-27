@@ -9,6 +9,8 @@ import type {
   ListingStatus,
   PricingUnit,
   VendorCategory,
+  VendorReview,
+  VendorReviewInput,
 } from "@oohrena/shared";
 import { api } from "./api";
 
@@ -42,10 +44,13 @@ export type VendorMe = {
   documents: KycDoc[];
   missingDocuments: KycDocType[];
   bank: MaskedBank;
-  onboarding?: {
-    savedSteps?: Record<string, string> | undefined;
-    submittedAt: string | null;
-  } | null | undefined;
+  onboarding?:
+    | {
+        savedSteps?: Record<string, string> | undefined;
+        submittedAt: string | null;
+      }
+    | null
+    | undefined;
 };
 export type Listing = {
   inventoryId: string;
@@ -95,6 +100,8 @@ export type AdminVendorRow = {
   listingCount: number;
   createdAt: string;
   approvedAt: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
 };
 export type AdminVendorDetail = {
   vendorId: string;
@@ -108,6 +115,15 @@ export type AdminVendorDetail = {
   documents: KycDoc[];
   bank: MaskedBank;
   createdAt: string;
+  onboarding: { submittedAt: string | null } | null;
+  /** Onboarding sections as saved by the vendor (validated server-side); business.pan is masked. */
+  business: Record<string, unknown> | null;
+  category: Record<string, unknown> | null;
+  territory: Record<string, unknown> | null;
+  execution: Record<string, unknown> | null;
+  sla: Record<string, unknown> | null;
+  declaration: Record<string, unknown> | null;
+  review: VendorReview | null;
 };
 export type HistoryRow = {
   inventoryId: string;
@@ -226,12 +242,19 @@ export const useListingHistory = (id: string | undefined, scope: "vendor" | "adm
   });
 
 /* ---------- Admin ---------- */
-export const useAdminVendors = (kycStatus?: KycStatus) =>
+/** `"submitted"` = the review queue: pending vendors who finished onboarding, oldest first. */
+export const useAdminVendors = (kycStatus?: KycStatus | "submitted") =>
   useQuery({
     queryKey: [...K.adminVendors, kycStatus ?? "all"],
     queryFn: () =>
       api<Page<AdminVendorRow>>(
-        `/admin/vendors?pageSize=100${kycStatus ? `&kycStatus=${kycStatus}` : ""}`,
+        `/admin/vendors?pageSize=100${
+          kycStatus === "submitted"
+            ? "&queue=submitted"
+            : kycStatus
+              ? `&kycStatus=${kycStatus}`
+              : ""
+        }`,
       ),
   });
 export const useAdminVendor = (id: string | undefined) =>
@@ -259,6 +282,18 @@ export function useKycDecision() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: K.adminVendors });
       void qc.invalidateQueries({ queryKey: K.adminInventory });
+    },
+  });
+}
+
+export function useSaveVendorReview(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: VendorReviewInput) =>
+      api<VendorReview>(`/admin/vendors/${id}/review`, { method: "PATCH", body: input }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: K.adminVendor(id) });
+      void qc.invalidateQueries({ queryKey: K.adminVendors });
     },
   });
 }
@@ -337,8 +372,12 @@ export function useVendorTeam() {
 export function useInviteVendorStaff() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name: string; email: string; mobile: string; role: "manager" | "field" | "accounts" }) =>
-      api<VendorStaffItem>("/vendors/me/team/invite", { body }),
+    mutationFn: (body: {
+      name: string;
+      email: string;
+      mobile: string;
+      role: "manager" | "field" | "accounts";
+    }) => api<VendorStaffItem>("/vendors/me/team/invite", { body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vendor", "team"] }),
   });
 }
@@ -346,8 +385,14 @@ export function useInviteVendorStaff() {
 export function useUpdateVendorStaff() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, ...body }: { userId: string; role?: "manager" | "field" | "accounts"; status?: "active" | "suspended" }) =>
-      api<VendorStaffItem>(`/vendors/me/team/${userId}`, { method: "PATCH", body }),
+    mutationFn: ({
+      userId,
+      ...body
+    }: {
+      userId: string;
+      role?: "manager" | "field" | "accounts";
+      status?: "active" | "suspended";
+    }) => api<VendorStaffItem>(`/vendors/me/team/${userId}`, { method: "PATCH", body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["vendor", "team"] }),
   });
 }

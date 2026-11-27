@@ -237,3 +237,46 @@ export type OnboardingState = {
     sla: OnboardingSlaInput;
   }>;
 };
+
+/* ---------- Admin review = vendor form §L "Office use" (T8) ---------- */
+
+export const REVIEW_CHECKS = ["pending", "verified", "rejected"] as const;
+export type ReviewCheck = (typeof REVIEW_CHECKS)[number];
+export const ASSET_REVIEW = ["pending", "partial", "verified", "rejected"] as const;
+export type AssetReview = (typeof ASSET_REVIEW)[number];
+export const RATE_CARD_REVIEW = ["pending", "approved", "clarification"] as const;
+export type RateCardReview = (typeof RATE_CARD_REVIEW)[number];
+
+/** Checklist items that can be rejected; any rejection needs a reason (AGENTS.md §4.7). */
+export const REVIEW_REJECTABLE = ["identity", "ownership", "assets", "permission"] as const;
+
+export const vendorReviewInput = z
+  .object({
+    identity: z.enum(REVIEW_CHECKS),
+    ownership: z.enum(REVIEW_CHECKS),
+    assets: z.enum(ASSET_REVIEW),
+    permission: z.enum(REVIEW_CHECKS),
+    rateCard: z.enum(RATE_CARD_REVIEW),
+    siteVisitRequired: z.boolean(),
+    territoryNote: z.string().trim().max(500).default(""),
+    remarks: z.string().trim().max(2000).default(""),
+    nextReviewDate: isoDate.nullable().default(null),
+    reason: z.string().trim().max(1000).optional(),
+  })
+  .strict()
+  .refine((v) => !reviewHasRejection(v) || (v.reason?.length ?? 0) >= 3, {
+    path: ["reason"],
+    message: "Give a reason for the rejected item (at least 3 characters)",
+  });
+export type VendorReviewInput = z.infer<typeof vendorReviewInput>;
+
+/** Stored review (what the API returns). */
+export type VendorReview = Omit<VendorReviewInput, "reason"> & {
+  reason: string | null;
+  reviewedBy: string;
+  reviewedAt: string;
+};
+
+export function reviewHasRejection(v: { identity: ReviewCheck; ownership: ReviewCheck; assets: AssetReview; permission: ReviewCheck }): boolean {
+  return REVIEW_REJECTABLE.some((k) => v[k] === "rejected");
+}
